@@ -1,4 +1,4 @@
-package com.pfc.notus.Matricula.domain;
+package com.pfc.notus.matricula.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;

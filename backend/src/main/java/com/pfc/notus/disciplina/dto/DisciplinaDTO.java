@@ -1,4 +1,4 @@
-package com.pfc.notus.Disciplina.dto;
+package com.pfc.notus.disciplina.dto;
 
 import java.time.LocalDateTime;
 

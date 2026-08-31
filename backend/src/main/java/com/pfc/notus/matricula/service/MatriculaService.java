@@ -1,8 +1,8 @@
-package com.pfc.notus.Matricula.service;
+package com.pfc.notus.matricula.service;
 
 
-import com.pfc.notus.Matricula.domain.Matricula;
-import com.pfc.notus.Matricula.repository.MatriculaRepository;
+import com.pfc.notus.matricula.domain.Matricula;
+import com.pfc.notus.matricula.repository.MatriculaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

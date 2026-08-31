@@ -1,4 +1,4 @@
-package com.pfc.notus.Nota.service;
+package com.pfc.notus.nota.service;
 
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.repository.NotaRepository;
