@@ -3,8 +3,8 @@ INSERT INTO tb_role (authority) VALUES ('ROLE_ALUNO');
 INSERT INTO tb_role (authority) VALUES ('ROLE_PROFESSOR');
 
 -- 2. Usuários
-INSERT INTO tb_user (id, username, email, password, phone, address) VALUES (1, 'Ana Aluna', 'ana.aluna@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', '11999990000', 'Rua A, 123');
-INSERT INTO tb_user (id, username, email, password, phone, address) VALUES (2, 'Pedro Professor', 'pedro.professor@gmail.com', '$2a$10$eE.P8/Z6.8/UqX73BkD6ne8xO4Rz8N79PjZ1D7w9/g53zJ5rA7/O6', '11988880000', 'Rua B, 456');
+INSERT INTO tb_user (id, name, email, password, phone, address) VALUES (1, 'Ana Aluna', 'ana.aluna@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', '11999990000', 'Rua A, 123');
+INSERT INTO tb_user (id, name, email, password, phone, address) VALUES (2, 'Pedro Professor', 'pedro.professor@gmail.com', '$2a$10$HiGKZgV0susl4kodrIibkOlc.QPUmCK6D0o2.SqWLZa.Yg2vhOZwS', '11988880000', 'Rua B, 456');
 
 -- 3. Vínculo Usuário ↔ Role
 INSERT INTO tb_user_role (user_id, role_id) VALUES (1, 1);

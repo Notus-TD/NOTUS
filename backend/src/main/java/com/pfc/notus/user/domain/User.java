@@ -23,7 +23,8 @@ public class User implements UserDetails {
     private Long id;
 
     @Getter @Setter
-    private String username;
+    private String name;
+
     @Getter @Setter
     private String password;
 
@@ -44,7 +45,7 @@ public class User implements UserDetails {
 
 
     public User(String username, String password) {
-        this.username = username;
+        this.email = username;
         this.password = password;
     }
 
