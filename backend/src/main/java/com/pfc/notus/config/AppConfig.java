@@ -30,10 +30,12 @@ public class AppConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
         http.csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/login",
                                 "/games/**",
+                                "/h2-console/**",
                                 "/turma/**",
                                 "/users/create",
                                 "/v3/api-docs/**",

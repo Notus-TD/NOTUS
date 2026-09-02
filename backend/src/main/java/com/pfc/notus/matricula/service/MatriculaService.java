@@ -32,7 +32,7 @@ public class MatriculaService {
 
     @Transactional
     public void delete( Long id){
-        if(matriculaRepository.existsById(id)){
+        if(!matriculaRepository.existsById(id)){
            throw new EntityNotFoundException("Matricula não encontrado com o id: " +id);
         }
         matriculaRepository.deleteById(id);

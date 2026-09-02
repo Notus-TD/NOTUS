@@ -33,7 +33,7 @@ public class DisciplinaService {
 
     @Transactional
     public void delete(Long id) {
-        if (disciplinaRepository.existsById(id)) {
+        if (!disciplinaRepository.existsById(id)) {
             throw new EntityNotFoundException("Disciplina não encontrado com o id: " + id);
         }
         disciplinaRepository.deleteById(id);

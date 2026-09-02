@@ -1,4 +1,7 @@
 package com.pfc.notus.nota.dto;
 
-public record NotaDTO(Float rate, String period ) {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+public record NotaDTO(Long id, @NotNull Float rate, @NotBlank String period ) {
 }

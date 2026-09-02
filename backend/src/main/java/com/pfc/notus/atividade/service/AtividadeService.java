@@ -32,7 +32,7 @@ public class AtividadeService {
 
     @Transactional
     public void delete(Long id){
-        if (atividadeRepository.existsById(id)){
+        if (!atividadeRepository.existsById(id)){
             throw new EntityNotFoundException("Atividade não encontrado com o id: " + id);
         }
         atividadeRepository.deleteById(id);
