@@ -1,4 +1,7 @@
 package com.pfc.notus.boletim.dto;
 
-public record BoletimDTO (String period,  Float finalAverage, String status) {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+public record BoletimDTO (Long id, @NotBlank String period, @NotNull Float finalAverage, @NotBlank String status) {
 }

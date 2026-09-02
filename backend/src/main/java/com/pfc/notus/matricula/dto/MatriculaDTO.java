@@ -1,4 +1,7 @@
 package com.pfc.notus.matricula.dto;
 
-public record MatriculaDTO(String period, String status, Float finalAverage) {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+public record MatriculaDTO(Long id, @NotBlank String period, @NotBlank String status, @NotNull Float finalAverage) {
 }

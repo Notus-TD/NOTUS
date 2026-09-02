@@ -1,4 +1,6 @@
 package com.pfc.notus.atividade.dto;
 
-public record AtividadeDTO(String title, String content, String status) {
+import jakarta.validation.constraints.NotBlank;
+
+public record AtividadeDTO(Long id, @NotBlank String title, @NotBlank  String content, @NotBlank String status) {
 }
