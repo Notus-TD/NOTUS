@@ -32,6 +32,7 @@ public class Responsible {
     private String phone;
 
     @OneToMany(mappedBy = "responsible", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Getter @Setter
     private List<Student> students = new ArrayList<>();
 
 }
