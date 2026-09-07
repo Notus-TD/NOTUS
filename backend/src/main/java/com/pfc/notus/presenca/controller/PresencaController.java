@@ -7,9 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -30,10 +28,9 @@ public class PresencaController {
     }
 
     @PostMapping
-    public ResponseEntity<PresencaDTO> create(@RequestBody @Valid PresencaDTO dto, UriComponentsBuilder uriBuilder) {
+    public ResponseEntity<PresencaDTO> create(@RequestBody @Valid PresencaDTO dto) {
         PresencaDTO created = presencaService.save(dto);
-        URI uri = uriBuilder.path("/presenca/{id}").buildAndExpand(created.id()).toUri();
-        return ResponseEntity.created(uri).body(created);
+        return ResponseEntity.ok(created);
     }
 
     @DeleteMapping("/{id}")

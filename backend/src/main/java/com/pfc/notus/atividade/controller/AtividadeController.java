@@ -8,9 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -26,10 +24,9 @@ public class AtividadeController {
     }
 
     @PostMapping
-    public ResponseEntity<AtividadeDTO> create(@RequestBody @Valid AtividadeDTO dto, UriComponentsBuilder uriBuilder) {
+    public ResponseEntity<AtividadeDTO> create(@RequestBody @Valid AtividadeDTO dto) {
         AtividadeDTO created = atividadeService.save(dto);
-        URI uri = uriBuilder.path("/atividade/{id}").buildAndExpand(created.id()).toUri();
-        return ResponseEntity.created(uri).body(created);
+        return ResponseEntity.ok(created);
     }
 
     @DeleteMapping("/{id}")
