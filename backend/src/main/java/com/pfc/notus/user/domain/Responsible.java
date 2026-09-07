@@ -1,7 +1,6 @@
 package com.pfc.notus.user.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,11 +11,17 @@ import java.util.List;
 @Entity
 @Table(name = "tb_responsible")
 @NoArgsConstructor
-@AllArgsConstructor
 public class Responsible {
 
     @Id
+    @Getter
     private Long id;
+
+    @OneToOne
+    @MapsId
+    @JoinColumn(name = "id")
+    @Getter @Setter
+    private User user;
 
     @OneToMany(mappedBy = "responsible")
     @MapsId
@@ -31,8 +36,14 @@ public class Responsible {
     @Getter @Setter
     private String phone;
 
-    @OneToMany(mappedBy = "responsible", cascade = CascadeType.ALL, orphanRemoval = true)
     @Getter @Setter
-    private List<Student> students = new ArrayList<>();
+    private String cpf;
 
+    public Responsible(Long id,String name, String email, String phone, String cpf) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.phone = phone;
+        this.cpf = cpf;
+    }
 }
