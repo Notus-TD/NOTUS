@@ -17,6 +17,4 @@ public class NotaController {
     @Autowired
     private NotaService notaService;
 
-    @GetMapping
-    public List<Nota> getAllNota(){return notaService.getAllNota();}
 }

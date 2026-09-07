@@ -1,6 +1,5 @@
 package com.pfc.notus.nota.service;
 
-import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.repository.NotaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +14,6 @@ public class NotaService {
     private NotaRepository notaRepository;
 
     public List<NotaDTO> getAllNota(){
-        return notaRepository.findAll().stream().map(NotaDTO::new).toList();
+        return notaRepository.findAll().stream().map(x -> new NotaDTO(x)).toList();
     }
 }
