@@ -13,6 +13,7 @@ import lombok.Setter;
 public class Student {
 
     @Id
+    @Getter
     private Long id;
 
     @OneToOne
