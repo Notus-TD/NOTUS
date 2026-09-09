@@ -18,7 +18,7 @@ public class TurmaController {
     @Autowired
     private TurmaService turmaService;
 
-    @PreAuthorize("hasRole('ROLE_PROFESSOR')") // para bloquear pela role
+    @PreAuthorize("hasRole('ROLE_PROFESSOR')")
     @GetMapping
     public List<Turma> getAllTurmas() {return turmaService.getAllTurma();}
 
