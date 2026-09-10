@@ -38,6 +38,9 @@ public class User implements UserDetails {
     @Getter @Setter
     private String address;
 
+    @Getter @Setter
+    private boolean firstLogin = true;
+
     @ManyToMany
     @JoinTable(name = "tb_user_role",
             joinColumns = @JoinColumn(name = "user_id"),

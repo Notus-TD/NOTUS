@@ -24,8 +24,8 @@ public class Responsible {
     private User user;
 
     @OneToMany(mappedBy = "responsible")
-    @MapsId
-    private List<Student> student = new ArrayList<>();
+    @Getter @Setter
+    private List<Student> students = new ArrayList<>();
 
     @Getter @Setter
     private String name;
@@ -39,11 +39,11 @@ public class Responsible {
     @Getter @Setter
     private String cpf;
 
-    public Responsible(Long id,String name, String email, String phone, String cpf) {
-        this.id = id;
+    public Responsible(String name, String email, String phone, String cpf) {
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.cpf = cpf;
     }
+
 }
