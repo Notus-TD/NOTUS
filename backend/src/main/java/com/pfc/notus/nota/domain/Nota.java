@@ -22,6 +22,7 @@ public class Nota {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "boletim_id", nullable = false)
+    @Getter @Setter
     private Boletim boletim;
 
 

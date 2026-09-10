@@ -5,24 +5,36 @@ import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.dto.security.StudentInsertDTO;
 import com.pfc.notus.user.repository.StudentReposity;
-import com.pfc.notus.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StudentService {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
+
+    @Autowired
+    private ResponsibleService responsibleService;
 
     @Autowired
     private StudentReposity studentReposity;
 
-    public Student createStudent(StudentInsertDTO studentInsertDTO){
-        var student = new Student();
-        var responsible = new Responsible();
-        User user = new User();
+    @Transactional
+    public Student createStudent(StudentInsertDTO dto) {
+        User responsibleUser = userService.createUser(
+                dto.responsibleName(), dto.responsibleEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_RESPONSAVEL");
+        Responsible responsible = responsibleService.createReponsible(
+                responsibleUser, dto.responsibleName(), dto.responsibleEmail(), dto.responsibleCpf(), dto.responsiblePhoneNumber());
 
-        return null;
+        User studentUser = userService.createUser(
+                dto.fullName(), dto.educationalEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_ALUNO");
+
+        Student student = new Student();
+        student.setUser(studentUser);
+        student.setResponsible(responsible);
+
+        return studentReposity.save(student);
     }
 }

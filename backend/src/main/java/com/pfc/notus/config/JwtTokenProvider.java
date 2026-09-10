@@ -23,7 +23,7 @@ public class JwtTokenProvider {
 
     public String createToken(String username, Collection<? extends GrantedAuthority> roles) {
         algorithm = Algorithm.HMAC256(secret);
-        Date expiry = new Date(+ expiration);
+        Date expiry = new Date(System.currentTimeMillis() + expiration);
 
         return JWT.create()
                 .withSubject(username)

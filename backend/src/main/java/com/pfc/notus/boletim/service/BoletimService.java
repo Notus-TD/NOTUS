@@ -35,7 +35,7 @@ public class BoletimService {
 
     @Transactional
     public void delete(Long id) {
-        if (boletimRepository.existsById(id)) {
+        if (!boletimRepository.existsById(id)) {
             throw  new EntityNotFoundException("Boletim não encontrado com o id: " + id);
         }
         boletimRepository.deleteById(id);

@@ -8,9 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -24,10 +22,9 @@ public class BoletimController {
     public List<Boletim> getAllBoletim(){return boletimService.getAllBoletim();}
 
     @PostMapping
-    public ResponseEntity<BoletimDTO> create(@RequestBody @Valid BoletimDTO dto, UriComponentsBuilder uriBuilder) {
+    public ResponseEntity<BoletimDTO> create(@RequestBody @Valid BoletimDTO dto) {
         BoletimDTO created = boletimService.save(dto);
-        URI uri = uriBuilder.path("/boletim/{id}").buildAndExpand(created.id()).toUri();
-        return ResponseEntity.created(uri).body(created);
+        return ResponseEntity.ok(created);
     }
 
     @DeleteMapping("/{id}")

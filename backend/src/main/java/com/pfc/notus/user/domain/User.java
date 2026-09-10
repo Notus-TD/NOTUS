@@ -20,6 +20,7 @@ public class User implements UserDetails {
 
     @Id
     @Getter
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Getter @Setter
@@ -36,6 +37,9 @@ public class User implements UserDetails {
 
     @Getter @Setter
     private String address;
+
+    @Getter @Setter
+    private boolean firstLogin = true;
 
     @ManyToMany
     @JoinTable(name = "tb_user_role",
