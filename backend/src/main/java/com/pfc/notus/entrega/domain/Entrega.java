@@ -42,6 +42,8 @@ public class Entrega {
     @Getter @Setter
     private Student student;
 
+
+
     public Entrega(String content, LocalDateTime submittedAt, Float grade, StatusEntrega status) {
         this.content = content;
         this.submittedAt = submittedAt;

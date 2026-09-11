@@ -56,7 +56,6 @@ public class UserService implements UserDetailsService {
         user.setEmail(email);
         user.setPhone(phone);
         user.setAddress(address);
-        // Senha inicial = próprio e-mail; firstLogin já nasce true (ver User.java).
         user.setPassword(passwordEncoder.encode(email));
         user.addRole(role);
 

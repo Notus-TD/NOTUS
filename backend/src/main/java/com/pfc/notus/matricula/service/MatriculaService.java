@@ -2,8 +2,11 @@ package com.pfc.notus.matricula.service;
 
 
 import com.pfc.notus.matricula.domain.Matricula;
+import com.pfc.notus.matricula.domain.StatusMatricula;
 import com.pfc.notus.matricula.dto.MatriculaDTO;
 import com.pfc.notus.matricula.repository.MatriculaRepository;
+import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.repository.StudentReposity;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,17 +20,20 @@ public class MatriculaService {
     @Autowired
     private MatriculaRepository matriculaRepository;
 
+    @Autowired
+    private StudentReposity studentReposity;
+
     public List<Matricula> getAllMatricula(){return matriculaRepository.findAll();}
 
     @Transactional
     public MatriculaDTO save (MatriculaDTO dto){
-        Matricula entity = new Matricula();
-        entity.setPeriod(dto.period());
-        entity.setStatus(dto.status());
-        entity.setFinalAverage(dto.finalAverage());
+        Student student = studentReposity.findById(dto.userId())
+                .orElseThrow(() -> new EntityNotFoundException("Aluno não encontrado com o id: " + dto.userId()));
 
-        entity =  matriculaRepository.save(entity);
-        return new MatriculaDTO(entity.getId(), entity.getPeriod(), entity.getStatus(), entity.getFinalAverage());
+        Matricula entity = new Matricula(student, dto.period(), StatusMatricula.ATIVA);
+        entity = matriculaRepository.save(entity);
+
+        return new MatriculaDTO(entity.getId(), entity.getPeriod(), entity.getStatus(), student.getId());
     }
 
     @Transactional

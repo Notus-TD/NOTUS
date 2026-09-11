@@ -1,9 +1,11 @@
 package com.pfc.notus.user.service;
 
 import com.pfc.notus.user.domain.Responsible;
+import com.pfc.notus.user.domain.Role;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.dto.security.StudentInsertDTO;
+import com.pfc.notus.user.repository.RoleRepository;
 import com.pfc.notus.user.repository.StudentReposity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,8 +23,13 @@ public class StudentService {
     @Autowired
     private StudentReposity studentReposity;
 
+    @Autowired
+    private RoleRepository roleRepository;
+
+
     @Transactional
     public Student createStudent(StudentInsertDTO dto) {
+
         User responsibleUser = userService.createUser(
                 dto.responsibleName(), dto.responsibleEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_RESPONSAVEL");
         Responsible responsible = responsibleService.createReponsible(
@@ -31,9 +38,9 @@ public class StudentService {
         User studentUser = userService.createUser(
                 dto.fullName(), dto.educationalEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_ALUNO");
 
-        Student student = new Student();
-        student.setUser(studentUser);
-        student.setResponsible(responsible);
+        Student student = new Student(dto.Matricula(), studentUser, responsible);
+
+        studentReposity.save(student);
 
         return studentReposity.save(student);
     }

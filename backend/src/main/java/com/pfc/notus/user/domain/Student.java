@@ -1,15 +1,19 @@
 package com.pfc.notus.user.domain;
 
+import com.pfc.notus.matricula.domain.Matricula;
+import com.pfc.notus.turma.domain.Turma;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "tb_student")
 @NoArgsConstructor
-@AllArgsConstructor
 public class Student {
 
     @Id
@@ -27,4 +31,18 @@ public class Student {
     @Getter @Setter
     private Responsible responsible;
 
+    private String educationalEmail;
+
+    @OneToMany(mappedBy = "student")
+    @Getter @Setter
+    private List<Matricula> matriculas = new ArrayList<>();
+
+    @OneToOne
+    private Turma turma;
+
+    public Student(Long matricula, User user, Responsible responsible) {
+        this.id = matricula;
+        this.user = user;
+        this.responsible = responsible;
+    }
 }

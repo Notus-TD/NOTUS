@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -15,7 +16,6 @@ import java.util.Set;
 @Entity
 @Table(name = "tb_user")
 @NoArgsConstructor
-@AllArgsConstructor
 public class User implements UserDetails {
 
     @Id
@@ -33,13 +33,17 @@ public class User implements UserDetails {
     private String email;
 
     @Getter @Setter
+    private boolean firstLogin = true;
+
+    @Getter @Setter
     private String phone;
 
     @Getter @Setter
     private String address;
 
-    @Getter @Setter
-    private boolean firstLogin = true;
+    private LocalDate createdAt;
+
+    private String cpf;
 
     @ManyToMany
     @JoinTable(name = "tb_user_role",
@@ -47,6 +51,14 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
+    public User(String name, String email, String password, boolean firstLogin, LocalDate createdAt, String cpf) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.firstLogin = firstLogin;
+        this.createdAt = LocalDate.now();
+        this.cpf = cpf;
+    }
 
     public User(String username, String password) {
         this.email = username;
