@@ -38,3 +38,7 @@ INSERT INTO tb_boletim (period, final_average, status) VALUES ('1º Bimestre', 7
 -- 10. Notas (Vinculadas OBRIGATORIAMENTE à Entrega e ao Boletim)
 INSERT INTO tb_nota (period, rate,  boletim_id) VALUES ('1º Bimestre', 8.5, 1);
 INSERT INTO tb_nota (period, rate, boletim_id) VALUES ('1º Bimestre', 7.0, 2);
+
+-- 11. Faltas (aluno_id=1 é Ana Aluna, registrado_por_id=2 é Pedro Professor)
+INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id) VALUES ('2026-03-02', 1, '2026-03-02T08:10:00', 1, 1, 2);
+INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id) VALUES ('2026-03-09', 2, '2026-03-09T08:10:00', 1, 2, 2);
