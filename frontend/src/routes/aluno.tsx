@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { aluno, atividades, horarios, notasRecentes, presenca, media } from "@/data/notus";
+import { getFaltas, login, type FaltaDTO } from "@/lib/api";
 
 export const Route = createFileRoute("/aluno")({
   head: () => ({
@@ -33,11 +36,55 @@ const situacaoInfo = {
 function PainelAluno() {
   const mediaGeral = media(notasRecentes.map((n) => n.nota));
 
+  const [faltas, setFaltas] = useState<FaltaDTO[] | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function testarIntegracaoBackend() {
+    setCarregando(true);
+    setErro(null);
+    try {
+      await login("ana.aluna@gmail.com", "123456");
+      const dados = await getFaltas();
+      setFaltas(dados);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   return (
     <AppShell
       titulo={`Olá, ${aluno.nome.split(" ")[0]}!`}
       subtitulo={`${aluno.turma} · Aqui está o seu resumo da semana: o que entregar, suas notas, seus horários e sua presença.`}
     >
+      <Card className="border-2 border-dashed border-primary/40">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl">Teste de integração — backend NOTUS</CardTitle>
+          <CardDescription className="text-base">
+            Faz login como Ana Aluna e busca as faltas reais em{" "}
+            <code>GET http://localhost:8081/falta</code>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button onClick={testarIntegracaoBackend} disabled={carregando} className="min-h-11 text-base">
+            {carregando ? "Buscando..." : "Buscar faltas do backend"}
+          </Button>
+          {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
+          {faltas && (
+            <ul className="divide-y divide-border text-base">
+              {faltas.map((f) => (
+                <li key={f.id} className="py-2">
+                  Falta #{f.id} — disciplina {f.disciplinaId}, {f.quantidade}{" "}
+                  {f.quantidade === 1 ? "falta" : "faltas"} em {f.data}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
