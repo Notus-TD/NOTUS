@@ -20,7 +20,6 @@ public class User implements UserDetails {
 
     @Id
     @Getter
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Getter @Setter
@@ -51,11 +50,11 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
-    public User(String name, String email, String password, boolean firstLogin, LocalDate createdAt, String cpf) {
+    public User(String name, String email, String password, String cpf) {
         this.name = name;
         this.email = email;
         this.password = password;
-        this.firstLogin = firstLogin;
+        this.firstLogin = true;
         this.createdAt = LocalDate.now();
         this.cpf = cpf;
     }

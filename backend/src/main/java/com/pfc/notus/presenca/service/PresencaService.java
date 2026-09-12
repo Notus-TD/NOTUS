@@ -6,7 +6,7 @@ import com.pfc.notus.presenca.domain.Presenca;
 import com.pfc.notus.presenca.dto.PresencaDTO;
 import com.pfc.notus.presenca.repository.PresencaRepository;
 import com.pfc.notus.user.domain.Student;
-import com.pfc.notus.user.repository.StudentReposity;
+import com.pfc.notus.user.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ public class PresencaService {
     private DisiciplinaRepository disciplinaRepository;
 
     @Autowired
-    private StudentReposity studentRepository;
+    private StudentRepository studentRepository;
 
     public List<Presenca> getAllPresenca() {
         return presencaRepository.findAll();

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +32,15 @@ public class Student {
     @Getter @Setter
     private Responsible responsible;
 
+    @Column(unique = true)
+    @Getter @Setter
+    private Long matricula;
+
+    @Getter @Setter
     private String educationalEmail;
+
+    @Getter @Setter
+    private LocalDate birthDate;
 
     @OneToMany(mappedBy = "student")
     @Getter @Setter
@@ -40,9 +49,10 @@ public class Student {
     @OneToOne
     private Turma turma;
 
-    public Student(Long matricula, User user, Responsible responsible) {
-        this.id = matricula;
+    public Student(Long matricula, User user, String educationalEmail, LocalDate birthDate) {
+        this.matricula = matricula;
+        this.educationalEmail = educationalEmail;
+        this.birthDate = birthDate;
         this.user = user;
-        this.responsible = responsible;
     }
 }

@@ -4,9 +4,9 @@ INSERT INTO tb_role (authority) VALUES ('ROLE_PROFESSOR');
 INSERT INTO tb_role (authority) VALUES ('ROLE_RESPONSAVEL');
 
 -- 2. Usuários (senha para todos: 123456; first_login=FALSE pois já têm senha definida)
-INSERT INTO tb_user (id, name, email, password, phone, address, first_login) VALUES (1, 'Ana Aluna', 'ana.aluna@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', '11999990000', 'Rua A, 123', FALSE);
-INSERT INTO tb_user (id, name, email, password, phone, address, first_login) VALUES (2, 'Pedro Professor', 'pedro.professor@gmail.com', '$2a$10$HiGKZgV0susl4kodrIibkOlc.QPUmCK6D0o2.SqWLZa.Yg2vhOZwS', '11988880000', 'Rua B, 456', FALSE);
-INSERT INTO tb_user (id, name, email, password, phone, address, first_login) VALUES (3, 'Marta Responsável', 'marta.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', '11977770000', 'Rua C, 789', FALSE);
+INSERT INTO tb_user (name, email, password, phone, address, first_login) VALUES ('Ana Aluna', 'ana.aluna@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', '11999990000', 'Rua A, 123', FALSE);
+INSERT INTO tb_user (name, email, password, phone, address, first_login) VALUES ('Pedro Professor', 'pedro.professor@gmail.com', '$2a$10$HiGKZgV0susl4kodrIibkOlc.QPUmCK6D0o2.SqWLZa.Yg2vhOZwS', '11988880000', 'Rua B, 456', FALSE);
+INSERT INTO tb_user (name, email, password, phone, address, first_login) VALUES ('Marta Responsável', 'marta.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', '11977770000', 'Rua C, 789', FALSE);
 
 -- 3. Vínculo Usuário ↔ Role
 INSERT INTO tb_user_role (user_id, role_id) VALUES (1, 1);

@@ -1,12 +1,14 @@
 package com.pfc.notus.user.service;
 
+import com.pfc.notus.matricula.domain.Matricula;
+import com.pfc.notus.matricula.service.MatriculaService;
 import com.pfc.notus.user.domain.Responsible;
-import com.pfc.notus.user.domain.Role;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
-import com.pfc.notus.user.dto.security.StudentInsertDTO;
-import com.pfc.notus.user.repository.RoleRepository;
-import com.pfc.notus.user.repository.StudentReposity;
+import com.pfc.notus.user.dto.ResponsibleRequest;
+import com.pfc.notus.user.dto.StudentRegistrationResponse;
+import com.pfc.notus.user.dto.StudentRequest;
+import com.pfc.notus.user.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,27 +23,33 @@ public class StudentService {
     private ResponsibleService responsibleService;
 
     @Autowired
-    private StudentReposity studentReposity;
+    private StudentRepository studentReposity;
 
     @Autowired
-    private RoleRepository roleRepository;
-
+    private MatriculaService matriculaService;
 
     @Transactional
-    public Student createStudent(StudentInsertDTO dto) {
+    public StudentRegistrationResponse createStudent(ResponsibleRequest responsibleDto, StudentRequest studentDto) {
 
         User responsibleUser = userService.createUser(
-                dto.responsibleName(), dto.responsibleEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_RESPONSAVEL");
+                responsibleDto.name(), responsibleDto.email(), responsibleDto.cpf(),
+                responsibleDto.phone(), responsibleDto.address(), "ROLE_RESPONSAVEL");
+
         Responsible responsible = responsibleService.createReponsible(
-                responsibleUser, dto.responsibleName(), dto.responsibleEmail(), dto.responsibleCpf(), dto.responsiblePhoneNumber());
+                responsibleUser, responsibleDto.name(), responsibleDto.email(),
+                responsibleDto.cpf(), responsibleDto.phone());
 
         User studentUser = userService.createUser(
-                dto.fullName(), dto.educationalEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_ALUNO");
+                studentDto.fullName(), studentDto.educationalEmail(), studentDto.cpf(),
+                responsibleDto.phone(), responsibleDto.address(), "ROLE_ALUNO");
 
-        Student student = new Student(dto.Matricula(), studentUser, responsible);
+        Student student = new Student(
+                studentDto.matricula(), studentUser, studentDto.educationalEmail(), studentDto.birthDate());
+        student.setResponsible(responsible);
+        student = studentReposity.save(student);
 
-        studentReposity.save(student);
+        Matricula matricula = matriculaService.create(student);
 
-        return studentReposity.save(student);
+        return new StudentRegistrationResponse(studentUser.getId(), matricula.getStatus());
     }
 }
