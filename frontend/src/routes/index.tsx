@@ -1,8 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { PerfilSwitcher } from "@/components/PerfilSwitcher";
 import { CalendarDays, BellRing, ClipboardCheck, ShieldCheck, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: () => {
+    throw redirect({ to: "/login" });
+  },
   head: () => ({
     meta: [
       { title: "NOTUS · Portal de gestão escolar" },

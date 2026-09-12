@@ -70,6 +70,7 @@ function PainelProfessor() {
 
   return (
     <AppShell
+      role="ROLE_PROFESSOR"
       titulo="Diário de classe"
       subtitulo="Prof. Rafael Duarte · Registre a chamada, lance as notas e publique recados para suas turmas."
     >

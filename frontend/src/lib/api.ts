@@ -1,18 +1,33 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+import { getToken, saveSession, type Session } from "@/lib/auth";
+
+const API_URL = import.meta.env["VITE_API_URL"] ?? "http://localhost:8080";
 
 // ---------- Auth ----------
 
-let token: string | null = null;
+export type TokenDTO = {
+  email: string;
+  token: string;
+  createdAt: string;
+  expiresAt: string;
+};
 
-export async function login(email: string, password: string): Promise<void> {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error(`Login falhou: ${res.status}`);
-  const data = (await res.json()) as { token: string };
-  token = data.token;
+export async function login(email: string, password: string): Promise<Session> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+  }
+  if (res.status === 401 || res.status === 403) {
+    throw new ApiError(res.status, "E-mail ou senha incorretos.");
+  }
+  if (!res.ok) throw new ApiError(res.status, `Login falhou: ${res.status}`);
+  const data = (await res.json()) as TokenDTO;
+  return saveSession(data);
 }
 
 // ---------- Faltas ----------
@@ -28,6 +43,7 @@ export type FaltaDTO = {
 };
 
 export async function getFaltas(): Promise<FaltaDTO[]> {
+  const token = getToken();
   if (!token) throw new Error("É preciso fazer login antes de buscar as faltas.");
   const res = await fetch(`${API_URL}/falta`, {
     headers: { Authorization: `Bearer ${token}` },

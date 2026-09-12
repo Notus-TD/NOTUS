@@ -41,6 +41,7 @@ function PainelResponsavel() {
 
   return (
     <AppShell
+      role="ROLE_RESPONSAVEL"
       titulo={`Boa tarde, ${aluno.responsavel}`}
       subtitulo={`Acompanhamento de ${aluno.nome} — ${aluno.turma}. Avisos da escola, boletim, faltas e conversa com a equipe.`}
     >
