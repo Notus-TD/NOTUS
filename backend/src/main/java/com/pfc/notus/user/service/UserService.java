@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -43,7 +44,8 @@ public class UserService implements UserDetailsService {
         return user;
     }
 
-    public User createUser(String name, String email, String phone, String address, String roleAuthority) {
+    @Transactional
+    public User createUser(String name, String email, String cpf, String phone, String address, String roleAuthority) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new ConflictException("E-mail já cadastrado: " + email);
         }
@@ -51,12 +53,9 @@ public class UserService implements UserDetailsService {
         Role role = roleRepository.findByAuthority(roleAuthority)
                 .orElseThrow(() -> new ResourceNotFoundException("Role não encontrada: " + roleAuthority));
 
-        User user = new User();
-        user.setName(name);
-        user.setEmail(email);
+        User user = new User(name, email, passwordEncoder.encode(email), cpf);
         user.setPhone(phone);
         user.setAddress(address);
-        user.setPassword(passwordEncoder.encode(email));
         user.addRole(role);
 
         return userRepository.save(user);

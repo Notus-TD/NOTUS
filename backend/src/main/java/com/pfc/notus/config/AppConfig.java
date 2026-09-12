@@ -37,7 +37,7 @@ public class AppConfig {
                                 "/games/**",
                                 "/h2-console/**",
                                 "/turma/**",
-                                "/users/create",
+                                "/students",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-resources/**",

@@ -2,8 +2,8 @@ package com.pfc.notus.matricula.service;
 
 
 import com.pfc.notus.matricula.domain.Matricula;
-import com.pfc.notus.matricula.domain.StatusMatricula;
-import com.pfc.notus.matricula.dto.MatriculaDTO;
+import com.pfc.notus.matricula.dto.MatriculaRequestDTO;
+import com.pfc.notus.matricula.dto.MatriculaResponseDTO;
 import com.pfc.notus.matricula.repository.MatriculaRepository;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.StudentReposity;
@@ -26,14 +26,19 @@ public class MatriculaService {
     public List<Matricula> getAllMatricula(){return matriculaRepository.findAll();}
 
     @Transactional
-    public MatriculaDTO save (MatriculaDTO dto){
+    public MatriculaResponseDTO save (MatriculaRequestDTO dto){
         Student student = studentReposity.findById(dto.userId())
                 .orElseThrow(() -> new EntityNotFoundException("Aluno não encontrado com o id: " + dto.userId()));
 
-        Matricula entity = new Matricula(student, dto.period(), StatusMatricula.ATIVA);
-        entity = matriculaRepository.save(entity);
+        Matricula matricula = new Matricula(student);
+        matricula = matriculaRepository.save(matricula);
 
-        return new MatriculaDTO(entity.getId(), entity.getPeriod(), entity.getStatus(), student.getId());
+        return new MatriculaResponseDTO(matricula.getStatus(), student.getId());
+    }
+
+    @Transactional
+    public Matricula create(Student student) {
+        return matriculaRepository.save(new Matricula(student));
     }
 
     @Transactional

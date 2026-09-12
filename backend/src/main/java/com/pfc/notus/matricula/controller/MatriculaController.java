@@ -1,7 +1,6 @@
 package com.pfc.notus.matricula.controller;
 
 import com.pfc.notus.matricula.domain.Matricula;
-import com.pfc.notus.matricula.dto.MatriculaDTO;
 import com.pfc.notus.matricula.service.MatriculaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,12 +21,7 @@ public class MatriculaController {
     @GetMapping
     public List<Matricula> getAllMatricula(){return matriculaService.getAllMatricula();}
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
-    @PostMapping
-    public ResponseEntity<MatriculaDTO> create(@RequestBody @Valid MatriculaDTO dto){
-        MatriculaDTO created = matriculaService.save(dto);
-        return ResponseEntity.ok(created);
-    }
+
 
     @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
     @DeleteMapping("/{id}")

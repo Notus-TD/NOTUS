@@ -23,9 +23,6 @@ public class Matricula {
     @Getter @Setter
     private Student student;
 
-    @Getter @Setter
-    private String period;
-
     @Enumerated(EnumType.STRING)
     @Getter @Setter
     private StatusMatricula status;
@@ -33,10 +30,9 @@ public class Matricula {
     @Getter
     private LocalDate createdAt;
 
-    public Matricula(Student student, String period, StatusMatricula status) {
+    public Matricula(Student student) {
         this.student = student;
-        this.period = period;
-        this.status = status;
+        this.status = StatusMatricula.ATIVA;
         this.createdAt = LocalDate.now();
     }
 }
