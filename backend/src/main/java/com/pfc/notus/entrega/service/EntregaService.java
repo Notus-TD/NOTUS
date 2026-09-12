@@ -6,7 +6,7 @@ import com.pfc.notus.entrega.domain.Entrega;
 import com.pfc.notus.entrega.dto.EntregaDTO;
 import com.pfc.notus.entrega.repository.EntregaRepository;
 import com.pfc.notus.user.domain.Student;
-import com.pfc.notus.user.repository.StudentReposity;
+import com.pfc.notus.user.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ public class EntregaService {
     private AtividadeRepository atividadeRepository;
 
     @Autowired
-    private StudentReposity studentRepository;
+    private StudentRepository studentRepository;
 
     public List<Entrega> getAllEntrega() {
         return entregaRepository.findAll();

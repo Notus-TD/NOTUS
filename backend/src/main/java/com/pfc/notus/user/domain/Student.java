@@ -32,6 +32,10 @@ public class Student {
     @Getter @Setter
     private Responsible responsible;
 
+    @Column(unique = true)
+    @Getter @Setter
+    private Long matricula;
+
     @Getter @Setter
     private String educationalEmail;
 
@@ -46,7 +50,7 @@ public class Student {
     private Turma turma;
 
     public Student(Long matricula, User user, String educationalEmail, LocalDate birthDate) {
-        this.id = matricula;
+        this.matricula = matricula;
         this.educationalEmail = educationalEmail;
         this.birthDate = birthDate;
         this.user = user;

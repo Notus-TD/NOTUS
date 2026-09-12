@@ -8,7 +8,7 @@ import com.pfc.notus.falta.dto.FaltaDTO;
 import com.pfc.notus.falta.repository.FaltaRepository;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
-import com.pfc.notus.user.repository.StudentReposity;
+import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,7 @@ public class FaltaService {
     private FaltaRepository faltaRepository;
 
     @Autowired
-    private StudentReposity studentRepository;
+    private StudentRepository studentRepository;
 
     @Autowired
     private DisiciplinaRepository disciplinaRepository;

@@ -20,7 +20,6 @@ public class User implements UserDetails {
 
     @Id
     @Getter
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Getter @Setter

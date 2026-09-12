@@ -6,7 +6,7 @@ import com.pfc.notus.matricula.dto.MatriculaRequestDTO;
 import com.pfc.notus.matricula.dto.MatriculaResponseDTO;
 import com.pfc.notus.matricula.repository.MatriculaRepository;
 import com.pfc.notus.user.domain.Student;
-import com.pfc.notus.user.repository.StudentReposity;
+import com.pfc.notus.user.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,13 +21,13 @@ public class MatriculaService {
     private MatriculaRepository matriculaRepository;
 
     @Autowired
-    private StudentReposity studentReposity;
+    private StudentRepository studentRepository;
 
     public List<Matricula> getAllMatricula(){return matriculaRepository.findAll();}
 
     @Transactional
     public MatriculaResponseDTO save (MatriculaRequestDTO dto){
-        Student student = studentReposity.findById(dto.userId())
+        Student student = studentRepository.findById(dto.userId())
                 .orElseThrow(() -> new EntityNotFoundException("Aluno não encontrado com o id: " + dto.userId()));
 
         Matricula matricula = new Matricula(student);

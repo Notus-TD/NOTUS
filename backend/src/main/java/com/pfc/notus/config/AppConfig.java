@@ -42,7 +42,8 @@ public class AppConfig {
                                 "/swagger-ui/**",
                                 "/swagger-resources/**",
                                 "/swagger-ui.html",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/students/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
