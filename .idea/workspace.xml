@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="dc750fac-4d2d-4051-b5fc-4a3232f9d985" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitattributes" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mvnw" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mvnw.cmd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Atividade/controller/AtividadeController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Atividade/domain/Atividade.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Atividade/dto/AtividadeDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Atividade/repository/AtividadeRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Atividade/service/AtividadeService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Boletim/controller/BoletimController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Boletim/domain/Boletim.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Boletim/dto/BoletimDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Boletim/repository/BoletimRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Boletim/service/BoletimService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Disciplina/controller/DisciplinaController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Disciplina/domain/Disciplina.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Disciplina/dto/DisciplinaDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Disciplina/repository/DisiciplinaRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Disciplina/service/DisciplinaService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Entrega/controller/EntreController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Entrega/domain/Entrega.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Entrega/dto/EntregaDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Entrega/repository/EntregaRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Entrega/service/EntregaService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Matricula/controller/MatriculaController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Matricula/domain/Matricula.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Matricula/dto/MatriculaDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Matricula/repository/MatriculaRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Matricula/service/MatriculaService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Nota/controller/NotaController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Nota/domain/Nota.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Nota/dto/NotaDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Nota/repository/NotaRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Nota/service/NotaService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/NotusApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Turma/controller/TurmaController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Turma/domain/Turma.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Turma/dto/TurmaDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Turma/repository/TurmaRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/Turma/service/TurmaService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/controller/AuthController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/domain/Responsible.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/domain/Role.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/domain/Student.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/domain/User.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/dto/security/AccountCredentialsDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/dto/security/StudentInsertDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/dto/security/TokenDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/projection/UserDetailsProjection.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/repository/RoleRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/repository/StudentReposity.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/repository/UserRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/service/AuthService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/service/StudentService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/User/service/UserService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/config/AppConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/config/JwtFilter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/pfc/notus/config/JwtTokenProvider.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/import.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/pfc/notus/NotusApplicationTests.java" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CodeInsightWorkspaceSettings">
+    <option name="optimizeImportsOnTheFly" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="package-info" />
+        <option value="Record" />
+        <option value="Interface" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3IIXBztF8rZ0Dvr69WcpP11IABQ" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "Spring Boot.NotusApplication.executor": "Run",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/kkowa/Downloads/notus/notus/src/main/java/com/pfc/notus",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "editor.preferences.import"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\kkowa\Downloads\notus\notus\src\main\java\com\pfc\notus" />
+      <recent name="C:\Users\kkowa\Downloads\notus\notus\src\main\java\com\pfc\notus\User" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.27258.48" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.27258.48" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="dc750fac-4d2d-4051-b5fc-4a3232f9d985" name="Changes" comment="" />
+      <created>1787452924357</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1787452924357</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

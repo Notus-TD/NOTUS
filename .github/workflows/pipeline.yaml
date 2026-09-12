@@ -1,0 +1,35 @@
+name: Build and Publish
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+
+      - name: Configura jdk
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          architecture: x64
+          cache: maven
+
+      - name: Empacotar artifact com Maven
+        working-directory: ./backend
+        run: mvn package -DskipTests
+
+
+      - name: Upload do artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notus-api-artifact
+          path: ./application/target
+
