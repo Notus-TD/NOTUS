@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PerfilSwitcher } from "@/components/PerfilSwitcher";
-import { CalendarDays, BellRing, ClipboardCheck, ShieldCheck } from "lucide-react";
+import { CalendarDays, BellRing, ClipboardCheck, ShieldCheck, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -61,6 +61,13 @@ function Index() {
         <section className="mt-10">
           <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Escolha uma visão</h2>
           <PerfilSwitcher />
+          <Link
+            to="/cadastro"
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-border bg-card px-4 text-base font-semibold text-foreground transition-colors hover:border-primary hover:bg-accent"
+          >
+            <UserPlus className="size-5" aria-hidden="true" />
+            Secretaria · Cadastrar aluno
+          </Link>
         </section>
 
         <section className="mt-14 grid gap-4 sm:grid-cols-2">
