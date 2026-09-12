@@ -22,13 +22,13 @@ public class FaltaController {
         return faltaService.getAllFaltas();
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_PROFESSOR')")
     @GetMapping("/student/{studentId}")
     public List<FaltaDTO> getByStudent(@PathVariable Long studentId) {
         return faltaService.getByStudent(studentId);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_PROFESSOR')")
     @PostMapping("/associar")
     public ResponseEntity<FaltaDTO> associar(@RequestBody @Valid FaltaDTO dto) {
         FaltaDTO created = faltaService.associarFalta(dto);
