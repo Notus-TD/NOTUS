@@ -2,6 +2,7 @@ package com.pfc.notus.falta.service;
 
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.falta.domain.FaltaDomain;
 import com.pfc.notus.falta.dto.FaltaDTO;
 import com.pfc.notus.falta.repository.FaltaRepository;
@@ -9,7 +10,6 @@ import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.StudentReposity;
 import com.pfc.notus.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,11 +43,11 @@ public class FaltaService {
     @Transactional
     public FaltaDTO associarFalta(FaltaDTO dto) {
         Student aluno = studentRepository.findById(dto.studentId())
-                .orElseThrow(() -> new EntityNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
-                .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
         User registradoPor = userRepository.findById(dto.registradoPorId())
-                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com o id: " + dto.registradoPorId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com o id: " + dto.registradoPorId()));
 
         FaltaDomain entity = new FaltaDomain(dto.quantidade(), dto.data(), LocalDateTime.now(), aluno, registradoPor, disciplina);
 
@@ -58,7 +58,7 @@ public class FaltaService {
     @Transactional
     public void delete(Long id) {
         if (!faltaRepository.existsById(id)) {
-            throw new EntityNotFoundException("Falta não encontrada com o id: " + id);
+            throw new ResourceNotFoundException("Falta não encontrada com o id: " + id);
         }
         faltaRepository.deleteById(id);
     }
