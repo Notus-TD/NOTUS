@@ -1,13 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { alunosPorTurma, recadosPublicados, turmas } from "@/data/notus";
+import {
+  ApiError,
+  associarFalta,
+  deleteFalta,
+  getDisciplinas,
+  getFaltas,
+  getStudents,
+  registrarAula,
+  type DisciplinaDTO,
+  type FaltaDTO,
+  type StudentMinDTO,
+} from "@/lib/api";
 
 export const Route = createFileRoute("/professor")({
   head: () => ({
@@ -31,21 +46,98 @@ function PainelProfessor() {
   const [turma, setTurma] = useState<string>(turmas[0] ?? "");
   const listaAlunos: string[] = alunosPorTurma[turma] ?? [];
 
-  const [presentes, setPresentes] = useState<Record<string, boolean>>({});
   const [notas, setNotas] = useState<Record<string, string>>({});
   const [recados, setRecados] = useState(recadosPublicados);
   const [titulo, setTitulo] = useState("");
   const [corpo, setCorpo] = useState("");
 
   const chaveTurma = (nome: string) => `${turma}::${nome}`;
-  const totalPresentes = useMemo(
-    () => listaAlunos.filter((n) => presentes[chaveTurma(n)] !== false).length,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [listaAlunos, presentes, turma],
-  );
 
-  function salvarChamada() {
-    toast.success(`Chamada do ${turma} salva: ${totalPresentes} presentes, ${listaAlunos.length - totalPresentes} faltas.`);
+  const [alunosReais, setAlunosReais] = useState<StudentMinDTO[] | null>(null);
+  const [disciplinas, setDisciplinas] = useState<DisciplinaDTO[] | null>(null);
+  const [disciplinaId, setDisciplinaId] = useState<number | null>(null);
+  const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
+  const [faltosos, setFaltosos] = useState<Record<number, boolean>>({});
+  const [salvandoChamada, setSalvandoChamada] = useState(false);
+  const [faltasDaDisciplina, setFaltasDaDisciplina] = useState<FaltaDTO[] | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    Promise.all([getStudents(), getDisciplinas()])
+      .then(([alunos, discs]) => {
+        if (!ativo) return;
+        setAlunosReais(alunos.filter((a) => a.matriculaStatus === "ATIVA"));
+        setDisciplinas(discs);
+        setDisciplinaId((atual) => atual ?? discs[0]?.id ?? null);
+      })
+      .catch((e) => ativo && setErroCarregamento(e instanceof ApiError ? e.message : "Erro ao carregar alunos e disciplinas."));
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  async function recarregarFaltasDaDisciplina(discId: number) {
+    try {
+      const todas = await getFaltas();
+      setFaltasDaDisciplina(todas.filter((f) => f.disciplinaId === discId));
+    } catch {
+      setFaltasDaDisciplina(null);
+    }
+  }
+
+  useEffect(() => {
+    if (disciplinaId != null) void recarregarFaltasDaDisciplina(disciplinaId);
+  }, [disciplinaId]);
+
+  const nomeDoAluno = (id: number) => alunosReais?.find((a) => a.userId === id)?.studentName ?? `Aluno ${id}`;
+
+  async function salvarChamadaReal() {
+    if (!disciplinaId) {
+      toast.error("Selecione uma disciplina.");
+      return;
+    }
+
+    setSalvandoChamada(true);
+    const hoje = new Date().toISOString().slice(0, 10);
+
+    try {
+      await registrarAula(disciplinaId, hoje);
+    } catch (e) {
+      setSalvandoChamada(false);
+      toast.error(e instanceof ApiError ? e.message : "Erro ao registrar a aula do dia.");
+      return;
+    }
+
+    const idsFaltantes = Object.entries(faltosos)
+      .filter(([, faltou]) => faltou)
+      .map(([id]) => Number(id));
+
+    let sucesso = 0;
+    let primeiroErro: string | null = null;
+    for (const studentId of idsFaltantes) {
+      try {
+        await associarFalta({ data: hoje, quantidade: 1, studentId, disciplinaId });
+        sucesso++;
+      } catch (e) {
+        primeiroErro ??= e instanceof ApiError ? e.message : "Erro desconhecido.";
+      }
+    }
+    setSalvandoChamada(false);
+    setFaltosos({});
+    if (idsFaltantes.length === 0) toast.success("Aula registrada — todos presentes.");
+    else if (sucesso) toast.success(`Aula registrada. ${sucesso} falta(s) lançada(s).`);
+    if (primeiroErro) toast.error(`Falha ao registrar algumas faltas: ${primeiroErro}`);
+    void recarregarFaltasDaDisciplina(disciplinaId);
+  }
+
+  async function excluirFalta(id: number) {
+    try {
+      await deleteFalta(id);
+      toast.success("Falta removida.");
+      if (disciplinaId != null) void recarregarFaltasDaDisciplina(disciplinaId);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao remover a falta.");
+    }
   }
 
   function salvarNotas() {
@@ -101,49 +193,114 @@ function PainelProfessor() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="chamada" className="mt-6">
+        <TabsContent value="chamada" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Presença de hoje — {turma}</CardTitle>
+              <CardTitle className="text-xl">Registrar faltas (backend real)</CardTitle>
               <CardDescription className="text-base">
-                Todos começam como presentes. Marque apenas quem faltou. {totalPresentes} de{" "}
-                {listaAlunos.length} presentes.
+                Lista de alunos ativos e disciplinas vindas do servidor. Marcar "Faltou" e salvar cria a falta de
+                verdade via <code>POST /falta/associar</code>.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <ul className="divide-y divide-border">
-                {listaAlunos.map((nome) => {
-                  const presente = presentes[chaveTurma(nome)] !== false;
-                  return (
-                    <li key={nome} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                      <span className="text-lg text-foreground">{nome}</span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant={presente ? "default" : "outline"}
-                          className="min-h-11 min-w-28 text-base"
-                          aria-pressed={presente}
-                          onClick={() => setPresentes({ ...presentes, [chaveTurma(nome)]: true })}
-                        >
-                          Presente
-                        </Button>
-                        <Button
-                          variant={presente ? "outline" : "destructive"}
-                          className="min-h-11 min-w-28 text-base"
-                          aria-pressed={!presente}
-                          onClick={() => setPresentes({ ...presentes, [chaveTurma(nome)]: false })}
-                        >
-                          Faltou
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              <Button onClick={salvarChamada} className="min-h-12 px-6 text-lg">
-                Salvar chamada
-              </Button>
+            <CardContent className="space-y-4">
+              {erroCarregamento && <p className="text-base font-semibold text-destructive">{erroCarregamento}</p>}
+
+              {!erroCarregamento && (alunosReais === null || disciplinas === null) && (
+                <p className="text-base text-muted-foreground">Carregando alunos e disciplinas…</p>
+              )}
+
+              {alunosReais && disciplinas && (
+                <>
+                  <div className="max-w-xs space-y-2">
+                    <label className="block text-lg font-semibold text-foreground">Disciplina</label>
+                    <Select
+                      value={disciplinaId ? String(disciplinaId) : undefined}
+                      onValueChange={(v) => setDisciplinaId(Number(v))}
+                    >
+                      <SelectTrigger className="h-12 text-lg">
+                        <SelectValue placeholder="Selecione a disciplina" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {disciplinas.map((d) => (
+                          <SelectItem key={d.id} value={String(d.id)}>
+                            {d.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <ul className="divide-y divide-border">
+                    {alunosReais.map((a) => {
+                      const faltou = faltosos[a.userId] === true;
+                      return (
+                        <li key={a.userId} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                          <span className="text-lg text-foreground">
+                            {a.studentName} <span className="text-base text-muted-foreground">· matr. {a.matricula}</span>
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              variant={!faltou ? "default" : "outline"}
+                              className="min-h-11 min-w-28 text-base"
+                              aria-pressed={!faltou}
+                              onClick={() => setFaltosos({ ...faltosos, [a.userId]: false })}
+                            >
+                              Presente
+                            </Button>
+                            <Button
+                              variant={faltou ? "destructive" : "outline"}
+                              className="min-h-11 min-w-28 text-base"
+                              aria-pressed={faltou}
+                              onClick={() => setFaltosos({ ...faltosos, [a.userId]: true })}
+                            >
+                              Faltou
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <Button onClick={salvarChamadaReal} disabled={salvandoChamada} className="min-h-12 px-6 text-lg">
+                    {salvandoChamada ? "Salvando..." : "Salvar chamada no backend"}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
+
+          {faltasDaDisciplina && faltasDaDisciplina.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Faltas já registradas nesta disciplina</CardTitle>
+                <CardDescription className="text-base">
+                  {faltasDaDisciplina.length} registro(s). Pode excluir uma falta lançada por engano.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y divide-border">
+                  {faltasDaDisciplina.map((f) => (
+                    <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                      <span className="text-lg text-foreground">
+                        {nomeDoAluno(f.studentId)}{" "}
+                        <Badge className="ml-2 bg-secondary text-sm font-semibold text-secondary-foreground">
+                          {f.data} · {f.quantidade} {f.quantidade === 1 ? "falta" : "faltas"}
+                        </Badge>
+                      </span>
+                      <Button
+                        variant="outline"
+                        className="min-h-10 text-base text-destructive hover:text-destructive"
+                        onClick={() => excluirFalta(f.id)}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                        Excluir
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="notas" className="mt-6">

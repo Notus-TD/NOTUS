@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { aluno, avisos, boletim, conversas, presenca, media } from "@/data/notus";
+import { aluno, avisos, boletim, conversas, media } from "@/data/notus";
+import { ApiError, getMinhaFrequencia, type FrequenciaDTO } from "@/lib/api";
 
 export const Route = createFileRoute("/responsavel")({
   head: () => ({
@@ -31,6 +32,26 @@ function PainelResponsavel() {
   const [lidos, setLidos] = useState<string[]>([]);
   const [mensagens, setMensagens] = useState(conversas);
   const [texto, setTexto] = useState("");
+
+  const [frequencia, setFrequencia] = useState<FrequenciaDTO[] | null>(null);
+  const [carregandoFrequencia, setCarregandoFrequencia] = useState(false);
+  const [erroFrequencia, setErroFrequencia] = useState<string | null>(null);
+
+  async function buscarFrequencia() {
+    setCarregandoFrequencia(true);
+    setErroFrequencia(null);
+    try {
+      setFrequencia(await getMinhaFrequencia());
+    } catch (e) {
+      setErroFrequencia(e instanceof ApiError ? e.message : "Erro ao carregar as faltas.");
+    } finally {
+      setCarregandoFrequencia(false);
+    }
+  }
+
+  useEffect(() => {
+    void buscarFrequencia();
+  }, []);
 
   function enviar() {
     if (!texto.trim()) return;
@@ -150,17 +171,29 @@ function PainelResponsavel() {
       </section>
 
       <section>
-        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Controle de faltas</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-2xl font-bold text-foreground">Controle de faltas</h2>
+          <Button onClick={buscarFrequencia} disabled={carregandoFrequencia} variant="outline" className="min-h-11 text-base">
+            {carregandoFrequencia ? "Atualizando..." : "Atualizar"}
+          </Button>
+        </div>
+        {erroFrequencia && <p className="text-base font-semibold text-destructive">{erroFrequencia}</p>}
+        {!erroFrequencia && frequencia === null && <p className="text-base text-muted-foreground">Carregando…</p>}
+        {frequencia && frequencia.length === 0 && (
+          <p className="text-base text-muted-foreground">
+            Nenhuma aula registrada ainda pelo professor — as faltas aparecem aqui assim que a chamada começar.
+          </p>
+        )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {presenca.map((p) => {
-            const limite = Math.floor(p.aulas * 0.25);
-            const alerta = p.faltas >= limite;
+          {frequencia?.map((f) => {
+            const limite = Math.floor(f.totalAulas * 0.25);
+            const alerta = f.totalFaltas >= limite && limite > 0;
             return (
-              <Card key={p.disciplina} className={alerta ? "border-2 border-warning" : undefined}>
+              <Card key={`${f.studentId}-${f.disciplinaId}`} className={alerta ? "border-2 border-warning" : undefined}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xl">{p.disciplina}</CardTitle>
+                  <CardTitle className="text-xl">{f.disciplinaTitle}</CardTitle>
                   <CardDescription className="text-base">
-                    {p.faltas} de {p.aulas} aulas perdidas
+                    {f.totalFaltas} de {f.totalAulas} aulas perdidas · {Math.round(f.percentualPresenca)}% de presença
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="text-base">
