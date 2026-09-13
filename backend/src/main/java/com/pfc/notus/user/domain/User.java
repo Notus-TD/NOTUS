@@ -1,7 +1,6 @@
 package com.pfc.notus.user.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,18 +12,16 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+
 @Entity
 @Table(name = "tb_user")
+@Inheritance(strategy = InheritanceType.JOINED)
 @NoArgsConstructor
 public class User implements UserDetails {
 
     @Id
-    @Getter
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Getter @Setter
-    private String name;
+    private Long id;
 
     @Getter @Setter
     private String password;
@@ -35,15 +32,8 @@ public class User implements UserDetails {
     @Getter @Setter
     private boolean firstLogin = true;
 
-    @Getter @Setter
-    private String phone;
-
-    @Getter @Setter
-    private String address;
-
+    @Getter
     private LocalDate createdAt;
-
-    private String cpf;
 
     @ManyToMany
     @JoinTable(name = "tb_user_role",
@@ -51,20 +41,16 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
-    public User(String name, String email, String password, String cpf) {
-        this.name = name;
+    public User(String email) {
         this.email = email;
-        this.password = password;
         this.firstLogin = true;
         this.createdAt = LocalDate.now();
-        this.cpf = cpf;
     }
 
     public User(String username, String password) {
         this.email = username;
         this.password = password;
     }
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

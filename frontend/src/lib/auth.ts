@@ -1,4 +1,4 @@
-export type Role = "ROLE_ALUNO" | "ROLE_RESPONSAVEL" | "ROLE_PROFESSOR";
+export type Role = "ROLE_ALUNO" | "ROLE_RESPONSAVEL" | "ROLE_PROFESSOR" | "ROLE_ADMIN";
 
 export type Session = {
   email: string;
@@ -25,7 +25,6 @@ export function saveSession(data: { email: string; token: string; expiresAt: str
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
   } catch {
-    /* localStorage indisponível (SSR ou navegador bloqueado) */
   }
   return session;
 }
@@ -58,7 +57,8 @@ export function getToken(): string | null {
   return getSession()?.token ?? null;
 }
 
-export function homeForRoles(roles: Role[]): "/aluno" | "/responsavel" | "/professor" {
+export function homeForRoles(roles: Role[]): "/admin" | "/aluno" | "/responsavel" | "/professor" {
+  if (roles.includes("ROLE_ADMIN")) return "/admin";
   if (roles.includes("ROLE_PROFESSOR")) return "/professor";
   if (roles.includes("ROLE_RESPONSAVEL")) return "/responsavel";
   return "/aluno";

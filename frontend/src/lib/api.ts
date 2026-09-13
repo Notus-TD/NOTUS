@@ -2,8 +2,6 @@ import { getToken, saveSession, type Session } from "@/lib/auth";
 
 const API_URL = import.meta.env["VITE_API_URL"] ?? "http://localhost:8080";
 
-// ---------- Auth ----------
-
 export type TokenDTO = {
   email: string;
   token: string;
@@ -30,8 +28,6 @@ export async function login(email: string, password: string): Promise<Session> {
   return saveSession(data);
 }
 
-// ---------- Faltas ----------
-
 export type FaltaDTO = {
   id: number;
   data: string;
@@ -52,8 +48,6 @@ export async function getFaltas(): Promise<FaltaDTO[]> {
   return res.json();
 }
 
-// ---------- Cadastro de aluno ----------
-
 export type ResponsibleRequest = {
   name: string;
   email: string;
@@ -65,9 +59,8 @@ export type ResponsibleRequest = {
 export type StudentRequest = {
   fullName: string;
   educationalEmail: string;
-  cpf: string;
-  birthDate: string;
   matricula: number;
+  birthDate: string;
 };
 
 export type StudentRegistrationRequest = {
@@ -77,7 +70,7 @@ export type StudentRegistrationRequest = {
 
 export type StudentRegistrationResponse = {
   userId: number;
-  matriculaStatus: "ATIVA" | "INATIVA" | "TRANCADA" | "CANCELADA";
+  studentName: string;
 };
 
 type StandardError = {
@@ -100,11 +93,15 @@ export class ApiError extends Error {
 export async function cadastrarAluno(
   body: StudentRegistrationRequest,
 ): Promise<StudentRegistrationResponse> {
+  const token = getToken();
   let res: Response;
   try {
     res = await fetch(`${API_URL}/students`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(body),
     });
   } catch {
@@ -118,3 +115,31 @@ export async function cadastrarAluno(
 
   return res.json();
 }
+
+async function getJson<T>(path: string): Promise<T> {
+  const token = getToken();
+  if (!token) throw new ApiError(401, "Faça login para continuar.");
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+  }
+  if (res.status === 401 || res.status === 403) throw new ApiError(res.status, `Sem permissão para ${path}.`);
+  if (!res.ok) throw new ApiError(res.status, `Falha em GET ${path}: ${res.status}`);
+  return res.json();
+}
+
+export type StatusMatricula = "ATIVA" | "FINALIZADA";
+
+export type StudentMinDTO = { userId: number; matricula: number; studentName: string; matriculaStatus: StatusMatricula };
+export type TurmaDTO = { id: number; name: string; schoolYear: string; disciplinas?: { id: number; title: string }[] };
+export type DisciplinaDTO = { id: number; title: string; description?: string };
+export type AtividadeDTO = { id: number; title: string; content?: string; status: string };
+export type BoletimDTO = { id: number; period: string; finalAverage: number; status: string };
+
+export const getStudents = () => getJson<StudentMinDTO[]>("/students");
+export const getTurmas = () => getJson<TurmaDTO[]>("/turma");
+export const getDisciplinas = () => getJson<DisciplinaDTO[]>("/disciplina");
+export const getAtividades = () => getJson<AtividadeDTO[]>("/atividade");
+export const getBoletins = () => getJson<BoletimDTO[]>("/boletim");

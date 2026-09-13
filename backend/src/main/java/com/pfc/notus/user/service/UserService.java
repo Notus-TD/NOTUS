@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -43,21 +44,30 @@ public class UserService implements UserDetailsService {
 
         return user;
     }
-
     @Transactional
-    public User createUser(String name, String email, String cpf, String phone, String address, String roleAuthority) {
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new ConflictException("E-mail já cadastrado: " + email);
+    public User register(User user, String roleAuthority) {
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new ConflictException("E-mail já cadastrado: " + user.getEmail());
         }
 
         Role role = roleRepository.findByAuthority(roleAuthority)
                 .orElseThrow(() -> new ResourceNotFoundException("Role não encontrada: " + roleAuthority));
 
-        User user = new User(name, email, passwordEncoder.encode(email), cpf);
-        user.setPhone(phone);
-        user.setAddress(address);
+        user.setId(gerarProximoId());
+        user.setEmail(user.getEmail());
+        user.setPassword(passwordEncoder.encode(user.getEmail()));
         user.addRole(role);
 
         return userRepository.save(user);
+    }
+
+    private Long gerarProximoId() {
+        long base = LocalDate.now().getYear() * 1_000_000L;
+        Long ultimo = userRepository.buscarUltimoId();
+
+        if (ultimo == null || ultimo < base) {
+            return base + 1;
+        }
+        return ultimo + 1;
     }
 }

@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { GraduationCap, Users, ClipboardCheck, LogOut } from "lucide-react";
+import { GraduationCap, Users, ClipboardCheck, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { clearSession, getSession, homeForRoles, type Role, type Session } from "@/lib/auth";
 
@@ -8,6 +8,7 @@ const perfil: Record<Role, { label: string; icon: typeof GraduationCap }> = {
   ROLE_ALUNO: { label: "Aluno", icon: GraduationCap },
   ROLE_RESPONSAVEL: { label: "Pai / Responsável", icon: Users },
   ROLE_PROFESSOR: { label: "Professor", icon: ClipboardCheck },
+  ROLE_ADMIN: { label: "Administrador", icon: ShieldCheck },
 };
 
 export function AppShell({

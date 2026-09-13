@@ -11,39 +11,29 @@ import java.util.List;
 @Entity
 @Table(name = "tb_responsible")
 @NoArgsConstructor
-public class Responsible {
-
-    @Id
-    @Getter
-    private Long id;
-
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "id")
-    @Getter @Setter
-    private User user;
-
-    @OneToMany(mappedBy = "responsible")
-    @Getter @Setter
-    private List<Student> students = new ArrayList<>();
+public class Responsible extends User {
 
     @Getter @Setter
     private String name;
 
     @Getter @Setter
-    private String email;
+    private String cpf;
 
     @Getter @Setter
     private String phone;
 
     @Getter @Setter
-    private String cpf;
+    private String address;
 
-    public Responsible(String name, String email, String phone, String cpf) {
+    @OneToMany(mappedBy = "responsible")
+    @Getter @Setter
+    private List<Student> students = new ArrayList<>();
+
+    public Responsible(String name, String email, String cpf, String phone, String address) {
+        super(email);
         this.name = name;
-        this.email = email;
-        this.phone = phone;
         this.cpf = cpf;
+        this.phone = phone;
+        this.address = address;
     }
-
 }

@@ -10,8 +10,7 @@ import java.time.LocalDate;
 public record StudentRequest(
         @NotBlank String fullName,
         @NotBlank @Email String educationalEmail,
-        @NotBlank String cpf,
-        @NotNull @Past LocalDate birthDate,
-        @NotNull Long matricula
+        @NotNull Long matricula,
+        @NotNull @Past LocalDate birthDate
 ) {
 }
