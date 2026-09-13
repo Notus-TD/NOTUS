@@ -28,7 +28,7 @@ public class StudentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
     @GetMapping
     public ResponseEntity<List<StudentMinDTO>> findAll() {
         return ResponseEntity.ok(studentService.listStudents());
