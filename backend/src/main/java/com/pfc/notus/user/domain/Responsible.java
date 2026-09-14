@@ -1,5 +1,6 @@
 package com.pfc.notus.user.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,7 +27,8 @@ public class Responsible extends User {
     private String address;
 
     @OneToMany(mappedBy = "responsible")
-    @Setter
+    @JsonIgnore
+    @Getter @Setter
     private List<Student> students = new ArrayList<>();
 
     public Responsible(String name, String email, String cpf, String phone, String address) {

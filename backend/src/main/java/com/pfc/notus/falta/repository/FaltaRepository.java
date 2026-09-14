@@ -11,5 +11,7 @@ public interface FaltaRepository extends JpaRepository<FaltaDomain, Long> {
 
     List<FaltaDomain> findByAlunoId(Long alunoId);
 
+    List<FaltaDomain> findByAlunoIdIn(List<Long> alunoIds);
+
     List<FaltaDomain> findByDisciplinaId(Long disciplinaId);
 }

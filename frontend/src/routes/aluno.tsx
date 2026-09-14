@@ -15,13 +15,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { aluno, atividades, horarios, presenca, media } from "@/data/notus";
+import { aluno, atividades, horarios, media } from "@/data/notus";
 import {
+  ApiError,
   getBoletinsByStudent,
-  getFaltas,
+  getMeuPerfil,
+  getMinhaFrequencia,
+  getMinhasFaltas,
   getNotasByBoletim,
   type Boletim,
   type FaltaDTO,
+  type FrequenciaDTO,
   type Nota,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
@@ -127,6 +131,17 @@ function diaDeHoje() {
 function PainelAluno() {
   const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("hoje");
+  const [primeiroNome, setPrimeiroNome] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    getMeuPerfil()
+      .then((perfil) => ativo && setPrimeiroNome(perfil.nome?.split(" ")[0] ?? null))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const atrasadas = atividades.filter((a) => a.situacao === "atrasada");
 
@@ -155,7 +170,7 @@ function PainelAluno() {
   return (
     <AppShell
       role="ROLE_ALUNO"
-      titulo={`Olá, ${aluno.nome.split(" ")[0]}!`}
+      titulo={`Olá, ${primeiroNome ?? "..."}!`}
       subtitulo={`${aluno.turma} · Use a busca ao lado para encontrar o que precisa.`}
     >
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -466,25 +481,68 @@ function BoletimDoAluno({ boletim }: { boletim: Boletim }) {
 }
 
 function Presenca() {
-  const geral = Math.round(
-    (1 - presenca.reduce((s, p) => s + p.faltas, 0) / presenca.reduce((s, p) => s + p.aulas, 0)) *
-      100,
-  );
+  const [frequencia, setFrequencia] = useState<FrequenciaDTO[] | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function buscar() {
+    setCarregando(true);
+    setErro(null);
+    try {
+      setFrequencia(await getMinhaFrequencia());
+    } catch (e) {
+      setErro(e instanceof ApiError ? e.message : "Erro ao carregar a frequência.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  useEffect(() => {
+    void buscar();
+  }, []);
+
+  const geral = frequencia?.length
+    ? Math.round(frequencia.reduce((s, f) => s + f.percentualPresenca, 0) / frequencia.length)
+    : null;
+
   return (
     <Secao
       titulo="Presença por disciplina"
-      descricao={`Presença geral: ${geral}% · mínimo exigido 75%`}
+      descricao={
+        geral !== null
+          ? `Presença geral: ${geral}% · mínimo exigido 75%`
+          : "Calculada a partir das aulas e faltas registradas pelo professor."
+      }
     >
       <Card>
         <CardContent className="space-y-5 p-6">
-          {presenca.map((p) => {
-            const pct = Math.round((1 - p.faltas / p.aulas) * 100);
+          <Button
+            onClick={buscar}
+            disabled={carregando}
+            variant="outline"
+            className="min-h-11 text-base"
+          >
+            {carregando ? "Atualizando..." : "Atualizar"}
+          </Button>
+          {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
+          {!erro && frequencia === null && (
+            <p className="text-base text-muted-foreground">Carregando…</p>
+          )}
+          {frequencia && frequencia.length === 0 && (
+            <p className="text-base text-muted-foreground">
+              Nenhuma aula registrada ainda pelo professor — a presença aparece aqui assim que a
+              chamada começar.
+            </p>
+          )}
+          {frequencia?.map((f) => {
+            const pct = Math.round(f.percentualPresenca);
             return (
-              <div key={p.disciplina}>
+              <div key={f.disciplinaId}>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-lg font-semibold text-foreground">{p.disciplina}</span>
+                  <span className="text-lg font-semibold text-foreground">{f.disciplinaTitle}</span>
                   <span className="text-base text-muted-foreground">
-                    {p.faltas} {p.faltas === 1 ? "falta" : "faltas"} · {pct}%
+                    {f.totalFaltas} {f.totalFaltas === 1 ? "falta" : "faltas"} de {f.totalAulas}{" "}
+                    {f.totalAulas === 1 ? "aula" : "aulas"} · {pct}%
                   </span>
                 </div>
                 <Progress value={pct} className="mt-2 h-3" />
@@ -553,23 +611,32 @@ function FaltasBackend() {
     setCarregando(true);
     setErro(null);
     try {
-      setFaltas(await getFaltas());
+      setFaltas(await getMinhasFaltas());
     } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
+      setErro(e instanceof ApiError ? e.message : "Erro ao buscar as faltas.");
     } finally {
       setCarregando(false);
     }
   }
 
+  useEffect(() => {
+    void buscar();
+  }, []);
+
   return (
     <Secao
       titulo="Faltas registradas"
-      descricao="Registros oficiais vindos do backend (GET /falta) com o seu login."
+      descricao="Suas faltas lançadas pelo professor, vindas do backend (GET /falta/me)."
     >
       <Card>
         <CardContent className="space-y-4 p-6">
-          <Button onClick={buscar} disabled={carregando} className="min-h-11 text-base">
-            {carregando ? "Buscando..." : "Buscar faltas"}
+          <Button
+            onClick={buscar}
+            disabled={carregando}
+            variant="outline"
+            className="min-h-11 text-base"
+          >
+            {carregando ? "Atualizando..." : "Atualizar"}
           </Button>
           {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
           {faltas && faltas.length === 0 && (

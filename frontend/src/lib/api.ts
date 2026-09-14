@@ -40,12 +40,66 @@ export type FaltaDTO = {
 
 export async function getFaltas(): Promise<FaltaDTO[]> {
   const token = getToken();
-  if (!token) throw new Error("É preciso fazer login antes de buscar as faltas.");
-  const res = await fetch(`${API_URL}/falta`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`Falha ao buscar faltas: ${res.status}`);
+  if (!token) throw new ApiError(401, "É preciso fazer login antes de buscar as faltas.");
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/falta`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+  }
+  if (res.status === 401 || res.status === 403)
+    throw new ApiError(res.status, "Sem permissão para ver as faltas.");
+  if (!res.ok) throw new ApiError(res.status, `Falha ao buscar faltas: ${res.status}`);
   return res.json();
+}
+
+export type FaltaCreateRequest = {
+  data: string;
+  quantidade: number;
+  studentId: number;
+  disciplinaId: number;
+};
+
+export async function associarFalta(body: FaltaCreateRequest): Promise<FaltaDTO> {
+  const token = getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/falta/associar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+  }
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as StandardError | null;
+    throw new ApiError(
+      res.status,
+      err?.message ?? `Erro ${res.status} ao registrar a falta.`,
+      err?.errors ?? [],
+    );
+  }
+  return res.json();
+}
+
+export async function deleteFalta(id: number): Promise<void> {
+  const token = getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/falta/${id}`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+  }
+  if (!res.ok) throw new ApiError(res.status, `Falha ao excluir a falta: ${res.status}`);
 }
 
 export type ResponsibleRequest = {
@@ -213,6 +267,16 @@ export type Nota = {
   disciplina: { id: number; title: string };
 };
 
+export type FrequenciaDTO = {
+  studentId: number;
+  studentName: string;
+  disciplinaId: number;
+  disciplinaTitle: string;
+  totalAulas: number;
+  totalFaltas: number;
+  percentualPresenca: number;
+};
+
 export const getStudents = () => getJson<StudentMinDTO[]>("/students");
 export const getStudentsByResponsible = (responsibleId: number) =>
   getJson<StudentMinDTO[]>(`/students/responsible/${responsibleId}`);
@@ -232,3 +296,21 @@ export const createNota = (dto: Omit<NotaDTO, "id">) => sendJson<NotaDTO>("POST"
 export const updateNota = (id: number, dto: Omit<NotaDTO, "id">) =>
   sendJson<NotaDTO>("PUT", `/nota/${id}`, dto);
 export const deleteNota = (id: number) => sendJson<void>("DELETE", `/nota/${id}`);
+
+export type DependenteDTO = { id: number; nome: string };
+export type MeuPerfilDTO = {
+  email: string;
+  roles: string[];
+  nome: string | null;
+  dependentes: DependenteDTO[];
+};
+
+export const getMeuPerfil = () => getJson<MeuPerfilDTO>("/auth/me");
+
+export const getMinhasFaltas = () => getJson<FaltaDTO[]>("/falta/me");
+export const getMinhaFrequencia = () => getJson<FrequenciaDTO[]>("/falta/me/frequencia");
+export const getFaltasByStudent = (studentId: number) =>
+  getJson<FaltaDTO[]>(`/falta/student/${studentId}`);
+
+export const registrarAula = (disciplinaId: number, data: string) =>
+  sendJson<void>("POST", `/disciplina/${disciplinaId}/aulas`, { data });
