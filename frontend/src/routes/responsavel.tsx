@@ -6,7 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { aluno, avisos, boletim, conversas, presenca, media } from "@/data/notus";
+import { aluno, avisos, conversas, presenca, media } from "@/data/notus";
+import {
+  getBoletinsByStudent,
+  getNotasByBoletim,
+  getStudentsByResponsible,
+  type Boletim,
+  type Nota,
+  type StudentMinDTO,
+} from "@/lib/api";
+import { getSession } from "@/lib/auth";
+import { useCarga, MensagemErro } from "@/hooks/use-carga";
 
 export const Route = createFileRoute("/responsavel")({
   head: () => ({
@@ -20,7 +30,8 @@ export const Route = createFileRoute("/responsavel")({
       { property: "og:title", content: "Painel do Responsável · NOTUS" },
       {
         property: "og:description",
-        content: "Acompanhe notas, faltas e comunicados da escola em letras grandes e linguagem clara.",
+        content:
+          "Acompanhe notas, faltas e comunicados da escola em letras grandes e linguagem clara.",
       },
     ],
   }),
@@ -46,7 +57,9 @@ function PainelResponsavel() {
       subtitulo={`Acompanhamento de ${aluno.nome} — ${aluno.turma}. Avisos da escola, boletim, faltas e conversa com a equipe.`}
     >
       <section>
-        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Avisos e notificações</h2>
+        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">
+          Avisos e notificações
+        </h2>
         <div className="grid gap-4">
           {avisos.map((a) => {
             const naoLido = a.naoLido && !lidos.includes(a.titulo);
@@ -87,66 +100,7 @@ function PainelResponsavel() {
 
       <section>
         <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Boletim completo</h2>
-        <Card>
-          <CardContent className="overflow-x-auto p-0">
-            <table className="w-full min-w-[640px] border-collapse text-left">
-              <caption className="sr-only">Notas por bimestre, média e situação</caption>
-              <thead>
-                <tr className="border-b border-border bg-secondary text-base font-semibold text-secondary-foreground">
-                  <th scope="col" className="px-5 py-4">
-                    Disciplina
-                  </th>
-                  <th scope="col" className="px-5 py-4">
-                    1º bim.
-                  </th>
-                  <th scope="col" className="px-5 py-4">
-                    2º bim.
-                  </th>
-                  <th scope="col" className="px-5 py-4">
-                    3º bim.
-                  </th>
-                  <th scope="col" className="px-5 py-4">
-                    Média
-                  </th>
-                  <th scope="col" className="px-5 py-4">
-                    Situação
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {boletim.map((b) => {
-                  const m = media([b.b1, b.b2, b.b3]);
-                  const aprovado = m >= 7;
-                  const recuperacao = m >= 6 && m < 7;
-                  return (
-                    <tr key={b.disciplina} className="border-b border-border text-lg last:border-0">
-                      <th scope="row" className="px-5 py-4 font-semibold text-foreground">
-                        {b.disciplina}
-                      </th>
-                      <td className="px-5 py-4 text-foreground">{b.b1.toFixed(1)}</td>
-                      <td className="px-5 py-4 text-foreground">{b.b2.toFixed(1)}</td>
-                      <td className="px-5 py-4 text-foreground">{b.b3.toFixed(1)}</td>
-                      <td className="px-5 py-4 font-display font-bold text-foreground">{m.toFixed(1)}</td>
-                      <td className="px-5 py-4">
-                        <Badge
-                          className={`px-3 py-1 text-sm font-semibold ${
-                            aprovado
-                              ? "bg-success text-success-foreground"
-                              : recuperacao
-                                ? "bg-warning text-warning-foreground"
-                                : "bg-destructive text-destructive-foreground"
-                          }`}
-                        >
-                          {aprovado ? "Em dia" : recuperacao ? "Atenção" : "Recuperação"}
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+        <BoletimCompleto />
       </section>
 
       <section>
@@ -181,9 +135,7 @@ function PainelResponsavel() {
       </section>
 
       <section>
-        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">
-          Falar com a escola
-        </h2>
+        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Falar com a escola</h2>
         <Card>
           <CardContent className="space-y-5 p-6">
             <ul className="space-y-4">
@@ -191,7 +143,9 @@ function PainelResponsavel() {
                 <li
                   key={i}
                   className={`max-w-2xl rounded-2xl p-4 ${
-                    m.meu ? "ml-auto bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                    m.meu
+                      ? "ml-auto bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
                   }`}
                 >
                   <p className="text-base font-semibold">
@@ -222,5 +176,140 @@ function PainelResponsavel() {
         </Card>
       </section>
     </AppShell>
+  );
+}
+
+function BoletimCompleto() {
+  const responsibleId = getSession()?.userId;
+  const [versao, setVersao] = useState(0);
+  const filhos = useCarga(
+    () => (responsibleId ? getStudentsByResponsible(responsibleId) : Promise.resolve([])),
+    versao,
+  );
+
+  return (
+    <div className="space-y-4">
+      <Button
+        variant="outline"
+        className="min-h-10 text-base"
+        onClick={() => setVersao((v) => v + 1)}
+        disabled={filhos.estado === "carregando"}
+      >
+        Atualizar
+      </Button>
+
+      {filhos.estado === "carregando" && (
+        <p className="text-base text-muted-foreground">Carregando…</p>
+      )}
+      {filhos.estado === "erro" && <MensagemErro carga={filhos} />}
+      {filhos.estado === "ok" && filhos.dados.length === 0 && (
+        <Card>
+          <CardContent className="p-6 text-base text-muted-foreground">
+            Nenhum aluno vinculado a esta conta.
+          </CardContent>
+        </Card>
+      )}
+      {filhos.estado === "ok" &&
+        filhos.dados.map((filho) => <BoletinsDoFilho key={filho.userId} filho={filho} />)}
+    </div>
+  );
+}
+
+function BoletinsDoFilho({ filho }: { filho: StudentMinDTO }) {
+  const boletins = useCarga(() => getBoletinsByStudent(filho.userId), 0);
+
+  return (
+    <div className="space-y-3">
+      <h3 className="font-display text-xl font-bold text-foreground">
+        {filho.studentName} · Matrícula nº {filho.matricula}
+      </h3>
+      {boletins.estado === "carregando" && (
+        <p className="text-base text-muted-foreground">Carregando…</p>
+      )}
+      {boletins.estado === "erro" && <MensagemErro carga={boletins} />}
+      {boletins.estado === "ok" && boletins.dados.length === 0 && (
+        <Card>
+          <CardContent className="p-6 text-base text-muted-foreground">
+            Nenhum boletim lançado ainda.
+          </CardContent>
+        </Card>
+      )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {boletins.estado === "ok" &&
+          boletins.dados.map((b) => <BoletimCard key={b.id} boletim={b} />)}
+      </div>
+    </div>
+  );
+}
+
+function BoletimCard({ boletim }: { boletim: Boletim }) {
+  const notas = useCarga(() => getNotasByBoletim(boletim.id), 0);
+
+  const grupos =
+    notas.estado === "ok"
+      ? Object.values(
+          notas.dados.reduce<Record<number, { disciplina: Nota["disciplina"]; notas: Nota[] }>>(
+            (acc, n) => {
+              const grupo = (acc[n.disciplina.id] ??= { disciplina: n.disciplina, notas: [] });
+              grupo.notas.push(n);
+              return acc;
+            },
+            {},
+          ),
+        )
+      : [];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-xl">{boletim.period}</CardTitle>
+        <CardDescription className="text-base">
+          Média final: {boletim.finalAverage.toFixed(1)} · {boletim.status}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {notas.estado === "carregando" && (
+          <p className="text-base text-muted-foreground">Carregando…</p>
+        )}
+        {notas.estado === "erro" && <MensagemErro carga={notas} />}
+        {notas.estado === "ok" && grupos.length === 0 && (
+          <p className="text-base text-muted-foreground">Nenhuma nota lançada neste boletim.</p>
+        )}
+        {grupos.map((grupo) => {
+          const m = media(grupo.notas.map((n) => n.rate));
+          const aprovado = m >= 7;
+          const recuperacao = m >= 6 && m < 7;
+          return (
+            <div
+              key={grupo.disciplina.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
+            >
+              <div>
+                <p className="text-lg font-semibold text-foreground">{grupo.disciplina.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {grupo.notas.map((n) => n.rate.toFixed(1)).join(" · ")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-display text-xl font-bold text-foreground">
+                  {m.toFixed(1)}
+                </span>
+                <Badge
+                  className={`px-3 py-1 text-sm font-semibold ${
+                    aprovado
+                      ? "bg-success text-success-foreground"
+                      : recuperacao
+                        ? "bg-warning text-warning-foreground"
+                        : "bg-destructive text-destructive-foreground"
+                  }`}
+                >
+                  {aprovado ? "Em dia" : recuperacao ? "Atenção" : "Recuperação"}
+                </Badge>
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

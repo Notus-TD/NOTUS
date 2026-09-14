@@ -83,7 +83,11 @@ export class ApiError extends Error {
   status: number;
   fieldErrors: { fieldName: string; message: string }[];
 
-  constructor(status: number, message: string, fieldErrors: { fieldName: string; message: string }[] = []) {
+  constructor(
+    status: number,
+    message: string,
+    fieldErrors: { fieldName: string; message: string }[] = [],
+  ) {
     super(message);
     this.status = status;
     this.fieldErrors = fieldErrors;
@@ -125,21 +129,106 @@ async function getJson<T>(path: string): Promise<T> {
   } catch {
     throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
   }
-  if (res.status === 401 || res.status === 403) throw new ApiError(res.status, `Sem permissão para ${path}.`);
+  if (res.status === 401 || res.status === 403)
+    throw new ApiError(res.status, `Sem permissão para ${path}.`);
   if (!res.ok) throw new ApiError(res.status, `Falha em GET ${path}: ${res.status}`);
+  return res.json();
+}
+
+async function sendJson<T>(
+  method: "POST" | "PUT" | "DELETE",
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const token = getToken();
+  if (!token) throw new ApiError(401, "Faça login para continuar.");
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: body !== undefined ? JSON.stringify(body) : null,
+    });
+  } catch {
+    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+  }
+  if (res.status === 401 || res.status === 403)
+    throw new ApiError(res.status, `Sem permissão para ${path}.`);
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as StandardError | null;
+    throw new ApiError(
+      res.status,
+      err?.message ?? `Falha em ${method} ${path}: ${res.status}`,
+      err?.errors ?? [],
+    );
+  }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
 export type StatusMatricula = "ATIVA" | "FINALIZADA";
 
-export type StudentMinDTO = { userId: number; matricula: number; studentName: string; matriculaStatus: StatusMatricula };
-export type TurmaDTO = { id: number; name: string; schoolYear: string; disciplinas?: { id: number; title: string }[] };
+export type StudentMinDTO = {
+  userId: number;
+  matricula: number;
+  studentName: string;
+  matriculaStatus: StatusMatricula;
+};
+export type TurmaDTO = {
+  id: number;
+  name: string;
+  schoolYear: string;
+  disciplinas?: { id: number; title: string }[];
+};
 export type DisciplinaDTO = { id: number; title: string; description?: string };
 export type AtividadeDTO = { id: number; title: string; content?: string; status: string };
-export type BoletimDTO = { id: number; period: string; finalAverage: number; status: string };
+
+export type BoletimDTO = {
+  id: number;
+  period: string;
+  finalAverage: number;
+  status: string;
+  studentId: number;
+};
+export type Boletim = {
+  id: number;
+  period: string;
+  finalAverage: number;
+  status: string;
+  student: { id: number; fullName?: string };
+};
+
+export type NotaDTO = {
+  id: number;
+  rate: number;
+  period: string;
+  boletimId: number;
+  disciplinaId: number;
+};
+export type Nota = {
+  id: number;
+  rate: number;
+  period: string;
+  boletim: { id: number; period: string; finalAverage: number; status: string };
+  disciplina: { id: number; title: string };
+};
 
 export const getStudents = () => getJson<StudentMinDTO[]>("/students");
+export const getStudentsByResponsible = (responsibleId: number) =>
+  getJson<StudentMinDTO[]>(`/students/responsible/${responsibleId}`);
 export const getTurmas = () => getJson<TurmaDTO[]>("/turma");
 export const getDisciplinas = () => getJson<DisciplinaDTO[]>("/disciplina");
 export const getAtividades = () => getJson<AtividadeDTO[]>("/atividade");
 export const getBoletins = () => getJson<BoletimDTO[]>("/boletim");
+export const getBoletinsByStudent = (studentId: number) =>
+  getJson<Boletim[]>(`/boletim/student/${studentId}`);
+export const createBoletim = (dto: Omit<BoletimDTO, "id">) =>
+  sendJson<BoletimDTO>("POST", "/boletim", dto);
+export const deleteBoletim = (id: number) => sendJson<void>("DELETE", `/boletim/${id}`);
+
+export const getNotasByBoletim = (boletimId: number) =>
+  getJson<Nota[]>(`/nota/boletim/${boletimId}`);
+export const createNota = (dto: Omit<NotaDTO, "id">) => sendJson<NotaDTO>("POST", "/nota", dto);
+export const updateNota = (id: number, dto: Omit<NotaDTO, "id">) =>
+  sendJson<NotaDTO>("PUT", `/nota/${id}`, dto);
+export const deleteNota = (id: number) => sendJson<void>("DELETE", `/nota/${id}`);

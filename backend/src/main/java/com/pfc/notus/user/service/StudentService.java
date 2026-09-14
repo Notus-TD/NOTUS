@@ -49,4 +49,11 @@ public class StudentService {
                 .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public List<StudentMinDTO> listStudentsByResponsible(Long responsibleId) {
+        return studentRepository.findByResponsibleId(responsibleId).stream()
+                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .toList();
+    }
 }

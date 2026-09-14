@@ -4,27 +4,32 @@ export type Session = {
   email: string;
   token: string;
   roles: Role[];
+  userId: number | null;
   expiresAt: string;
 };
 
 const STORAGE_KEY = "notus.session";
 
-function decodeRoles(token: string): Role[] {
+function decodeClaims(token: string): { roles: Role[]; userId: number | null } {
   try {
     const payload = token.split(".")[1] ?? "";
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const claims = JSON.parse(json) as { roles?: string[] };
-    return (claims.roles ?? []).filter((r): r is Role => r.startsWith("ROLE_"));
+    const claims = JSON.parse(json) as { roles?: string[]; id?: number };
+    return {
+      roles: (claims.roles ?? []).filter((r): r is Role => r.startsWith("ROLE_")),
+      userId: claims.id ?? null,
+    };
   } catch {
-    return [];
+    return { roles: [], userId: null };
   }
 }
 
 export function saveSession(data: { email: string; token: string; expiresAt: string }): Session {
-  const session: Session = { ...data, roles: decodeRoles(data.token) };
+  const session: Session = { ...data, ...decodeClaims(data.token) };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
   } catch {
+    /* ignore */
   }
   return session;
 }

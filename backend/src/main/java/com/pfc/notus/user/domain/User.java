@@ -1,5 +1,6 @@
 package com.pfc.notus.user.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +24,7 @@ public class User implements UserDetails {
     @Getter @Setter
     private Long id;
 
+    @JsonIgnore
     @Getter @Setter
     private String password;
 

@@ -1,6 +1,7 @@
 package com.pfc.notus.boletim.domain;
 
 import com.pfc.notus.nota.domain.Nota;
+import com.pfc.notus.user.domain.Student;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,6 +25,11 @@ public class Boletim {
     private Float finalAverage;
     @Getter @Setter
     private String status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_id", nullable = false)
+    @Getter @Setter
+    private Student student;
 
     @OneToMany(mappedBy = "boletim", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Nota> notas = new ArrayList<>();

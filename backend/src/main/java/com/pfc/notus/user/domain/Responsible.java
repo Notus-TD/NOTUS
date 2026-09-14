@@ -26,7 +26,7 @@ public class Responsible extends User {
     private String address;
 
     @OneToMany(mappedBy = "responsible")
-    @Getter @Setter
+    @Setter
     private List<Student> students = new ArrayList<>();
 
     public Responsible(String name, String email, String cpf, String phone, String address) {
