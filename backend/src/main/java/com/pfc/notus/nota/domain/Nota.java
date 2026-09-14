@@ -1,6 +1,7 @@
 package com.pfc.notus.nota.domain;
 
 import com.pfc.notus.boletim.domain.Boletim;
+import com.pfc.notus.disciplina.domain.Disciplina;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,6 +25,11 @@ public class Nota {
     @JoinColumn(name = "boletim_id", nullable = false)
     @Getter @Setter
     private Boletim boletim;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "disciplina_id", nullable = false)
+    @Getter @Setter
+    private Disciplina disciplina;
 
 
     public Nota(Float rate, String period) {

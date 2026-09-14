@@ -28,9 +28,15 @@ public class StudentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_PROFESSOR')")
     @GetMapping
     public ResponseEntity<List<StudentMinDTO>> findAll() {
         return ResponseEntity.ok(studentService.listStudents());
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/responsible/{responsibleId}")
+    public ResponseEntity<List<StudentMinDTO>> findByResponsible(@PathVariable Long responsibleId) {
+        return ResponseEntity.ok(studentService.listStudentsByResponsible(responsibleId));
     }
 }
