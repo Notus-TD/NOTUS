@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: postgres-dev
+    restart: always
+    environment:
+      POSTGRES_DB: notusdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234567
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./.data/postgresql/data:/var/lib/postgresqldev/data
+    networks:
+      - naws-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: dev-pgadmin
+    restart: always
+    environment:
+      TZ: America/Sao_Paulo
+      PGADMIN_DEFAULT_EMAIL: me@example.com
+      PGADMIN_DEFAULT_PASSWORD: 1234567
+    ports:
+      - "5050:80"
+    volumes:
+      - ./.data/pgadmin:/var/lib/pgadmin
+    depends_on:
+      - db
+    networks:
+      - naws-net
+
+networks:
+  naws-net:
+    driver: bridge
