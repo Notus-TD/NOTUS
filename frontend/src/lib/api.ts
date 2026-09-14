@@ -226,6 +226,11 @@ export const getDisciplinas = () => getJson<DisciplinaDTO[]>("/disciplina");
 export const getAtividades = () => getJson<AtividadeDTO[]>("/atividade");
 export const getBoletins = () => getJson<BoletimDTO[]>("/boletim");
 
+export type DependenteDTO = { id: number; nome: string };
+export type MeuPerfilDTO = { email: string; roles: string[]; nome: string | null; dependentes: DependenteDTO[] };
+
+export const getMeuPerfil = () => getJson<MeuPerfilDTO>("/auth/me");
+
 export const getMinhasFaltas = () => getJson<FaltaDTO[]>("/falta/me");
 export const getMinhaFrequencia = () => getJson<FrequenciaDTO[]>("/falta/me/frequencia");
 export const getFaltasByStudent = (studentId: number) => getJson<FaltaDTO[]>(`/falta/student/${studentId}`);

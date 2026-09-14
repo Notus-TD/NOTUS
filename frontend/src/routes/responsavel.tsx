@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { aluno, avisos, boletim, conversas, media } from "@/data/notus";
-import { ApiError, getMinhaFrequencia, type FrequenciaDTO } from "@/lib/api";
+import { ApiError, getMeuPerfil, getMinhaFrequencia, type FrequenciaDTO, type MeuPerfilDTO } from "@/lib/api";
 
 export const Route = createFileRoute("/responsavel")({
   head: () => ({
@@ -32,6 +32,18 @@ function PainelResponsavel() {
   const [lidos, setLidos] = useState<string[]>([]);
   const [mensagens, setMensagens] = useState(conversas);
   const [texto, setTexto] = useState("");
+
+  const [perfil, setPerfil] = useState<MeuPerfilDTO | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    getMeuPerfil()
+      .then((p) => ativo && setPerfil(p))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const [frequencia, setFrequencia] = useState<FrequenciaDTO[] | null>(null);
   const [carregandoFrequencia, setCarregandoFrequencia] = useState(false);
@@ -63,8 +75,8 @@ function PainelResponsavel() {
   return (
     <AppShell
       role="ROLE_RESPONSAVEL"
-      titulo={`Boa tarde, ${aluno.responsavel}`}
-      subtitulo={`Acompanhamento de ${aluno.nome} — ${aluno.turma}. Avisos da escola, boletim, faltas e conversa com a equipe.`}
+      titulo={`Boa tarde, ${perfil?.nome ?? "..."}`}
+      subtitulo={`Acompanhamento de ${perfil?.dependentes[0]?.nome ?? "..."} — ${aluno.turma}. Avisos da escola, boletim, faltas e conversa com a equipe.`}
     >
       <section>
         <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Avisos e notificações</h2>

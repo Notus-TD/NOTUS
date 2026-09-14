@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { aluno, atividades, horarios, notasRecentes, media } from "@/data/notus";
-import { ApiError, getMinhaFrequencia, getMinhasFaltas, type FaltaDTO, type FrequenciaDTO } from "@/lib/api";
+import { getMeuPerfil, ApiError, getMinhaFrequencia, getMinhasFaltas, type FaltaDTO, type FrequenciaDTO } from "@/lib/api";
 
 export const Route = createFileRoute("/aluno")({
   head: () => ({
@@ -68,6 +68,17 @@ function diaDeHoje() {
 function PainelAluno() {
   const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("hoje");
+  const [primeiroNome, setPrimeiroNome] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    getMeuPerfil()
+      .then((perfil) => ativo && setPrimeiroNome(perfil.nome?.split(" ")[0] ?? null))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const atrasadas = atividades.filter((a) => a.situacao === "atrasada");
 
@@ -94,7 +105,7 @@ function PainelAluno() {
   return (
     <AppShell
       role="ROLE_ALUNO"
-      titulo={`Olá, ${aluno.nome.split(" ")[0]}!`}
+      titulo={`Olá, ${primeiroNome ?? "..."}!`}
       subtitulo={`${aluno.turma} · Use a busca ao lado para encontrar o que precisa.`}
     >
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
