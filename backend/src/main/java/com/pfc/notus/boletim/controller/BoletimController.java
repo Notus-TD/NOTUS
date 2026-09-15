@@ -27,14 +27,14 @@ public class BoletimController {
         return boletimService.getByStudent(studentId);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESSOR','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
     public ResponseEntity<BoletimDTO> create(@RequestBody @Valid BoletimDTO dto) {
         BoletimDTO created = boletimService.save(dto);
         return ResponseEntity.ok(created);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESSOR','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){
         boletimService.delete(id);

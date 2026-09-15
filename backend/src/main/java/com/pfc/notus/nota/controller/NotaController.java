@@ -26,21 +26,21 @@ public class NotaController {
         return notaService.getByBoletim(boletimId);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESSOR','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
     public ResponseEntity<NotaDTO> create(@RequestBody @Valid NotaDTO dto) {
         NotaDTO created = notaService.save(dto);
         return ResponseEntity.ok(created);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESSOR','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<NotaDTO> update(@PathVariable Long id, @RequestBody @Valid NotaDTO dto) {
         NotaDTO updated = notaService.update(id, dto);
         return ResponseEntity.ok(updated);
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_PROFESSOR','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){
         notaService.delete(id);
