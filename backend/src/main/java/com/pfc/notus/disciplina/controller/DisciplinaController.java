@@ -24,19 +24,21 @@ public class DisciplinaController {
         return disciplinaService.getAllDisciplina();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping
     public ResponseEntity<DisciplinaDTO> create(@RequestBody @Valid DisciplinaDTO dto){
         DisciplinaDTO created = disciplinaService.save(dto);
         return ResponseEntity.ok(created);
     }
 
-    @DeleteMapping
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @DeleteMapping ("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){
         disciplinaService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('PROFESSOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','PROFESSOR')")
     @PostMapping("/{id}/aulas")
     public ResponseEntity<Void> registrarAula(@PathVariable Long id, @RequestBody @Valid AulaRequestDTO req) {
         disciplinaService.registrarAula(id, req.data());

@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,12 +19,13 @@ public class NotaController {
     @Autowired
     private NotaService notaService;
 
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @GetMapping
     public List<Nota> getAllNota(){return notaService.getAllNota();}
 
     @GetMapping("/boletim/{boletimId}")
-    public List<Nota> getByBoletim(@PathVariable Long boletimId) {
-        return notaService.getByBoletim(boletimId);
+    public List<Nota> getByBoletim(@PathVariable Long boletimId, Authentication authentication) {
+        return notaService.getByBoletim(boletimId, authentication.getName());
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")

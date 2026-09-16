@@ -3,9 +3,11 @@ package com.pfc.notus.presenca.controller;
 import com.pfc.notus.presenca.domain.Presenca;
 import com.pfc.notus.presenca.dto.PresencaDTO;
 import com.pfc.notus.presenca.service.PresencaService;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,13 +19,17 @@ public class PresencaController {
     @Autowired
     private PresencaService presencaService;
 
+    @Autowired
+    private StudentAccessGuardService studentAccessGuardService;
+
     @GetMapping
     public List<Presenca> getAllPresenca() {
         return presencaService.getAllPresenca();
     }
 
     @GetMapping("/student/{studentId}")
-    public List<Presenca> getByStudent(@PathVariable Long studentId) {
+    public List<Presenca> getByStudent(@PathVariable Long studentId, Authentication authentication) {
+        studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return presencaService.getByStudent(studentId);
     }
 

@@ -4,10 +4,12 @@ package com.pfc.notus.boletim.controller;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
 import com.pfc.notus.boletim.service.BoletimService;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,11 +21,16 @@ public class BoletimController {
     @Autowired
     private BoletimService boletimService;
 
+    @Autowired
+    private StudentAccessGuardService studentAccessGuardService;
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @GetMapping
     public List<Boletim> getAllBoletim(){return boletimService.getAllBoletim();}
 
     @GetMapping("/student/{studentId}")
-    public List<Boletim> getByStudent(@PathVariable Long studentId) {
+    public List<Boletim> getByStudent(@PathVariable Long studentId, Authentication authentication) {
+        studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return boletimService.getByStudent(studentId);
     }
 

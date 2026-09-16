@@ -7,6 +7,7 @@ import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.repository.NotaRepository;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +28,15 @@ public class NotaService {
     @Autowired
     private DisiciplinaRepository disciplinaRepository;
 
+    @Autowired
+    private StudentAccessGuardService studentAccessGuardService;
+
     public List<Nota> getAllNota(){return notaRepository.findAll();}
 
-    public List<Nota> getByBoletim(Long boletimId) {
+    public List<Nota> getByBoletim(Long boletimId, String requesterEmail) {
+        Boletim boletim = boletimRepository.findById(boletimId)
+                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
+        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
         return notaRepository.findByBoletimId(boletimId);
     }
 
