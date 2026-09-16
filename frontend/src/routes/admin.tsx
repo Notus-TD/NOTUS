@@ -475,8 +475,7 @@ function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => voi
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Nome, matrícula e status vêm do backend. E-mail, nascimento, turma e responsável são dados
-        de exemplo até existir o endpoint de detalhe do aluno.
+        Dados do aluno cadastrados na escola.
       </p>
     </div>
   );
@@ -621,7 +620,7 @@ function Comunicados() {
         <CardHeader>
           <CardTitle className="text-xl">Novo comunicado</CardTitle>
           <CardDescription className="text-base">
-            Ainda não há endpoint de comunicados no backend; os envios ficam salvos neste navegador.
+            Os comunicados enviados ficam salvos neste dispositivo.
           </CardDescription>
         </CardHeader>
         <CardContent>

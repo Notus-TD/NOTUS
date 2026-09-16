@@ -18,7 +18,7 @@ export async function login(email: string, password: string): Promise<Session> {
       body: JSON.stringify({ email, password }),
     });
   } catch {
-    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
   if (res.status === 401 || res.status === 403) {
     throw new ApiError(res.status, "E-mail ou senha incorretos.");
@@ -47,7 +47,7 @@ export async function getFaltas(): Promise<FaltaDTO[]> {
       headers: { Authorization: `Bearer ${token}` },
     });
   } catch {
-    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
   if (res.status === 401 || res.status === 403)
     throw new ApiError(res.status, "Sem permissão para ver as faltas.");
@@ -75,7 +75,7 @@ export async function associarFalta(body: FaltaCreateRequest): Promise<FaltaDTO>
       body: JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
   if (!res.ok) {
     const err = (await res.json().catch(() => null)) as StandardError | null;
@@ -97,7 +97,7 @@ export async function deleteFalta(id: number): Promise<void> {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   } catch {
-    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
   if (!res.ok) throw new ApiError(res.status, `Falha ao excluir a falta: ${res.status}`);
 }
@@ -163,7 +163,7 @@ export async function cadastrarAluno(
       body: JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
 
   if (!res.ok) {
@@ -181,7 +181,7 @@ async function getJson<T>(path: string): Promise<T> {
   try {
     res = await fetch(`${API_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
   } catch {
-    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
   if (res.status === 401 || res.status === 403)
     throw new ApiError(res.status, `Sem permissão para ${path}.`);
@@ -204,7 +204,7 @@ async function sendJson<T>(
       body: body !== undefined ? JSON.stringify(body) : null,
     });
   } catch {
-    throw new ApiError(0, `Não foi possível conectar ao backend em ${API_URL}. Ele está rodando?`);
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
   if (res.status === 401 || res.status === 403)
     throw new ApiError(res.status, `Sem permissão para ${path}.`);

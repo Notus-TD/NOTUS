@@ -224,7 +224,7 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
         <Card className="border-primary">
           <CardHeader>
             <CardTitle className="text-xl">Cadastro concluído</CardTitle>
-            <CardDescription className="text-base">Resposta do servidor.</CardDescription>
+            <CardDescription className="text-base">Dados confirmados.</CardDescription>
           </CardHeader>
           <CardContent className="text-lg text-foreground">
             <p>

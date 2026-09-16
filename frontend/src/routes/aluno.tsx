@@ -93,7 +93,7 @@ const secoes: {
     label: "Notas recentes",
     descricao: "Últimas avaliações",
     icon: BarChart3,
-    termos: "nota prova media avaliacao boletim",
+    termos: "nota prova media avaliação boletim",
   },
   {
     id: "presenca",
@@ -112,7 +112,7 @@ const secoes: {
   {
     id: "faltas",
     label: "Faltas registradas",
-    descricao: "Registros oficiais do backend",
+    descricao: "Registros oficiais da escola",
     icon: UserX,
     termos: "falta registro backend oficial",
   },
@@ -626,7 +626,7 @@ function FaltasBackend() {
   return (
     <Secao
       titulo="Faltas registradas"
-      descricao="Suas faltas lançadas pelo professor, vindas do backend (GET /falta/me)."
+      descricao="Suas faltas lançadas pelo professor."
     >
       <Card>
         <CardContent className="space-y-4 p-6">

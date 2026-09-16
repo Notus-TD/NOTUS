@@ -211,10 +211,10 @@ function PainelProfessor() {
         <TabsContent value="chamada" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Registrar faltas (backend real)</CardTitle>
+              <CardTitle className="text-xl">Registrar faltas</CardTitle>
               <CardDescription className="text-base">
-                Lista de alunos ativos e disciplinas vindas do servidor. Marcar "Faltou" e salvar
-                cria a falta de verdade via <code>POST /falta/associar</code>.
+                Lista de alunos ativos da disciplina selecionada. Marque "Faltou" nos alunos
+                ausentes e salve a chamada.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -291,7 +291,7 @@ function PainelProfessor() {
                     disabled={salvandoChamada}
                     className="min-h-12 px-6 text-lg"
                   >
-                    {salvandoChamada ? "Salvando..." : "Salvar chamada no backend"}
+                    {salvandoChamada ? "Salvando..." : "Salvar chamada"}
                   </Button>
                 </>
               )}
