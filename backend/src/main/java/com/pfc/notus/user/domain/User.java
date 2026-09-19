@@ -1,31 +1,30 @@
 package com.pfc.notus.user.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+
 @Entity
 @Table(name = "tb_user")
+@Inheritance(strategy = InheritanceType.JOINED)
 @NoArgsConstructor
-@AllArgsConstructor
 public class User implements UserDetails {
 
     @Id
-    @Getter
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Getter @Setter
     private Long id;
 
-    @Getter @Setter
-    private String name;
-
+    @JsonIgnore
     @Getter @Setter
     private String password;
 
@@ -33,13 +32,10 @@ public class User implements UserDetails {
     private String email;
 
     @Getter @Setter
-    private String phone;
-
-    @Getter @Setter
-    private String address;
-
-    @Getter @Setter
     private boolean firstLogin = true;
+
+    @Getter
+    private LocalDate createdAt;
 
     @ManyToMany
     @JoinTable(name = "tb_user_role",
@@ -47,12 +43,16 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
+    public User(String email) {
+        this.email = email;
+        this.firstLogin = true;
+        this.createdAt = LocalDate.now();
+    }
 
     public User(String username, String password) {
         this.email = username;
         this.password = password;
     }
-
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -1,11 +1,13 @@
 package com.pfc.notus.user.service;
 
-import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.user.domain.Responsible;
-import com.pfc.notus.user.domain.User;
+import com.pfc.notus.user.dto.ResponsibleRequest;
 import com.pfc.notus.user.repository.ResponsibleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 public class ResponsibleService {
@@ -13,14 +15,19 @@ public class ResponsibleService {
     @Autowired
     private ResponsibleRepository responsibleRepository;
 
-    // user já deve estar persistido: @MapsId deriva o id do Responsible a partir dele.
-    public Responsible createReponsible(User user, String name, String email, String cpf, String phone) {
-        if (responsibleRepository.findByCpf(cpf).isPresent()) {
-            throw new ConflictException("CPF já cadastrado: " + cpf);
+    @Autowired
+    private UserService userService;
+
+    @Transactional
+    public Responsible findOrCreateResponsible(ResponsibleRequest dto) {
+        Optional<Responsible> existente = responsibleRepository.findByCpf(dto.cpf());
+        if (existente.isPresent()) {
+            return existente.get();
         }
 
-        Responsible responsible = new Responsible(name, email, phone, cpf);
-        responsible.setUser(user);
-        return responsibleRepository.save(responsible);
+        Responsible responsible = new Responsible(
+                dto.name(), dto.email(), dto.cpf(), dto.phone(), dto.address());
+
+        return (Responsible) userService.register(responsible, "ROLE_RESPONSAVEL");
     }
 }

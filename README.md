@@ -26,7 +26,7 @@ API REST em Java com Spring Boot.
 
 ### Organização
 
-O código é organizado por domínio (`atividade`, `boletim`, `disciplina`, `matricula`, `nota`, `turma`, `user`, `falta`), cada um com as camadas `domain`, `dto`, `repository`, `service` e `controller`.
+O código é organizado por domínio (`atividade`, `boletim`, `disciplina`, `entrega`, `falta`, `presenca`, `nota`, `turma`, `user`), cada um com as camadas `domain`, `dto`, `repository`, `service` e `controller`.
 
 ### Como rodar
 
@@ -41,15 +41,16 @@ A API sobe em `http://localhost:8080`. Autenticação em `POST /auth/login`.
 
 ## Frontend (`frontend/`)
 
-Aplicação web em React. *(Em fase inicial de estruturação.)*
+Aplicação web em React, construída com TanStack Start, já com telas separadas por papel de usuário (admin, professor, aluno e responsável) e fluxo de login/cadastro integrado à API.
 
 | Tecnologia | Uso no projeto |
 |---|---|
-| **React** | Biblioteca para construção da interface por componentes. |
-| **TypeScript** | Tipagem estática sobre o JavaScript; principal linguagem dos componentes. |
-| **JavaScript** | Configurações e trechos sem tipagem. |
-| **HTML** | Estrutura base da página (`index.html`) e marcação (JSX). |
-| **CSS** | Estilização das telas e componentes. |
+| **React 19** | Biblioteca para construção da interface por componentes. |
+| **TanStack Start** | Framework de roteamento e SSR/build sobre o React. |
+| **TypeScript** | Tipagem estática; principal linguagem dos componentes. |
+| **Tailwind CSS** | Estilização das telas e componentes. |
+| **Radix UI / shadcn** | Biblioteca de componentes de UI acessíveis (dialogs, dropdowns, etc.). |
+| **React Hook Form** | Controle e validação dos formulários. |
 
 ### Como rodar
 

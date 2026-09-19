@@ -1,13 +1,18 @@
 package com.pfc.notus.user.service;
 
+import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
-import com.pfc.notus.user.domain.User;
-import com.pfc.notus.user.dto.security.StudentInsertDTO;
-import com.pfc.notus.user.repository.StudentReposity;
+import com.pfc.notus.user.dto.ResponsibleRequest;
+import com.pfc.notus.user.dto.StudentMinDTO;
+import com.pfc.notus.user.dto.StudentRegistrationResponse;
+import com.pfc.notus.user.dto.StudentRequest;
+import com.pfc.notus.user.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class StudentService {
@@ -19,22 +24,36 @@ public class StudentService {
     private ResponsibleService responsibleService;
 
     @Autowired
-    private StudentReposity studentReposity;
+    private StudentRepository studentRepository;
 
     @Transactional
-    public Student createStudent(StudentInsertDTO dto) {
-        User responsibleUser = userService.createUser(
-                dto.responsibleName(), dto.responsibleEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_RESPONSAVEL");
-        Responsible responsible = responsibleService.createReponsible(
-                responsibleUser, dto.responsibleName(), dto.responsibleEmail(), dto.responsibleCpf(), dto.responsiblePhoneNumber());
+    public StudentRegistrationResponse createStudent(ResponsibleRequest responsibleDto, StudentRequest studentDto) {
+        if (studentRepository.findByMatricula(studentDto.matricula()).isPresent()) {
+            throw new ConflictException("Matrícula já cadastrada: " + studentDto.matricula());
+        }
 
-        User studentUser = userService.createUser(
-                dto.fullName(), dto.educationalEmail(), dto.responsiblePhoneNumber(), dto.address(), "ROLE_ALUNO");
+        Responsible responsible = responsibleService.findOrCreateResponsible(responsibleDto);
 
-        Student student = new Student();
-        student.setUser(studentUser);
-        student.setResponsible(responsible);
+        Student student = new Student(
+                studentDto.fullName(), studentDto.educationalEmail(), studentDto.matricula(),
+                studentDto.birthDate(), responsible);
 
-        return studentReposity.save(student);
+        student = (Student) userService.register(student, "ROLE_ALUNO");
+
+        return new StudentRegistrationResponse(student.getId(), student.getFullName());
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentMinDTO> listStudents() {
+        return studentRepository.findAll().stream()
+                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentMinDTO> listStudentsByResponsible(Long responsibleId) {
+        return studentRepository.findByResponsibleId(responsibleId).stream()
+                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .toList();
     }
 }

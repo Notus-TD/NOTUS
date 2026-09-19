@@ -21,12 +21,13 @@ public class JwtTokenProvider {
 
     private Algorithm algorithm;
 
-    public String createToken(String username, Collection<? extends GrantedAuthority> roles) {
+    public String createToken(Long id, String username, Collection<? extends GrantedAuthority> roles) {
         algorithm = Algorithm.HMAC256(secret);
         Date expiry = new Date(System.currentTimeMillis() + expiration);
 
         return JWT.create()
                 .withSubject(username)
+                .withClaim("id", id)
                 .withClaim("roles", roles.stream().map(GrantedAuthority::getAuthority).toList())
                 .withIssuedAt(new Date())
                 .withExpiresAt(expiry)
