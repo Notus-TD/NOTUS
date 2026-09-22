@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";
-import { Eye, EyeOff, Info, Loader2, LogIn } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Info, Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, login } from "@/lib/api";
@@ -25,6 +25,7 @@ function LoginPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [verSenha, setVerSenha] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [errosCampo, setErrosCampo] = useState<{
     email?: string | undefined;
     senha?: string | undefined;
@@ -45,6 +46,10 @@ function LoginPage() {
   function validarSenha(v: string): string | undefined {
     if (!v) return "Informe a senha.";
     return undefined;
+  }
+
+  function verificarCapsLock(e: KeyboardEvent<HTMLInputElement>) {
+    setCapsLock(e.getModifierState("CapsLock"));
   }
 
   async function entrar(e: FormEvent) {
@@ -153,7 +158,10 @@ function LoginPage() {
                   onBlur={() => {
                     setTocados((t) => ({ ...t, senha: true }));
                     setErrosCampo((atual) => ({ ...atual, senha: validarSenha(senha) }));
+                    setCapsLock(false);
                   }}
+                  onKeyDown={verificarCapsLock}
+                  onKeyUp={verificarCapsLock}
                   aria-invalid={errosCampo.senha ? true : undefined}
                   aria-describedby={errosCampo.senha ? "senha-erro" : undefined}
                   className={`h-12 pr-12 text-lg ${errosCampo.senha ? "border-destructive focus-visible:ring-destructive" : ""}`}
@@ -172,6 +180,12 @@ function LoginPage() {
                   )}
                 </button>
               </div>
+              {capsLock && (
+                <p className="flex items-center gap-1.5 text-base font-medium text-warning">
+                  <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+                  Caps Lock está ativado
+                </p>
+              )}
               {errosCampo.senha && (
                 <p id="senha-erro" className="text-base font-medium text-destructive">
                   {errosCampo.senha}
