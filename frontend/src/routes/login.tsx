@@ -96,6 +96,11 @@ function LoginPage() {
       navigate({ to: homeForRoles(session.roles), replace: true });
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : "Erro inesperado ao entrar.");
+      const campoEmail = document.getElementById("email");
+      if (campoEmail instanceof HTMLInputElement) {
+        campoEmail.focus();
+        campoEmail.select();
+      }
     } finally {
       setEnviando(false);
     }
