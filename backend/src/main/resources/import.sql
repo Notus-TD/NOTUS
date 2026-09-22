@@ -56,6 +56,11 @@ INSERT INTO tb_disciplina (title, description, created) VALUES ('Educação Fís
 INSERT INTO tb_turma (name, school_year) VALUES ('9º Ano A', '2026');
 INSERT INTO tb_turma (name, school_year) VALUES ('9º Ano B', '2026');
 
+-- 7.1 Lecionamentos (vínculo professor ↔ turma ↔ disciplina; Pedro Professor = 2026000002)
+INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 1, 2026000002);
+INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 2, 2026000002);
+INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (2, 3, 2026000002);
+
 -- 8. Atividades
 INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Lista de Exercícios 1', 'Resolver os exercícios das páginas 10 a 15.', 'ABERTA', 1);
 INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Redação Dissertativa', 'Escrever uma redação sobre o tema sorteado em sala.', 'ABERTA', 2);
