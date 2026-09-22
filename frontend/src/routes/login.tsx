@@ -190,6 +190,13 @@ function LoginPage() {
               {enviando ? "Entrando..." : "Entrar"}
             </Button>
           </form>
+
+          <p className="mt-6 text-center text-base text-muted-foreground">
+            Ainda não tem uma conta? Fale com a secretaria:{" "}
+            <a href="mailto:secretaria@colegionotus.com.br" className="font-semibold text-primary hover:underline">
+              secretaria@colegionotus.com.br
+            </a>
+          </p>
         </div>
       </main>
 
