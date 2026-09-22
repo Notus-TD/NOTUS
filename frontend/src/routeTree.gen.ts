@@ -15,6 +15,7 @@ import { Route as AlunoRouteImport } from './routes/aluno'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ProfessorRouteImport } from './routes/professor'
 import { Route as ResponsavelRouteImport } from './routes/responsavel'
 
@@ -48,6 +49,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfessorRoute = ProfessorRouteImport.update({
   id: '/professor',
   path: '/professor',
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/professor': typeof ProfessorRoute
   '/responsavel': typeof ResponsavelRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/professor': typeof ProfessorRoute
   '/responsavel': typeof ResponsavelRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/professor': typeof ProfessorRoute
   '/responsavel': typeof ResponsavelRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/onboarding'
+    | '/privacidade'
     | '/professor'
     | '/responsavel'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/onboarding'
+    | '/privacidade'
     | '/professor'
     | '/responsavel'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/onboarding'
+    | '/privacidade'
     | '/professor'
     | '/responsavel'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ProfessorRoute: typeof ProfessorRoute
   ResponsavelRoute: typeof ResponsavelRoute
 }
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/professor': {
       id: '/professor'
       path: '/professor'
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ProfessorRoute: ProfessorRoute,
   ResponsavelRoute: ResponsavelRoute,
 }

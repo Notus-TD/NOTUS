@@ -310,6 +310,9 @@ export const getMeuPerfil = () => getJson<MeuPerfilDTO>("/auth/me");
 export const completeOnboarding = (newPassword: string, acceptTerms: boolean) =>
   sendJson<void>("POST", "/users/me/onboarding", { newPassword, acceptTerms });
 
+export const anonymizeUser = (userId: number) =>
+  sendJson<void>("PUT", `/users/me/anonymize/${userId}`);
+
 export const getMinhasFaltas = () => getJson<FaltaDTO[]>("/falta/me");
 export const getMinhaFrequencia = () => getJson<FrequenciaDTO[]>("/falta/me/frequencia");
 export const getFaltasByStudent = (studentId: number) =>

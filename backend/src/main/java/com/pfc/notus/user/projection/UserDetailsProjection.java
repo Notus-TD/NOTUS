@@ -4,6 +4,7 @@ public interface UserDetailsProjection {
     Long getId();
     String getUsername();
     String getPassword();
+    Boolean getFirstLogin();
     Long getRoleId();
     String getAuthority();
 }
