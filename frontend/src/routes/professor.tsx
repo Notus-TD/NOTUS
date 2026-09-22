@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { recadosPublicados, turmas } from "@/data/notus";
+import { recadosPublicados } from "@/data/notus";
 import {
   ApiError,
   associarFalta,
@@ -28,8 +28,10 @@ import {
   getBoletinsByStudent,
   getDisciplinas,
   getFaltas,
+  getMinhasTurmas,
   getNotasByBoletim,
   getStudents,
+  getStudentsByTurma,
   registrarAula,
   updateNota,
   type Boletim,
@@ -37,6 +39,7 @@ import {
   type FaltaDTO,
   type Nota,
   type StudentMinDTO,
+  type TurmaComDisciplinasDTO,
 } from "@/lib/api";
 import { useCarga, MensagemErro } from "@/hooks/use-carga";
 
@@ -61,40 +64,74 @@ export const Route = createFileRoute("/professor")({
 });
 
 function PainelProfessor() {
-  const [turma, setTurma] = useState<string>(turmas[0] ?? "");
+  const [minhasTurmas, setMinhasTurmas] = useState<TurmaComDisciplinasDTO[] | null>(null);
+  const [turmaId, setTurmaId] = useState<number | null>(null);
+  const [disciplinaId, setDisciplinaId] = useState<number | null>(null);
+  const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
+
+  const [alunosDaTurma, setAlunosDaTurma] = useState<StudentMinDTO[] | null>(null);
+  const [ordenacao, setOrdenacao] = useState<"nome" | "matricula">("nome");
 
   const [recados, setRecados] = useState(recadosPublicados);
   const [titulo, setTitulo] = useState("");
   const [corpo, setCorpo] = useState("");
 
-  const [alunosReais, setAlunosReais] = useState<StudentMinDTO[] | null>(null);
-  const [disciplinas, setDisciplinas] = useState<DisciplinaDTO[] | null>(null);
-  const [disciplinaId, setDisciplinaId] = useState<number | null>(null);
-  const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
   const [faltosos, setFaltosos] = useState<Record<number, boolean>>({});
   const [salvandoChamada, setSalvandoChamada] = useState(false);
   const [faltasDaDisciplina, setFaltasDaDisciplina] = useState<FaltaDTO[] | null>(null);
 
+  const turmaAtual = minhasTurmas?.find((t) => t.turmaId === turmaId) ?? null;
+
   useEffect(() => {
     let ativo = true;
-    Promise.all([getStudents(), getDisciplinas()])
-      .then(([alunos, discs]) => {
+    getMinhasTurmas()
+      .then((lista) => {
         if (!ativo) return;
-        setAlunosReais(alunos.filter((a) => a.matriculaStatus === "ATIVA"));
-        setDisciplinas(discs);
-        setDisciplinaId((atual) => atual ?? discs[0]?.id ?? null);
+        setMinhasTurmas(lista);
+        setTurmaId((atual) => atual ?? lista[0]?.turmaId ?? null);
+        setDisciplinaId((atual) => atual ?? lista[0]?.disciplinas[0]?.id ?? null);
       })
       .catch(
         (e) =>
           ativo &&
           setErroCarregamento(
-            e instanceof ApiError ? e.message : "Erro ao carregar alunos e disciplinas.",
+            e instanceof ApiError ? e.message : "Erro ao carregar suas turmas.",
           ),
       );
     return () => {
       ativo = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!turmaAtual) return;
+    if (!turmaAtual.disciplinas.some((d) => d.id === disciplinaId)) {
+      setDisciplinaId(turmaAtual.disciplinas[0]?.id ?? null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turmaId, minhasTurmas]);
+
+  useEffect(() => {
+    if (turmaId == null) {
+      setAlunosDaTurma(null);
+      return;
+    }
+    let ativo = true;
+    getStudentsByTurma(turmaId, ordenacao)
+      .then((alunos) => {
+        if (ativo) setAlunosDaTurma(alunos.filter((a) => a.matriculaStatus === "ATIVA"));
+      })
+      .catch(
+        (e) =>
+          ativo &&
+          setErroCarregamento(
+            e instanceof ApiError ? e.message : "Erro ao carregar os alunos da turma.",
+          ),
+      );
+    return () => {
+      ativo = false;
+    };
+  }, [turmaId, ordenacao]);
 
   async function recarregarFaltasDaDisciplina(discId: number) {
     try {
@@ -110,7 +147,7 @@ function PainelProfessor() {
   }, [disciplinaId]);
 
   const nomeDoAluno = (id: number) =>
-    alunosReais?.find((a) => a.userId === id)?.studentName ?? `Aluno ${id}`;
+    alunosDaTurma?.find((a) => a.userId === id)?.studentName ?? `Aluno ${id}`;
 
   async function salvarChamadaReal() {
     if (!disciplinaId) {
@@ -162,17 +199,18 @@ function PainelProfessor() {
   }
 
   function publicar() {
+    const nomeTurma = turmaAtual?.turmaName ?? "";
     if (!titulo.trim() || !corpo.trim()) {
       toast.error("Preencha o título e o texto do recado.");
       return;
     }
     setRecados([
-      { titulo: titulo.trim(), turma, quando: "Publicado agora", texto: corpo.trim() },
+      { titulo: titulo.trim(), turma: nomeTurma, quando: "Publicado agora", texto: corpo.trim() },
       ...recados,
     ]);
     setTitulo("");
     setCorpo("");
-    toast.success(`Recado publicado para o ${turma}.`);
+    toast.success(`Recado publicado para o ${nomeTurma}.`);
   }
 
   return (
@@ -183,14 +221,22 @@ function PainelProfessor() {
     >
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-lg font-semibold text-foreground">Turma:</span>
-        {turmas.map((t) => (
+        {minhasTurmas === null && !erroCarregamento && (
+          <span className="text-base text-muted-foreground">Carregando suas turmas…</span>
+        )}
+        {minhasTurmas?.length === 0 && (
+          <span className="text-base text-muted-foreground">
+            Você ainda não está associado a nenhuma turma.
+          </span>
+        )}
+        {minhasTurmas?.map((t) => (
           <Button
-            key={t}
-            variant={t === turma ? "default" : "outline"}
+            key={t.turmaId}
+            variant={t.turmaId === turmaId ? "default" : "outline"}
             className="min-h-11 text-base"
-            onClick={() => setTurma(t)}
+            onClick={() => setTurmaId(t.turmaId)}
           >
-            {t}
+            {t.turmaName}
           </Button>
         ))}
       </div>
@@ -213,8 +259,8 @@ function PainelProfessor() {
             <CardHeader>
               <CardTitle className="text-xl">Registrar faltas</CardTitle>
               <CardDescription className="text-base">
-                Lista de alunos ativos da disciplina selecionada. Marque "Faltou" nos alunos
-                ausentes e salve a chamada.
+                Lista de alunos ativos da turma e disciplina selecionadas. Marque "Faltou" nos
+                alunos ausentes e salve a chamada.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -222,35 +268,55 @@ function PainelProfessor() {
                 <p className="text-base font-semibold text-destructive">{erroCarregamento}</p>
               )}
 
-              {!erroCarregamento && (alunosReais === null || disciplinas === null) && (
-                <p className="text-base text-muted-foreground">Carregando alunos e disciplinas…</p>
+              {!erroCarregamento && (turmaAtual === null || alunosDaTurma === null) && (
+                <p className="text-base text-muted-foreground">Carregando turma e alunos…</p>
               )}
 
-              {alunosReais && disciplinas && (
+              {turmaAtual && alunosDaTurma && (
                 <>
-                  <div className="max-w-xs space-y-2">
-                    <label className="block text-lg font-semibold text-foreground">
-                      Disciplina
-                    </label>
-                    <Select
-                      value={disciplinaId ? String(disciplinaId) : ""}
-                      onValueChange={(v) => setDisciplinaId(Number(v))}
-                    >
-                      <SelectTrigger className="h-12 text-lg">
-                        <SelectValue placeholder="Selecione a disciplina" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {disciplinas.map((d) => (
-                          <SelectItem key={d.id} value={String(d.id)}>
-                            {d.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="max-w-xs flex-1 space-y-2">
+                      <label className="block text-lg font-semibold text-foreground">
+                        Disciplina
+                      </label>
+                      <Select
+                        value={disciplinaId ? String(disciplinaId) : ""}
+                        onValueChange={(v) => setDisciplinaId(Number(v))}
+                      >
+                        <SelectTrigger className="h-12 text-lg">
+                          <SelectValue placeholder="Selecione a disciplina" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {turmaAtual.disciplinas.map((d) => (
+                            <SelectItem key={d.id} value={String(d.id)}>
+                              {d.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="max-w-xs flex-1 space-y-2">
+                      <label className="block text-lg font-semibold text-foreground">
+                        Ordenar por
+                      </label>
+                      <Select
+                        value={ordenacao}
+                        onValueChange={(v) => setOrdenacao(v as "nome" | "matricula")}
+                      >
+                        <SelectTrigger className="h-12 text-lg">
+                          <SelectValue placeholder="Ordenar por" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="nome">Nome</SelectItem>
+                          <SelectItem value="matricula">Matrícula</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <ul className="divide-y divide-border">
-                    {alunosReais.map((a) => {
+                    {alunosDaTurma.map((a) => {
                       const faltou = faltosos[a.userId] === true;
                       return (
                         <li
@@ -343,7 +409,9 @@ function PainelProfessor() {
         <TabsContent value="recados" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Novo recado ou atividade — {turma}</CardTitle>
+              <CardTitle className="text-xl">
+                Novo recado ou atividade — {turmaAtual?.turmaName ?? ""}
+              </CardTitle>
               <CardDescription className="text-base">
                 O texto aparece no painel dos alunos e dos responsáveis da turma.
               </CardDescription>

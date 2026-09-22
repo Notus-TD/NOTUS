@@ -280,7 +280,18 @@ export type FrequenciaDTO = {
 export const getStudents = () => getJson<StudentMinDTO[]>("/students");
 export const getStudentsByResponsible = (responsibleId: number) =>
   getJson<StudentMinDTO[]>(`/students/responsible/${responsibleId}`);
+export const getStudentsByTurma = (turmaId: number, sort: "nome" | "matricula" = "nome") =>
+  getJson<StudentMinDTO[]>(`/students/turma/${turmaId}?sort=${sort}`);
 export const getTurmas = () => getJson<TurmaDTO[]>("/turma");
+
+export type TurmaComDisciplinasDTO = {
+  turmaId: number;
+  turmaName: string;
+  schoolYear: string;
+  disciplinas: { id: number; title: string }[];
+};
+export const getMinhasTurmas = () => getJson<TurmaComDisciplinasDTO[]>("/turma/me");
+
 export const getDisciplinas = () => getJson<DisciplinaDTO[]>("/disciplina");
 export const getAtividades = () => getJson<AtividadeDTO[]>("/atividade");
 export const getBoletins = () => getJson<BoletimDTO[]>("/boletim");
