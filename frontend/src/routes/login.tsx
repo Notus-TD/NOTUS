@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Eye, EyeOff, Info, LogIn } from "lucide-react";
+import { Eye, EyeOff, Info, Loader2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, login } from "@/lib/api";
@@ -186,7 +186,11 @@ function LoginPage() {
             )}
 
             <Button type="submit" disabled={enviando} className="min-h-12 w-full text-lg">
-              <LogIn className="size-5" aria-hidden="true" />
+              {enviando ? (
+                <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+              ) : (
+                <LogIn className="size-5" aria-hidden="true" />
+              )}
               {enviando ? "Entrando..." : "Entrar"}
             </Button>
           </form>
