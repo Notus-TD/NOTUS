@@ -11,6 +11,7 @@ import com.pfc.notus.user.dto.MeuPerfilDTO;
 import com.pfc.notus.user.projection.UserDetailsProjection;
 import com.pfc.notus.user.repository.RoleRepository;
 import com.pfc.notus.user.repository.UserRepository;
+import com.pfc.notus.user.service.util.AuthUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -34,6 +36,9 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthUtil authUtil;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -87,6 +92,35 @@ public class UserService implements UserDetailsService {
         }
 
         return new MeuPerfilDTO(user.getEmail(), roles, nome, dependentes);
+    }
+
+
+    @Transactional
+    public void onBoarding (String newPassword, Boolean acceptTerms){
+        User user = authUtil.getLoggedUser();
+
+        if (user.getAuthorities().equals("ROLE_ADMIN")) {
+
+        }
+
+        if(!user.isFirstLogin()){
+            throw new ConflictException("Usuário já fez login no sistema");
+        }
+
+        if(!Boolean.TRUE.equals(acceptTerms)){
+            throw new ConflictException("Usuário não aceitou os termos de uso");
+        }
+
+        user = userRepository.findById(user.getId())
+                .orElseThrow();
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setTermsAcceptedAt(LocalDateTime.now());
+
+        user.setFirstLogin(false);
+
+        userRepository.save(user);
+
     }
 
     private Long gerarProximoId() {

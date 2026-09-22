@@ -14,7 +14,7 @@ INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (20260
 INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (2026000007, 'bruno.aluno@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, '2026-02-01');
 INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (2026000008, 'carla.aluna@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, '2026-02-01');
 INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (2026000009, 'bruno.costa.aluno@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, '2026-02-01');
-INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (2026000010, 'fernanda.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, '2026-02-01');
+INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (2026000010, 'fernanda.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', TRUE, '2026-02-01');
 INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (2026000011, 'camila.aluna@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, '2026-02-01');
 INSERT INTO tb_user (id, email, password, first_login, created_at) VALUES (2026000012, 'diego.aluno@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, '2026-02-01');
 

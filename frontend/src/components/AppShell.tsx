@@ -35,6 +35,10 @@ export function AppShell({
       navigate({ to: homeForRoles(atual.roles), replace: true });
       return;
     }
+    if (atual.firstLogin) {
+      navigate({ to: "/onboarding", replace: true });
+      return;
+    }
     setSession(atual);
   }, [navigate, role]);
 

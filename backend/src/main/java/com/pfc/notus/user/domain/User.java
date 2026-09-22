@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,6 +34,9 @@ public class User implements UserDetails {
 
     @Getter @Setter
     private boolean firstLogin = true;
+
+    @Getter @Setter
+    private LocalDateTime termsAcceptedAt;
 
     @Getter
     private LocalDate createdAt;
