@@ -6,21 +6,23 @@ export type Session = {
   roles: Role[];
   userId: number | null;
   expiresAt: string;
+  firstLogin: boolean;
 };
 
 const STORAGE_KEY = "notus.session";
 
-function decodeClaims(token: string): { roles: Role[]; userId: number | null } {
+function decodeClaims(token: string): { roles: Role[]; userId: number | null; firstLogin: boolean } {
   try {
     const payload = token.split(".")[1] ?? "";
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const claims = JSON.parse(json) as { roles?: string[]; id?: number };
+    const claims = JSON.parse(json) as { roles?: string[]; id?: number; firstLogin?: boolean };
     return {
       roles: (claims.roles ?? []).filter((r): r is Role => r.startsWith("ROLE_")),
       userId: claims.id ?? null,
+      firstLogin: claims.firstLogin ?? false,
     };
   } catch {
-    return { roles: [], userId: null };
+    return { roles: [], userId: null, firstLogin: false };
   }
 }
 
@@ -47,6 +49,17 @@ export function getSession(): Session | null {
     return session;
   } catch {
     return null;
+  }
+}
+
+export function markOnboardingComplete() {
+  const session = getSession();
+  if (!session) return;
+  session.firstLogin = false;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    /* ignore */
   }
 }
 

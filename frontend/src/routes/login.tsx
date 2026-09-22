@@ -26,7 +26,12 @@ function LoginPage() {
 
   useEffect(() => {
     const session = getSession();
-    if (session) navigate({ to: homeForRoles(session.roles), replace: true });
+    if (session) {
+      navigate({
+        to: session.firstLogin ? "/onboarding" : homeForRoles(session.roles),
+        replace: true,
+      });
+    }
   }, [navigate]);
 
   async function entrar(e: FormEvent) {
@@ -36,7 +41,10 @@ function LoginPage() {
     try {
       const session = await login(email.trim(), senha);
       toast.success(`Bem-vindo(a), ${session.email}.`);
-      navigate({ to: homeForRoles(session.roles), replace: true });
+      navigate({
+        to: session.firstLogin ? "/onboarding" : homeForRoles(session.roles),
+        replace: true,
+      });
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : "Erro inesperado ao entrar.");
     } finally {

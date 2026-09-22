@@ -307,6 +307,9 @@ export type MeuPerfilDTO = {
 
 export const getMeuPerfil = () => getJson<MeuPerfilDTO>("/auth/me");
 
+export const completeOnboarding = (newPassword: string, acceptTerms: boolean) =>
+  sendJson<void>("POST", "/users/me/onboarding", { newPassword, acceptTerms });
+
 export const getMinhasFaltas = () => getJson<FaltaDTO[]>("/falta/me");
 export const getMinhaFrequencia = () => getJson<FrequenciaDTO[]>("/falta/me/frequencia");
 export const getFaltasByStudent = (studentId: number) =>

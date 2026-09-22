@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev
+    active: h2
 
   jpa:
     show-sql: true
@@ -14,7 +14,6 @@ security:
     expiration: 3600000
 
 ---
-
 spring:
   config:
     activate:

@@ -4,6 +4,9 @@ import com.pfc.notus.config.JwtTokenProvider;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.dto.security.AccountCredentialsDTO;
 import com.pfc.notus.user.dto.security.TokenDTO;
+import com.pfc.notus.user.repository.UserRepository;
+import com.pfc.notus.user.service.util.AuthUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,7 +32,7 @@ public class AuthService {
                 dto.password()));
 
         User user = (User) auth.getPrincipal();
-        String token = jwtProvider.createToken(user.getId(), dto.email(), auth.getAuthorities());
+        String token = jwtProvider.createToken(user.getId(), dto.email(), auth.getAuthorities(), user.isFirstLogin());
         Instant expires = Instant.now().plusMillis(jwtProvider.getValidityMs());
 
         return new TokenDTO(dto.email(), token, expires);

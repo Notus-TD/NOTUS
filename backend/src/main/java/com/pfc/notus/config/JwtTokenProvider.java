@@ -21,7 +21,7 @@ public class JwtTokenProvider {
 
     private Algorithm algorithm;
 
-    public String createToken(Long id, String username, Collection<? extends GrantedAuthority> roles) {
+    public String createToken(Long id, String username, Collection<? extends GrantedAuthority> roles, boolean fistLogin) {
         algorithm = Algorithm.HMAC256(secret);
         Date expiry = new Date(System.currentTimeMillis() + expiration);
 
@@ -29,9 +29,11 @@ public class JwtTokenProvider {
                 .withSubject(username)
                 .withClaim("id", id)
                 .withClaim("roles", roles.stream().map(GrantedAuthority::getAuthority).toList())
+                .withClaim("firstLogin", fistLogin)
                 .withIssuedAt(new Date())
                 .withExpiresAt(expiry)
                 .sign(algorithm);
+
     }
 
     public String getUsername(String token) {
