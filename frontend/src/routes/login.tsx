@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Eye, EyeOff, Info, Loader2, LogIn } from "lucide-react";
+import { AlertTriangle, Eye, EyeOff, Info, Loader2, LogIn, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, login } from "@/lib/api";
@@ -223,8 +223,19 @@ function LoginPage() {
             </div>
 
             {erro && (
-              <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-base text-destructive">
-                {erro}
+              <p
+                role="alert"
+                className="flex items-start justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-base text-destructive"
+              >
+                <span>{erro}</span>
+                <button
+                  type="button"
+                  onClick={() => setErro(null)}
+                  aria-label="Fechar aviso"
+                  className="shrink-0 text-destructive/70 transition-colors hover:text-destructive"
+                >
+                  <X className="size-5" aria-hidden="true" />
+                </button>
               </p>
             )}
 
