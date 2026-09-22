@@ -185,7 +185,7 @@ function LoginPage() {
               </p>
             )}
 
-            <Button type="submit" disabled={enviando || !email || !senha} className="min-h-12 w-full text-lg">
+            <Button type="submit" disabled={enviando} className="min-h-12 w-full text-lg">
               <LogIn className="size-5" aria-hidden="true" />
               {enviando ? "Entrando..." : "Entrar"}
             </Button>
