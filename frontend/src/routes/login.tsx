@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, login } from "@/lib/api";
 import { getSession, homeForRoles } from "@/lib/auth";
+import { emailValido } from "@/lib/validacao";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -24,15 +25,41 @@ function LoginPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [verSenha, setVerSenha] = useState(false);
+  const [errosCampo, setErrosCampo] = useState<{
+    email?: string | undefined;
+    senha?: string | undefined;
+  }>({});
+  const [tocados, setTocados] = useState<{ email?: boolean; senha?: boolean }>({});
 
   useEffect(() => {
     const session = getSession();
     if (session) navigate({ to: homeForRoles(session.roles), replace: true });
   }, [navigate]);
 
+  function validarEmail(v: string): string | undefined {
+    if (!v.trim()) return "Informe o e-mail.";
+    if (!emailValido(v)) return "Informe um e-mail válido.";
+    return undefined;
+  }
+
+  function validarSenha(v: string): string | undefined {
+    if (!v) return "Informe a senha.";
+    return undefined;
+  }
+
   async function entrar(e: FormEvent) {
     e.preventDefault();
     setErro(null);
+
+    const erroEmail = validarEmail(email);
+    const erroSenha = validarSenha(senha);
+    setTocados({ email: true, senha: true });
+    setErrosCampo({ email: erroEmail, senha: erroSenha });
+    if (erroEmail || erroSenha) {
+      document.getElementById(erroEmail ? "email" : "senha")?.focus();
+      return;
+    }
+
     setEnviando(true);
     try {
       const session = await login(email.trim(), senha);
@@ -78,10 +105,25 @@ function LoginPage() {
                 required
                 autoFocus
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (tocados.email)
+                    setErrosCampo((atual) => ({ ...atual, email: validarEmail(e.target.value) }));
+                }}
+                onBlur={() => {
+                  setTocados((t) => ({ ...t, email: true }));
+                  setErrosCampo((atual) => ({ ...atual, email: validarEmail(email) }));
+                }}
                 placeholder="nome@escola.edu.br"
-                className="h-12 text-lg"
+                aria-invalid={errosCampo.email ? true : undefined}
+                aria-describedby={errosCampo.email ? "email-erro" : undefined}
+                className={`h-12 text-lg ${errosCampo.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
               />
+              {errosCampo.email && (
+                <p id="email-erro" className="text-base font-medium text-destructive">
+                  {errosCampo.email}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -95,8 +137,18 @@ function LoginPage() {
                   autoComplete="current-password"
                   required
                   value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  className="h-12 pr-12 text-lg"
+                  onChange={(e) => {
+                    setSenha(e.target.value);
+                    if (tocados.senha)
+                      setErrosCampo((atual) => ({ ...atual, senha: validarSenha(e.target.value) }));
+                  }}
+                  onBlur={() => {
+                    setTocados((t) => ({ ...t, senha: true }));
+                    setErrosCampo((atual) => ({ ...atual, senha: validarSenha(senha) }));
+                  }}
+                  aria-invalid={errosCampo.senha ? true : undefined}
+                  aria-describedby={errosCampo.senha ? "senha-erro" : undefined}
+                  className={`h-12 pr-12 text-lg ${errosCampo.senha ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 />
                 <button
                   type="button"
@@ -112,6 +164,11 @@ function LoginPage() {
                   )}
                 </button>
               </div>
+              {errosCampo.senha && (
+                <p id="senha-erro" className="text-base font-medium text-destructive">
+                  {errosCampo.senha}
+                </p>
+              )}
             </div>
 
             {erro && (
