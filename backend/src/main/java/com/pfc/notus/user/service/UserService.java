@@ -6,6 +6,7 @@ import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Role;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
+import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.dto.DependenteDTO;
 import com.pfc.notus.user.dto.MeuPerfilDTO;
 import com.pfc.notus.user.projection.UserDetailsProjection;
@@ -49,6 +50,7 @@ public class UserService implements UserDetailsService {
 
         User user = new User(result.getFirst().getUsername(), result.getFirst().getPassword());
         user.setId(result.getFirst().getId());
+        user.setFirstLogin(Boolean.TRUE.equals(result.getFirst().getFirstLogin()));
         for (UserDetailsProjection projection : result) {
             user.addRole(new Role(projection.getRoleId(), projection.getAuthority()));
         }
@@ -121,6 +123,26 @@ public class UserService implements UserDetailsService {
 
         userRepository.save(user);
 
+    }
+
+    @Transactional
+    public void anonimyzeUser(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + userId));
+
+        if (user instanceof Student student) {
+            student.setEmail("****");
+            student.setBirthDate(null);
+            student.setFullName("****");
+            student.setStatusMatricula(StatusMatricula.FINALIZADA);
+        } else if (user instanceof Responsible responsible) {
+            responsible.setEmail("****");
+            responsible.setName("****");
+            responsible.setCpf("****");
+            responsible.setPhone("****");
+            responsible.setAddress("****");
+        }
+        userRepository.save(user);
     }
 
     private Long gerarProximoId() {
