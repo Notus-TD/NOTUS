@@ -56,10 +56,10 @@ INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, 
 INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000011, 'Camila Rocha', 20260006, '2013-01-30', 'ATIVA', 2026000010, 2);
 INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000012, 'Diego Rocha', 20260007, '2011-11-05', 'ATIVA', 2026000010, 2);
 
--- 7.1 Lecionamentos (vínculo professor ↔ turma ↔ disciplina; Pedro Professor = 2026000002)
+-- 7.1 Lecionamentos (vínculo professor ↔ turma ↔ disciplina; cada professor leciona uma
+-- única disciplina, mas pode dar aula em várias turmas. Pedro Professor = 2026000002, Matemática.)
 INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 1, 2026000002);
-INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 2, 2026000002);
-INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (2, 3, 2026000002);
+INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (2, 1, 2026000002);
 
 -- 8. Atividades
 INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Lista de Exercícios 1', 'Resolver os exercícios das páginas 10 a 15.', 'ABERTA', 1);

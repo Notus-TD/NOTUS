@@ -54,6 +54,9 @@ public class LecionamentoService {
                 turma.getId(), disciplina.getId(), professor.getId())) {
             throw new ConflictException("Este professor já está associado a esta turma e disciplina.");
         }
+        if (lecionamentoRepository.existsByProfessorIdAndDisciplinaIdNot(professor.getId(), disciplina.getId())) {
+            throw new ConflictException("Este professor já leciona outra disciplina. Cada professor está associado a uma única disciplina.");
+        }
 
         Lecionamento entity = lecionamentoRepository.save(new Lecionamento(turma, disciplina, professor));
         return toDTO(entity);
