@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, Info, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, login } from "@/lib/api";
@@ -90,10 +90,18 @@ function LoginPage() {
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">Entrar</h1>
           <p className="mt-2 text-base text-muted-foreground">
-            Use o e-mail cadastrado na escola. No primeiro acesso, a senha é o próprio e-mail.
+            Use o e-mail cadastrado na escola.
           </p>
 
-          <form onSubmit={entrar} className="mt-8 space-y-5" noValidate>
+          <div className="mt-4 flex items-start gap-3 rounded-xl border-2 border-primary bg-primary/5 p-4">
+            <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <p className="text-base text-foreground">
+              <strong>Primeiro acesso?</strong> Sua senha inicial é o próprio e-mail cadastrado na
+              escola.
+            </p>
+          </div>
+
+          <form onSubmit={entrar} className="mt-6 space-y-5" noValidate>
             <div className="space-y-2">
               <label htmlFor="email" className="block text-lg font-semibold text-foreground">
                 E-mail
