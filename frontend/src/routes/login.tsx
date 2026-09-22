@@ -8,6 +8,25 @@ import { ApiError, login } from "@/lib/api";
 import { getSession, homeForRoles } from "@/lib/auth";
 import { emailValido } from "@/lib/validacao";
 
+const CHAVE_EMAIL_LEMBRADO = "notus.ultimoEmail";
+
+function lerEmailLembrado(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(CHAVE_EMAIL_LEMBRADO) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function lembrarEmail(email: string) {
+  try {
+    localStorage.setItem(CHAVE_EMAIL_LEMBRADO, email);
+  } catch {
+    /* ignore */
+  }
+}
+
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
@@ -34,7 +53,11 @@ function LoginPage() {
 
   useEffect(() => {
     const session = getSession();
-    if (session) navigate({ to: homeForRoles(session.roles), replace: true });
+    if (session) {
+      navigate({ to: homeForRoles(session.roles), replace: true });
+      return;
+    }
+    setEmail(lerEmailLembrado());
   }, [navigate]);
 
   function validarEmail(v: string): string | undefined {
@@ -68,6 +91,7 @@ function LoginPage() {
     setEnviando(true);
     try {
       const session = await login(email.trim(), senha);
+      lembrarEmail(email.trim());
       toast.success(`Bem-vindo(a), ${session.email}.`);
       navigate({ to: homeForRoles(session.roles), replace: true });
     } catch (err) {
