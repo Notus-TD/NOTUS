@@ -38,28 +38,28 @@ INSERT INTO tb_responsible (id, name, cpf, phone, address) VALUES (2026000005, '
 INSERT INTO tb_responsible (id, name, cpf, phone, address) VALUES (2026000006, 'Juliana Santos', '345.678.901-22', '11955550000', 'Rua E, 654');
 INSERT INTO tb_responsible (id, name, cpf, phone, address) VALUES (2026000010, 'Fernanda Rocha', '456.789.012-33', '11955550000', 'Rua E, 456');
 
--- 5. Alunos (herança JOINED: mesmo id do tb_user, vinculados ao responsável correspondente)
-INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id) VALUES (2026000001, 'Ana Aluna', 20260001, '2012-05-10', 'ATIVA', 2026000003);
-INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id) VALUES (2026000007, 'Bruno Ferreira', 20260002, '2012-08-15', 'ATIVA', 2026000005);
-INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id) VALUES (2026000008, 'Carla Santos', 20260003, '2013-01-22', 'ATIVA', 2026000006);
-INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id) VALUES (2026000009, 'Bruno Costa', 20260005, '2012-09-22', 'ATIVA', 2026000005);
-INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id) VALUES (2026000011, 'Camila Rocha', 20260006, '2013-01-30', 'ATIVA', 2026000010);
-INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id) VALUES (2026000012, 'Diego Rocha', 20260007, '2011-11-05', 'ATIVA', 2026000010);
-
--- 6. Disciplinas
+-- 5. Disciplinas
 INSERT INTO tb_disciplina (title, description, created) VALUES ('Matemática', 'Disciplina de Matemática do ensino fundamental.', '2026-02-01T08:00:00');
 INSERT INTO tb_disciplina (title, description, created) VALUES ('Português', 'Disciplina de Língua Portuguesa.', '2026-02-01T08:00:00');
 INSERT INTO tb_disciplina (title, description, created) VALUES ('Ciências', 'Disciplina de Ciências do ensino fundamental.', '2026-02-01T08:00:00');
 INSERT INTO tb_disciplina (title, description, created) VALUES ('Educação Física', 'Disciplina de Educação Física.', '2026-02-01T08:00:00');
 
--- 7. Turmas
+-- 6. Turmas
 INSERT INTO tb_turma (name, school_year) VALUES ('9º Ano A', '2026');
 INSERT INTO tb_turma (name, school_year) VALUES ('9º Ano B', '2026');
 
--- 7.1 Lecionamentos (vínculo professor ↔ turma ↔ disciplina; Pedro Professor = 2026000002)
+-- 7. Alunos (herança JOINED: mesmo id do tb_user, vinculados ao responsável e à turma correspondentes)
+INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000001, 'Ana Aluna', 20260001, '2012-05-10', 'ATIVA', 2026000003, 1);
+INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000007, 'Bruno Ferreira', 20260002, '2012-08-15', 'ATIVA', 2026000005, 1);
+INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000008, 'Carla Santos', 20260003, '2013-01-22', 'ATIVA', 2026000006, 1);
+INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000009, 'Bruno Costa', 20260005, '2012-09-22', 'ATIVA', 2026000005, 2);
+INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000011, 'Camila Rocha', 20260006, '2013-01-30', 'ATIVA', 2026000010, 2);
+INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000012, 'Diego Rocha', 20260007, '2011-11-05', 'ATIVA', 2026000010, 2);
+
+-- 7.1 Lecionamentos (vínculo professor ↔ turma ↔ disciplina; cada professor leciona uma
+-- única disciplina, mas pode dar aula em várias turmas. Pedro Professor = 2026000002, Matemática.)
 INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 1, 2026000002);
-INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 2, 2026000002);
-INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (2, 3, 2026000002);
+INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (2, 1, 2026000002);
 
 -- 8. Atividades
 INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Lista de Exercícios 1', 'Resolver os exercícios das páginas 10 a 15.', 'ABERTA', 1);

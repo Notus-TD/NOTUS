@@ -45,4 +45,12 @@ public class StudentController {
         studentAccessGuardService.assertCanViewResponsible(responsibleId, authentication.getName());
         return ResponseEntity.ok(studentService.listStudentsByResponsible(responsibleId));
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
+    @GetMapping("/turma/{turmaId}")
+    public ResponseEntity<List<StudentMinDTO>> findByTurma(
+            @PathVariable Long turmaId,
+            @RequestParam(required = false, defaultValue = "nome") String sort) {
+        return ResponseEntity.ok(studentService.listStudentsByTurma(turmaId, sort));
+    }
 }
