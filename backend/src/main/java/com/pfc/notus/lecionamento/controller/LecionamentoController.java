@@ -2,7 +2,7 @@ package com.pfc.notus.lecionamento.controller;
 
 import com.pfc.notus.lecionamento.dto.LecionamentoDTO;
 import com.pfc.notus.lecionamento.dto.LecionamentoRequestDTO;
-import com.pfc.notus.lecionamento.service.LecionamentoService;
+import com.pfc.notus.Service.LecionamentoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

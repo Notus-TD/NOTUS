@@ -2,7 +2,7 @@ package com.pfc.notus.turma.controller;
 
 
 import com.pfc.notus.lecionamento.dto.TurmaComDisciplinasDTO;
-import com.pfc.notus.lecionamento.service.LecionamentoService;
+import com.pfc.notus.Service.LecionamentoService;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.turma.service.TurmaService;
 import org.springframework.beans.factory.annotation.Autowired;

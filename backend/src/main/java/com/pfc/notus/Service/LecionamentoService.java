@@ -1,4 +1,4 @@
-package com.pfc.notus.lecionamento.service;
+package com.pfc.notus.Service;
 
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
