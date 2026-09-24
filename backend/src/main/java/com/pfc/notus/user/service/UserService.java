@@ -134,11 +134,13 @@ public class UserService implements UserDetailsService {
             student.setEmail("****");
             student.setBirthDate(null);
             student.setFullName("****");
+            student.setAtivo(false);
             student.setStatusMatricula(StatusMatricula.FINALIZADA);
         } else if (user instanceof Responsible responsible) {
             responsible.setEmail("****");
             responsible.setName("****");
             responsible.setPhone("****");
+            responsible.setAtivo(false);
         }
         userRepository.save(user);
     }

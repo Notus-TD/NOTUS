@@ -25,11 +25,9 @@ public class User implements UserDetails {
     @Getter @Setter
     private Long id;
 
-    @JsonIgnore
     @Getter @Setter
     private String password;
 
-    @Column(unique = true, nullable = false)
     @Getter @Setter
     private String email;
 
@@ -41,6 +39,9 @@ public class User implements UserDetails {
 
     @Getter
     private LocalDate createdAt;
+
+    @Getter @Setter
+    private boolean ativo = true;
 
     @ManyToMany
     @JoinTable(name = "tb_user_role",
@@ -91,7 +92,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.ativo;
     }
 
     public void addRole(Role role) {
