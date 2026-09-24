@@ -52,6 +52,14 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
+    public List<StudentMinDTO> listStudentsByTurmas(java.util.Collection<Long> turmaIds) {
+        if (turmaIds.isEmpty()) return List.of();
+        return studentRepository.findByTurmaIdIn(turmaIds).stream()
+                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudentsByResponsible(Long responsibleId) {
         return studentRepository.findByResponsibleId(responsibleId).stream()
                 .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))

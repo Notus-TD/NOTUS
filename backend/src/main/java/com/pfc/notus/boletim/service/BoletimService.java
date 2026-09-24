@@ -32,6 +32,13 @@ public class BoletimService {
     }
 
     @Transactional
+    public Long getStudentId(Long boletimId) {
+        return boletimRepository.findById(boletimId)
+                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId))
+                .getStudent().getId();
+    }
+
+    @Transactional
     public BoletimDTO save(BoletimDTO dto) {
         Student student = studentRepository.findById(dto.studentId())
                 .orElseThrow(() -> new EntityNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));

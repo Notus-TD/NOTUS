@@ -14,9 +14,9 @@ import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -43,6 +43,9 @@ public class FaltaService {
     @Autowired
     private AulaRegistroRepository aulaRegistroRepository;
 
+    @Autowired
+    private StudentAccessGuardService studentAccessGuardService;
+
     public List<FaltaDTO> getAllFaltas() {
         return faltaRepository.findAll().stream().map(this::toDTO).toList();
     }
@@ -57,6 +60,7 @@ public class FaltaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
+        studentAccessGuardService.assertCanTeach(aluno.getId(), disciplina.getId(), registradoPorEmail);
         User registradoPor = userRepository.findByEmail(registradoPorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + registradoPorEmail));
 
@@ -67,25 +71,16 @@ public class FaltaService {
     }
 
     @Transactional
-    public void delete(Long id) {
-        if (!faltaRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Falta não encontrada com o id: " + id);
-        }
+    public void delete(Long id, String requesterEmail) {
+        FaltaDomain falta = faltaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Falta não encontrada com o id: " + id));
+        studentAccessGuardService.assertCanTeach(falta.getAluno().getId(), falta.getDisciplina().getId(), requesterEmail);
         faltaRepository.deleteById(id);
     }
 
     @Transactional
     public void assertCanView(Long studentId, String requesterEmail) {
-        User requester = userRepository.findByEmail(requesterEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + requesterEmail));
-
-        if (requester.hasRole("ROLE_PROFESSOR") || requester.hasRole("ROLE_ADMIN")) return;
-        if (requester.getId().equals(studentId)) return;
-        if (requester instanceof Responsible responsavel
-                && responsavel.getStudents().stream().anyMatch(s -> s.getId().equals(studentId))) {
-            return;
-        }
-        throw new AccessDeniedException("Sem permissão para ver as faltas deste aluno.");
+        studentAccessGuardService.assertCanView(studentId, requesterEmail);
     }
 
     @Transactional

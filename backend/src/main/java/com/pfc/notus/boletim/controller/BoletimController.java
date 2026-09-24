@@ -24,7 +24,7 @@ public class BoletimController {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
-    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Boletim> getAllBoletim(){return boletimService.getAllBoletim();}
 
@@ -36,14 +36,16 @@ public class BoletimController {
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
-    public ResponseEntity<BoletimDTO> create(@RequestBody @Valid BoletimDTO dto) {
+    public ResponseEntity<BoletimDTO> create(@RequestBody @Valid BoletimDTO dto, Authentication authentication) {
+        studentAccessGuardService.assertCanView(dto.studentId(), authentication.getName());
         BoletimDTO created = boletimService.save(dto);
         return ResponseEntity.ok(created);
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id){
+    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication){
+        studentAccessGuardService.assertCanView(boletimService.getStudentId(id), authentication.getName());
         boletimService.delete(id);
         return ResponseEntity.noContent().build();
     }

@@ -24,7 +24,7 @@ public class TurmaController {
     @Autowired
     private LecionamentoService lecionamentoService;
 
-    @PreAuthorize("hasRole('PROFESSOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Turma> getAllTurmas() {return turmaService.getAllTurma();}
 

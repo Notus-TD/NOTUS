@@ -35,8 +35,15 @@ public class StudentController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
     @GetMapping
-    public ResponseEntity<List<StudentMinDTO>> findAll() {
-        return ResponseEntity.ok(studentService.listStudents());
+    public ResponseEntity<List<StudentMinDTO>> findAll(Authentication authentication) {
+        boolean admin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (admin) {
+            return ResponseEntity.ok(studentService.listStudents());
+        }
+        // Professor só enxerga alunos das turmas em que leciona.
+        return ResponseEntity.ok(studentService.listStudentsByTurmas(
+                studentAccessGuardService.turmaIdsDoProfessor(authentication.getName())));
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -50,7 +57,9 @@ public class StudentController {
     @GetMapping("/turma/{turmaId}")
     public ResponseEntity<List<StudentMinDTO>> findByTurma(
             @PathVariable Long turmaId,
-            @RequestParam(required = false, defaultValue = "nome") String sort) {
+            @RequestParam(required = false, defaultValue = "nome") String sort,
+            Authentication authentication) {
+        studentAccessGuardService.assertCanViewTurma(turmaId, authentication.getName());
         return ResponseEntity.ok(studentService.listStudentsByTurma(turmaId, sort));
     }
 }
