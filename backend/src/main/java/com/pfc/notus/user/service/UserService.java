@@ -138,9 +138,7 @@ public class UserService implements UserDetailsService {
         } else if (user instanceof Responsible responsible) {
             responsible.setEmail("****");
             responsible.setName("****");
-            responsible.setCpf("****");
             responsible.setPhone("****");
-            responsible.setAddress("****");
         }
         userRepository.save(user);
     }
