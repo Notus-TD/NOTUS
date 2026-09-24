@@ -6,8 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 public record ResponsibleRequest(
         @NotBlank String name,
         @NotBlank @Email String email,
-        @NotBlank String phone,
-        @NotBlank String address,
-        @NotBlank String cpf
+        @NotBlank String phone
 ) {
 }

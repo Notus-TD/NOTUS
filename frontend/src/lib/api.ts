@@ -106,8 +106,6 @@ export type ResponsibleRequest = {
   name: string;
   email: string;
   phone: string;
-  address: string;
-  cpf: string;
 };
 
 export type StudentRequest = {
