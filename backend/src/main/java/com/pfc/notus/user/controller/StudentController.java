@@ -41,6 +41,7 @@ public class StudentController {
         if (admin) {
             return ResponseEntity.ok(studentService.listStudents());
         }
+        // Professor só enxerga alunos das turmas em que leciona.
         return ResponseEntity.ok(studentService.listStudentsByTurmas(
                 studentAccessGuardService.turmaIdsDoProfessor(authentication.getName())));
     }

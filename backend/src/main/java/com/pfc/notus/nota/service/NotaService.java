@@ -62,6 +62,7 @@ public class NotaService {
     public NotaDTO update(Long id, NotaDTO dto, String requesterEmail) {
         Nota entity = notaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
+        // precisa poder lançar tanto na nota atual quanto no destino da alteração
         studentAccessGuardService.assertCanTeach(entity.getBoletim().getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
         Long boletimAntigoId = entity.getBoletim().getId();
         Boletim boletim = boletimRepository.findById(dto.boletimId())
