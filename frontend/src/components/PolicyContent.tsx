@@ -26,7 +26,7 @@ export function PolicyContent() {
             identificar o aluno e organizar a vida escolar.
           </li>
           <li>
-            <Destaque>Responsável</Destaque> (nome, e-mail, CPF, telefone e endereço): para
+            <Destaque>Responsável</Destaque> (nome, e-mail e telefone): para
             identificar o responsável legal, vinculá-lo aos alunos e permitir o contato da escola.
           </li>
           <li>
@@ -47,11 +47,12 @@ export function PolicyContent() {
           <Destaque>Base legal:</Destaque> o uso desses dados é necessário para a prestação do
           serviço educacional (Art. 7º, V) e para cumprir obrigações legais, como a guarda de
           registros escolares e de registros de acesso (Art. 7º, II). O aceite no primeiro acesso
-          apenas confirma que você leu esta política e os Termos de Uso.
+          confirma que você leu esta política e os Termos de Uso; ele não é a base legal para o
+          tratamento, exceto no caso dos dados de menores, explicado na seção 3.
         </p>
         <p>
-          Não coletamos dados sensíveis (como saúde ou biometria), localização, fotos ou dados
-          financeiros.
+          Não coletamos dados sensíveis (como saúde ou biometria), CPF, endereço, localização,
+          fotos ou dados financeiros.
         </p>
       </Secao>
 
@@ -60,6 +61,14 @@ export function PolicyContent() {
           Os dados de alunos menores de idade são tratados sempre no melhor interesse do aluno (Art.
           14 da LGPD). As contas são criadas pela escola, o responsável vê apenas os alunos
           vinculados a ele, e as notas não são expostas a outros alunos nem usadas para publicidade.
+        </p>
+        <p>
+          <Destaque>Aviso aos responsáveis:</Destaque> o tratamento dos dados de menores de idade
+          depende do consentimento específico de pelo menos um dos pais ou do responsável legal
+          (Art. 14, §1º). Esse consentimento é dado pelo responsável no primeiro acesso, ao aceitar
+          esta política e os Termos de Uso, e pode ser retirado a qualquer momento pedindo à
+          secretaria. Retirá-lo pode impedir a continuidade do uso do portal, mas não apaga os
+          registros escolares que a lei exige guardar.
         </p>
       </Secao>
 
@@ -99,16 +108,27 @@ export function PolicyContent() {
       </Secao>
 
       <Secao titulo="7. Por quanto tempo guardamos">
+        <p>
+          Os prazos abaixo são definidos para este protótipo acadêmico. Em uma implantação real,
+          a escola os ajustaria conforme a norma do seu sistema de ensino.
+        </p>
         <ul className="list-disc space-y-2 pl-6">
           <li>
-            <Destaque>Cadastros:</Destaque> enquanto durar o vínculo com a escola. Depois, ou a
-            pedido do titular, são anonimizados em até 30 dias.
+            <Destaque>Cadastros:</Destaque> enquanto durar o vínculo com a escola e por 5 anos
+            depois do seu término. Depois desse prazo, ou a pedido do titular quando cabível, são
+            anonimizados em até 30 dias.
           </li>
           <li>
-            <Destaque>Dados acadêmicos:</Destaque> pelo prazo exigido pela legislação escolar.
+            <Destaque>Dados acadêmicos</Destaque> (notas, boletins, frequência e atividades): 5
+            anos após o término do vínculo. Depois, são eliminados ou anonimizados.
           </li>
           <li>
-            <Destaque>Registros de acesso:</Destaque> 6 meses (Marco Civil da Internet, Art. 15).
+            <Destaque>Registros de acesso:</Destaque> 6 meses (Marco Civil da Internet, Art. 15),
+            e depois são apagados.
+          </li>
+          <li>
+            <Destaque>Cópias de segurança:</Destaque> seguem os mesmos prazos e são descartadas
+            no ciclo de rotação, em até 30 dias após a eliminação do dado original.
           </li>
         </ul>
       </Secao>
@@ -135,6 +155,11 @@ export function PolicyContent() {
           Mudanças importantes nesta política serão avisadas no portal. Dúvidas ou pedidos sobre
           seus dados: secretaria da escola, pelo e-mail secretaria@colegionotus.com.br. Você também
           pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).
+        </p>
+        <p>
+          Como o Colégio Notus é fictício, o e-mail de contato e a figura do encarregado (DPO) são
+          ilustrativos neste protótipo. Em uma implantação real, a escola deveria indicar um
+          encarregado e um canal de atendimento funcionais.
         </p>
       </Secao>
     </div>

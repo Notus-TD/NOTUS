@@ -35,8 +35,10 @@ export function TermsContent() {
             As contas são criadas pela própria escola; não há cadastro aberto ao público.
           </li>
           <li>
-            Alunos menores de idade utilizam o portal com o conhecimento de seus responsáveis
-            legais, que respondem por eles perante a escola.
+            Alunos menores de idade utilizam o portal representados por seus responsáveis legais,
+            que respondem por eles perante a escola. Ao aceitar estes Termos e a Política de
+            Privacidade, o responsável o faz em seu nome e em nome dos alunos menores vinculados a
+            ele.
           </li>
           <li>
             O acesso depende de vínculo ativo com a escola e é encerrado quando esse vínculo

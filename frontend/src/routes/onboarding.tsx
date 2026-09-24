@@ -26,6 +26,7 @@ function OnboardingPage() {
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [ehResponsavel, setEhResponsavel] = useState(false);
 
   useEffect(() => {
     const session = getSession();
@@ -33,6 +34,7 @@ function OnboardingPage() {
       navigate({ to: "/login", replace: true });
       return;
     }
+    setEhResponsavel(session.roles.includes("ROLE_RESPONSAVEL"));
     if (!session.firstLogin) {
       navigate({ to: homeForRoles(session.roles), replace: true });
     }
@@ -175,6 +177,13 @@ function OnboardingPage() {
                   )}
                 </li>
               </ul>
+              {ehResponsavel && (
+                <p className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
+                  <strong>Aviso ao responsável:</strong> ao aceitar, você consente, como responsável
+                  legal, com o tratamento dos dados dos alunos menores vinculados a você (Art. 14 da
+                  LGPD). Você pode retirar esse consentimento a qualquer momento pela secretaria.
+                </p>
+              )}
             </div>
 
             <label
@@ -188,7 +197,9 @@ function OnboardingPage() {
               />
               <span className="text-base text-foreground">
                 {documentosLidos
-                  ? "Li e aceito os termos de uso e a política de privacidade."
+                  ? ehResponsavel
+                    ? "Li e aceito os termos de uso e a política de privacidade, em meu nome e como responsável legal dos alunos vinculados a mim."
+                    : "Li e aceito os termos de uso e a política de privacidade."
                   : "Abra e leia os dois documentos acima para liberar esta opção."}
               </span>
             </label>
