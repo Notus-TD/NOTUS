@@ -33,10 +33,13 @@ INSERT INTO tb_user_role (user_id, role_id) VALUES (2026000011, 1);
 INSERT INTO tb_user_role (user_id, role_id) VALUES (2026000012, 1);
 
 -- 4. Responsáveis (herança JOINED: mesmo id do tb_user)
-INSERT INTO tb_responsible (id, name, cpf, phone, address) VALUES (2026000003, 'Marta Responsável', '123.456.789-00', '11977770000', 'Rua C, 789');
-INSERT INTO tb_responsible (id, name, cpf, phone, address) VALUES (2026000005, 'Carlos Costa', '234.567.890-11', '11966660000', 'Rua D, 123');
-INSERT INTO tb_responsible (id, name, cpf, phone, address) VALUES (2026000006, 'Juliana Santos', '345.678.901-22', '11955550000', 'Rua E, 654');
-INSERT INTO tb_responsible (id, name, cpf, phone, address) VALUES (2026000010, 'Fernanda Rocha', '456.789.012-33', '11955550000', 'Rua E, 456');
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000003, 'Marta Responsável', '11977770000');
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000005, 'Carlos Costa', '11966660000');
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000006, 'Juliana Santos', '11955550000');
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000010, 'Fernanda Rocha', '11955550000');
+
+-- 4.1 Professores (herança JOINED: mesmo id do tb_user)
+INSERT INTO tb_professor (id, full_name) VALUES (2026000002, 'Pedro Professor');
 
 -- 5. Disciplinas
 INSERT INTO tb_disciplina (title, description, created) VALUES ('Matemática', 'Disciplina de Matemática do ensino fundamental.', '2026-02-01T08:00:00');
