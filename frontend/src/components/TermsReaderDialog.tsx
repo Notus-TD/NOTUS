@@ -8,16 +8,33 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PolicyContent } from "@/components/PolicyContent";
+import { TermsContent } from "@/components/TermsContent";
+
+const DOCUMENTOS = {
+  privacidade: {
+    titulo: "Política de Privacidade",
+    triggerLabel: "Leia a política de privacidade completa",
+    Conteudo: PolicyContent,
+  },
+  termos: {
+    titulo: "Termos de Uso",
+    triggerLabel: "Leia os termos de uso completos",
+    Conteudo: TermsContent,
+  },
+};
 
 export function TermsReaderDialog({
-  triggerLabel = "Leia a política de privacidade completa",
+  documento = "privacidade",
+  triggerLabel,
   triggerClassName = "text-primary underline",
   onConfirm,
 }: {
+  documento?: keyof typeof DOCUMENTOS;
   triggerLabel?: string;
   triggerClassName?: string;
   onConfirm: () => void;
 }) {
+  const { titulo, triggerLabel: labelPadrao, Conteudo } = DOCUMENTOS[documento];
   const [aberto, setAberto] = useState(false);
   const [leuTudo, setLeuTudo] = useState(false);
   const corpoRef = useRef<HTMLDivElement>(null);
@@ -48,17 +65,17 @@ export function TermsReaderDialog({
   return (
     <>
       <button type="button" onClick={abrir} className={triggerClassName}>
-        {triggerLabel}
+        {triggerLabel ?? labelPadrao}
       </button>
 
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="grid max-h-[85vh] max-w-2xl grid-rows-[auto_1fr_auto]">
           <DialogHeader>
-            <DialogTitle>Política de Privacidade</DialogTitle>
+            <DialogTitle>{titulo}</DialogTitle>
           </DialogHeader>
 
           <div ref={corpoRef} onScroll={aoRolar} className="min-h-0 overflow-y-auto pr-2">
-            <PolicyContent />
+            <Conteudo />
           </div>
 
           <DialogFooter>

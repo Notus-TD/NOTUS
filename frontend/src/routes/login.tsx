@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LinksLegais } from "@/components/LegalPage";
 import { ApiError, login } from "@/lib/api";
 import { getSession, homeForRoles } from "@/lib/auth";
 
@@ -121,8 +122,11 @@ function LoginPage() {
       </main>
 
       <footer className="border-t border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-base text-muted-foreground sm:px-6">
-          NOTUS · Portal de gestão escolar · Dúvidas: secretaria@colegionotus.com.br · (11) 4002-8922
+        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-6 text-base text-muted-foreground sm:px-6">
+          <span>
+            NOTUS · Portal de gestão escolar · Dúvidas: secretaria@colegionotus.com.br · (11) 4002-8922
+          </span>
+          <LinksLegais />
         </div>
       </footer>
     </div>

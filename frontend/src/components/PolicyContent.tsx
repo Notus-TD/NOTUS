@@ -1,195 +1,140 @@
-import type { ReactNode } from "react";
-
-export function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h2 className="font-display text-xl font-bold text-foreground">{titulo}</h2>
-      <div className="space-y-3 text-base leading-relaxed text-muted-foreground">{children}</div>
-    </section>
-  );
-}
+import { ATUALIZADO_EM, Destaque, Secao, VERSAO_DOCUMENTOS } from "@/components/LegalPage";
 
 export function PolicyContent() {
   return (
     <div className="space-y-10">
-      <Secao titulo="1. Escopo">
+      <Secao titulo="1. Sobre esta política">
         <p>
-          Esta política explica como o NOTUS trata os dados pessoais de alunos, responsáveis e
-          professores que usam o portal — site e futuros aplicativos — para acompanhar matrícula,
-          notas, presença, atividades e comunicação com a escola.
+          Esta política explica quais dados pessoais o NOTUS usa, para quê, por quanto tempo e
+          quais são os seus direitos, conforme a Lei Geral de Proteção de Dados (LGPD — Lei nº
+          13.709/2018). Versão {VERSAO_DOCUMENTOS}, atualizada em {ATUALIZADO_EM}.
+        </p>
+        <p>
+          O NOTUS é um projeto acadêmico. O responsável pelos dados (controlador) é a escola que usa
+          o sistema — neste protótipo, o Colégio Notus, uma escola fictícia.
         </p>
       </Secao>
 
-      <Secao titulo="2. Definições">
+      <Secao titulo="2. Quais dados usamos e por quê">
+        <ul className="list-disc space-y-3 pl-6">
+          <li>
+            <Destaque>Conta de acesso</Destaque> (e-mail, senha e perfil): para você entrar no
+            portal e ver apenas o que o seu perfil permite.
+          </li>
+          <li>
+            <Destaque>Aluno</Destaque> (nome, e-mail, matrícula, data de nascimento e turma): para
+            identificar o aluno e organizar a vida escolar.
+          </li>
+          <li>
+            <Destaque>Responsável</Destaque> (nome, e-mail, CPF, telefone e endereço): para
+            identificar o responsável legal, vinculá-lo aos alunos e permitir o contato da escola.
+          </li>
+          <li>
+            <Destaque>Professor</Destaque> (e-mail e turmas em que leciona): para lançar notas,
+            faltas e atividades.
+          </li>
+          <li>
+            <Destaque>Dados acadêmicos</Destaque> (notas, boletins, frequência e atividades): para o
+            acompanhamento escolar pelo aluno, pelo responsável e pelos professores.
+          </li>
+          <li>
+            <Destaque>Registros de acesso</Destaque> (usuário, IP, data, hora e ação realizada):
+            para segurança e para saber quem alterou notas, presenças e cadastros. Não registramos
+            senhas.
+          </li>
+        </ul>
+        <p>
+          <Destaque>Base legal:</Destaque> o uso desses dados é necessário para a prestação do
+          serviço educacional (Art. 7º, V) e para cumprir obrigações legais, como a guarda de
+          registros escolares e de registros de acesso (Art. 7º, II). O aceite no primeiro acesso
+          apenas confirma que você leu esta política e os Termos de Uso.
+        </p>
+        <p>
+          Não coletamos dados sensíveis (como saúde ou biometria), localização, fotos ou dados
+          financeiros.
+        </p>
+      </Secao>
+
+      <Secao titulo="3. Crianças e adolescentes">
+        <p>
+          Os dados de alunos menores de idade são tratados sempre no melhor interesse do aluno (Art.
+          14 da LGPD). As contas são criadas pela escola, o responsável vê apenas os alunos
+          vinculados a ele, e as notas não são expostas a outros alunos nem usadas para publicidade.
+        </p>
+      </Secao>
+
+      <Secao titulo="4. Quem acessa">
         <ul className="list-disc space-y-2 pl-6">
           <li>
-            <strong className="text-foreground">Titular:</strong> a pessoa a quem os dados pessoais
-            se referem (aluno, responsável ou professor).
+            <Destaque>Aluno:</Destaque> os próprios dados.
           </li>
           <li>
-            <strong className="text-foreground">Controlador:</strong> quem decide como e para quê os
-            dados são tratados — no caso, [Razão Social do Colégio].
+            <Destaque>Responsável:</Destaque> os dados dos alunos vinculados a ele.
           </li>
           <li>
-            <strong className="text-foreground">Encarregado (DPO):</strong> canal de contato entre
-            os titulares e o Controlador para assuntos de proteção de dados.
+            <Destaque>Professor:</Destaque> os dados acadêmicos necessários para as suas aulas.
           </li>
           <li>
-            <strong className="text-foreground">Tratamento:</strong> qualquer operação com dados
-            pessoais — coleta, uso, armazenamento, correção ou eliminação.
+            <Destaque>Administração:</Destaque> cadastros, turmas e pedidos sobre dados pessoais.
+          </li>
+        </ul>
+        <p>Essas permissões são verificadas pelo servidor em cada operação.</p>
+      </Secao>
+
+      <Secao titulo="5. Compartilhamento">
+        <p>
+          Não vendemos nem compartilhamos dados pessoais. Os dados ficam no servidor e no banco de
+          dados do sistema, e os registros de acesso ficam em ferramentas de log (Loki e Grafana) na
+          mesma infraestrutura. A única exceção é o Google Fonts, que fornece as fontes do site e
+          recebe o seu IP ao carregar a página, podendo processá-lo fora do Brasil. Dados só são
+          entregues a autoridades quando exigido por lei.
+        </p>
+      </Secao>
+
+      <Secao titulo="6. Armazenamento no navegador">
+        <p>
+          Não usamos cookies. O navegador guarda apenas a sua sessão (apagada ao sair ou em até 1
+          hora) e a indicação de que você já viu o aviso de privacidade.
+        </p>
+      </Secao>
+
+      <Secao titulo="7. Por quanto tempo guardamos">
+        <ul className="list-disc space-y-2 pl-6">
+          <li>
+            <Destaque>Cadastros:</Destaque> enquanto durar o vínculo com a escola. Depois, ou a
+            pedido do titular, são anonimizados em até 30 dias.
           </li>
           <li>
-            <strong className="text-foreground">Anonimização:</strong> processo que remove a
-            possibilidade de associar um dado a uma pessoa identificável.
+            <Destaque>Dados acadêmicos:</Destaque> pelo prazo exigido pela legislação escolar.
+          </li>
+          <li>
+            <Destaque>Registros de acesso:</Destaque> 6 meses (Marco Civil da Internet, Art. 15).
           </li>
         </ul>
       </Secao>
 
-      <Secao titulo="3. Controlador e Encarregado">
+      <Secao titulo="8. Seus direitos">
         <p>
-          <strong className="text-foreground">Controlador:</strong> [Razão Social do Colégio], CNPJ
-          [00.000.000/0000-00], com sede em [endereço completo].
-        </p>
-        <p>
-          <strong className="text-foreground">Encarregado (DPO):</strong> dúvidas, solicitações ou
-          reclamações sobre o tratamento de dados podem ser enviadas para{" "}
-          <a href="mailto:privacidade@colegionotus.com.br" className="text-primary underline">
-            privacidade@colegionotus.com.br
-          </a>
-          .
+          Você (ou seu responsável legal) pode pedir: acesso aos seus dados, correção, informação
+          sobre compartilhamento, anonimização ou eliminação, e uma cópia dos seus dados
+          (portabilidade). Basta solicitar à secretaria da escola, que responde em até 15 dias.
+          Alguns dados podem ser mantidos quando a lei exigir, como os registros escolares.
         </p>
       </Secao>
 
-      <Secao titulo="4. Dados de crianças e adolescentes">
+      <Secao titulo="9. Segurança e incidentes">
         <p>
-          Grande parte dos alunos atendidos pelo NOTUS são crianças e adolescentes. Nesses casos, o
-          tratamento observa o Art. 14 da LGPD: os dados são coletados no melhor interesse do aluno,
-          e o consentimento é obtido do responsável legal, que também autoriza, em nome do aluno, o
-          tratamento necessário para a prestação do serviço educacional (matrícula, notas,
-          frequência e comunicação escolar).
+          As senhas são guardadas com criptografia (hash), o acesso expira automaticamente e cada
+          perfil só acessa o que precisa. Se houver um incidente de segurança com risco aos
+          titulares, a escola comunica a ANPD e as pessoas afetadas.
         </p>
       </Secao>
 
-      <Secao titulo="5. Dados tratados e finalidade">
-        <p>Coletamos apenas os dados necessários para operar o portal escolar:</p>
-        <ul className="list-disc space-y-2 pl-6">
-          <li>
-            <strong className="text-foreground">Do aluno:</strong> nome completo, e-mail, matrícula,
-            data de nascimento e status da matrícula — para identificação, login e controle
-            acadêmico.
-          </li>
-          <li>
-            <strong className="text-foreground">Do responsável:</strong> nome, e-mail, CPF, telefone
-            e endereço — para contato da escola e vínculo com o(s) aluno(s).
-          </li>
-          <li>
-            <strong className="text-foreground">Do professor:</strong> nome e e-mail — para login e
-            registro de quem lançou notas, faltas e atividades.
-          </li>
-          <li>
-            <strong className="text-foreground">Dados acadêmicos:</strong> notas, boletins,
-            frequência/faltas e atividades — para acompanhamento pedagógico do aluno pelo próprio
-            aluno, pelo responsável e pelos professores.
-          </li>
-          <li>
-            <strong className="text-foreground">Dados de acesso:</strong> senha (armazenada com hash
-            criptográfico, nunca em texto puro) e registro de aceite dos termos — para autenticação
-            e segurança da conta.
-          </li>
-        </ul>
-      </Secao>
-
-      <Secao titulo="6. Base legal">
-        <p>O tratamento se apoia principalmente em duas hipóteses do Art. 7º da LGPD:</p>
-        <ul className="list-disc space-y-2 pl-6">
-          <li>
-            <strong className="text-foreground">Consentimento</strong> (inciso I): obtido do
-            responsável ou do próprio titular maior de idade no momento do primeiro acesso ao
-            portal.
-          </li>
-          <li>
-            <strong className="text-foreground">Execução de contrato</strong> (inciso V): dados
-            necessários à prestação do serviço educacional contratado junto à escola, como
-            matrícula, notas e frequência.
-          </li>
-        </ul>
-      </Secao>
-
-      <Secao titulo="7. Direitos do titular">
-        <p>A qualquer momento, o titular (ou seu responsável legal) pode solicitar:</p>
-        <ul className="list-disc space-y-2 pl-6">
-          <li>Confirmação da existência de tratamento e acesso aos dados;</li>
-          <li>Correção de dados incompletos, inexatos ou desatualizados;</li>
-          <li>Informação sobre com quem os dados são compartilhados;</li>
-          <li>Revogação do consentimento dado anteriormente;</li>
-          <li>
-            <strong className="text-foreground">
-              Anonimização, bloqueio ou eliminação de dados
-            </strong>{" "}
-            desnecessários ou tratados em desconformidade com a lei — no NOTUS, essa solicitação é
-            atendida pela funcionalidade de anonimização disponível para a administração da escola,
-            que substitui os dados pessoais identificáveis e encerra a matrícula vinculada.
-          </li>
-        </ul>
+      <Secao titulo="10. Alterações e contato">
         <p>
-          Solicitações podem ser feitas pelo canal indicado na seção 3 (Encarregado) ou diretamente
-          à secretaria da escola.
-        </p>
-      </Secao>
-
-      <Secao titulo="8. Compartilhamento de dados">
-        <p>
-          O NOTUS não compartilha dados pessoais com terceiros para fins comerciais. Os dados ficam
-          restritos à equipe escolar (professores, coordenação e administração) com acesso
-          necessário para exercer suas funções, e ao próprio aluno e responsável vinculados. Dados
-          podem ser divulgados a autoridades públicas apenas quando exigido por lei ou ordem
-          judicial.
-        </p>
-      </Secao>
-
-      <Secao titulo="9. Retenção e eliminação">
-        <p>
-          Os dados são mantidos enquanto durar o vínculo do aluno com a escola e pelo prazo
-          adicional necessário para cumprir obrigações legais de guarda de registro escolar. Após
-          esse período, ou mediante solicitação válida do titular, os dados pessoais são
-          anonimizados.
-        </p>
-      </Secao>
-
-      <Secao titulo="10. Segurança">
-        <p>
-          Adotamos medidas técnicas para proteger os dados pessoais, incluindo senhas armazenadas
-          com hash criptográfico (nunca em texto puro), autenticação por token com expiração e
-          controle de acesso por perfil (aluno, responsável, professor, administração). Nenhum
-          sistema é 100% livre de risco, mas trabalhamos para reduzir essas vulnerabilidades
-          continuamente.
-        </p>
-      </Secao>
-
-      <Secao titulo="11. Armazenamento local no navegador">
-        <p>
-          O NOTUS não usa cookies de rastreamento. Guardamos localmente no seu navegador
-          (localStorage) apenas o token de sessão necessário para manter você conectado — esse dado
-          não é compartilhado com terceiros e é apagado quando você sai da conta ou o token expira.
-        </p>
-      </Secao>
-
-      <Secao titulo="12. Alterações nesta política">
-        <p>
-          Podemos atualizar esta política para refletir mudanças no portal ou na legislação. A data
-          no topo desta página indica a versão vigente; mudanças relevantes serão comunicadas aos
-          usuários no próprio portal.
-        </p>
-      </Secao>
-
-      <Secao titulo="13. Contato">
-        <p>
-          Dúvidas, solicitações ou reclamações sobre esta política:{" "}
-          <a href="mailto:privacidade@colegionotus.com.br" className="text-primary underline">
-            privacidade@colegionotus.com.br
-          </a>{" "}
-          ou secretaria@colegionotus.com.br · (11) 4002-8922. Sem prejuízo desse canal, o titular
-          pode apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).
+          Mudanças importantes nesta política serão avisadas no portal. Dúvidas ou pedidos sobre
+          seus dados: secretaria da escola, pelo e-mail secretaria@colegionotus.com.br. Você também
+          pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).
         </p>
       </Secao>
     </div>

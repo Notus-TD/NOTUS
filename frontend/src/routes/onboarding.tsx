@@ -21,6 +21,8 @@ function OnboardingPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [termosLidos, setTermosLidos] = useState(false);
+  const [politicaLida, setPoliticaLida] = useState(false);
+  const documentosLidos = termosLidos && politicaLida;
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -53,8 +55,8 @@ function OnboardingPage() {
       setErro("As senhas não coincidem.");
       return;
     }
-    if (!termosLidos) {
-      setErro("Abra e leia a política de privacidade antes de continuar.");
+    if (!documentosLidos) {
+      setErro("Abra e leia os termos de uso e a política de privacidade antes de continuar.");
       return;
     }
     if (!aceitouTermos) {
@@ -152,30 +154,42 @@ function OnboardingPage() {
             <div className="rounded-xl border border-border bg-secondary/40 p-4">
               <p className="text-base font-semibold text-foreground">Termos de uso e privacidade</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Ao continuar, você concorda que o NOTUS trate os dados acadêmicos e de contato
-                cadastrados exclusivamente para a gestão escolar, conforme a Lei Geral de Proteção
-                de Dados (LGPD). <TermsReaderDialog onConfirm={() => setTermosLidos(true)} />
+                Antes de continuar, leia os Termos de Uso, com as regras do portal, e a Política de
+                Privacidade, que explica como a escola trata os dados acadêmicos e de contato
+                conforme a Lei Geral de Proteção de Dados (LGPD).
               </p>
-              {termosLidos && (
-                <p className="mt-2 text-sm font-medium text-success">
-                  ✓ Política de privacidade lida.
-                </p>
-              )}
+              <ul className="mt-2 space-y-1 text-sm">
+                <li>
+                  <TermsReaderDialog documento="termos" onConfirm={() => setTermosLidos(true)} />
+                  {termosLidos && (
+                    <span className="ml-2 font-medium text-success">✓ Lidos</span>
+                  )}
+                </li>
+                <li>
+                  <TermsReaderDialog
+                    documento="privacidade"
+                    onConfirm={() => setPoliticaLida(true)}
+                  />
+                  {politicaLida && (
+                    <span className="ml-2 font-medium text-success">✓ Lida</span>
+                  )}
+                </li>
+              </ul>
             </div>
 
             <label
-              className={`flex items-start gap-3 ${!termosLidos ? "cursor-not-allowed opacity-60" : ""}`}
+              className={`flex items-start gap-3 ${!documentosLidos ? "cursor-not-allowed opacity-60" : ""}`}
             >
               <Checkbox
                 checked={aceitouTermos}
-                disabled={!termosLidos}
+                disabled={!documentosLidos}
                 onCheckedChange={(v) => setAceitouTermos(v === true)}
                 className="mt-1"
               />
               <span className="text-base text-foreground">
-                {termosLidos
+                {documentosLidos
                   ? "Li e aceito os termos de uso e a política de privacidade."
-                  : "Abra e leia a política de privacidade acima para liberar esta opção."}
+                  : "Abra e leia os dois documentos acima para liberar esta opção."}
               </span>
             </label>
 
