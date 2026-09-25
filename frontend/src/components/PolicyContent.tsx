@@ -26,8 +26,9 @@ export function PolicyContent() {
             identificar o aluno e organizar a vida escolar.
           </li>
           <li>
-            <Destaque>Responsável</Destaque> (nome, e-mail e telefone): para
-            identificar o responsável legal, vinculá-lo aos alunos e permitir o contato da escola.
+            <Destaque>Responsável</Destaque> (nome, e-mail e telefone celular): para
+            identificar o responsável legal, vinculá-lo aos alunos, permitir o contato da escola e
+            enviar avisos automáticos pelo WhatsApp (seção 6).
           </li>
           <li>
             <Destaque>Professor</Destaque> (e-mail e turmas em que leciona): para lançar notas,
@@ -75,39 +76,101 @@ export function PolicyContent() {
       <Secao titulo="4. Quem acessa">
         <ul className="list-disc space-y-2 pl-6">
           <li>
-            <Destaque>Aluno:</Destaque> os próprios dados.
+            <Destaque>Aluno:</Destaque> apenas os próprios dados: cadastro, notas, boletins,
+            faltas, frequência, atividades e entregas. Não vê dados de outros alunos.
           </li>
           <li>
-            <Destaque>Responsável:</Destaque> os dados dos alunos vinculados a ele.
+            <Destaque>Responsável:</Destaque> o próprio cadastro e os mesmos dados acadêmicos dos
+            alunos vinculados a ele. Não vê outros alunos.
           </li>
           <li>
-            <Destaque>Professor:</Destaque> os dados acadêmicos necessários para as suas aulas.
+            <Destaque>Professor:</Destaque> nome, matrícula e situação da matrícula dos alunos das
+            turmas em que leciona. Lança notas, faltas, presenças e aulas somente nas disciplinas
+            que leciona em cada turma. Não vê e-mail, telefone nem os dados do responsável.
           </li>
           <li>
-            <Destaque>Administração:</Destaque> cadastros, turmas e pedidos sobre dados pessoais.
+            <Destaque>Administração (secretaria):</Destaque> os cadastros de alunos, responsáveis e
+            professores, as turmas, disciplinas, notas e frequência, e o histórico dos avisos pelo
+            WhatsApp (com o telefone mascarado). Também atende os pedidos sobre dados pessoais e
+            anonimiza contas quando cabível.
+          </li>
+          <li>
+            <Destaque>Equipe técnica:</Destaque> acessa o servidor, o banco de dados e os
+            registros de acesso apenas para manutenção, correção de erros e segurança.
           </li>
         </ul>
-        <p>Essas permissões são verificadas pelo servidor em cada operação.</p>
+        <p>
+          Essas permissões são verificadas pelo servidor em cada operação, e os acessos ficam
+          registrados (seção 2, "Registros de acesso").
+        </p>
       </Secao>
 
       <Secao titulo="5. Compartilhamento">
         <p>
-          Não vendemos nem compartilhamos dados pessoais. Os dados ficam no servidor e no banco de
-          dados do sistema, e os registros de acesso ficam em ferramentas de log (Loki e Grafana) na
-          mesma infraestrutura. A única exceção é o Google Fonts, que fornece as fontes do site e
-          recebe o seu IP ao carregar a página, podendo processá-lo fora do Brasil. Dados só são
-          entregues a autoridades quando exigido por lei.
+          Não vendemos dados pessoais. Os dados ficam no servidor e no banco de dados do sistema, e
+          os registros de acesso ficam em ferramentas de log (Loki e Grafana) na mesma
+          infraestrutura. Há duas exceções, e em ambas os dados podem ser processados fora do
+          Brasil:
         </p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>
+            <Destaque>Google Fonts:</Destaque> fornece as fontes do site e recebe o seu IP ao
+            carregar a página.
+          </li>
+          <li>
+            <Destaque>WhatsApp Business (Meta):</Destaque> recebe o telefone do responsável e o
+            conteúdo de cada aviso para entregá-lo pelo WhatsApp (seção 6).
+          </li>
+        </ul>
+        <p>Dados só são entregues a autoridades quando exigido por lei.</p>
       </Secao>
 
-      <Secao titulo="6. Armazenamento no navegador">
+      <Secao titulo="6. Avisos pelo WhatsApp">
         <p>
-          Não usamos cookies. O navegador guarda apenas a sua sessão (apagada ao sair ou em até 1
-          hora) e a indicação de que você já viu o aviso de privacidade.
+          O Colégio Notus envia avisos automáticos pelo WhatsApp ao número de celular cadastrado do
+          responsável, sobre os alunos vinculados a ele, quando:
+        </p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>o aluno recebe uma falta;</li>
+          <li>o boletim de um período é fechado;</li>
+          <li>uma nova atividade é publicada para a turma do aluno.</li>
+        </ul>
+        <p>
+          Os avisos só começam depois que o responsável aceita esta política e os Termos de Uso no
+          primeiro acesso ao portal. Esse aceite vale como a sua autorização para receber os avisos
+          pelo WhatsApp.
+        </p>
+        <p>
+          Cada aviso leva apenas o necessário: nome do responsável e do aluno, disciplina, data e,
+          conforme o caso, o total de faltas, a média do boletim ou o título e o prazo da
+          atividade. As mensagens são automáticas e o número não recebe respostas; dúvidas devem
+          ser tratadas com a secretaria.
+        </p>
+        <p>
+          Para deixar de receber os avisos, basta pedir à secretaria. Guardamos um registro de cada
+          aviso (tipo, data, situação do envio, identificador da mensagem e os dados usados no
+          aviso) para suporte e auditoria, pelo prazo indicado na seção 8.
         </p>
       </Secao>
 
-      <Secao titulo="7. Por quanto tempo guardamos">
+      <Secao titulo="7. Armazenamento no navegador">
+        <p>Não usamos cookies. O navegador guarda apenas:</p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>a sua sessão, apagada ao sair ou em até 1 hora;</li>
+          <li>
+            o seu e-mail, só se você marcar "Lembrar meu e-mail neste dispositivo" ao entrar. A
+            senha nunca é guardada. Para apagar o e-mail, desmarque a opção no próximo acesso ou
+            limpe os dados do navegador. Evite marcar essa opção em computadores compartilhados;
+          </li>
+          <li>a indicação de que você já viu o aviso de privacidade;</li>
+          <li>
+            no perfil de administração, os comunicados enviados, que neste protótipo ficam salvos
+            só no navegador de quem os enviou.
+          </li>
+        </ul>
+      </Secao>
+
+      <Secao titulo="8. Por quanto tempo guardamos">
         <p>
           Os prazos abaixo são definidos para este protótipo acadêmico. Em uma implantação real,
           a escola os ajustaria conforme a norma do seu sistema de ensino.
@@ -127,13 +190,17 @@ export function PolicyContent() {
             e depois são apagados.
           </li>
           <li>
+            <Destaque>Registros de avisos pelo WhatsApp:</Destaque> 6 meses após o envio, e
+            depois são apagados.
+          </li>
+          <li>
             <Destaque>Cópias de segurança:</Destaque> seguem os mesmos prazos e são descartadas
             no ciclo de rotação, em até 30 dias após a eliminação do dado original.
           </li>
         </ul>
       </Secao>
 
-      <Secao titulo="8. Seus direitos">
+      <Secao titulo="9. Seus direitos">
         <p>
           Você (ou seu responsável legal) pode pedir: acesso aos seus dados, correção, informação
           sobre compartilhamento, anonimização ou eliminação, e uma cópia dos seus dados
@@ -142,7 +209,7 @@ export function PolicyContent() {
         </p>
       </Secao>
 
-      <Secao titulo="9. Segurança e incidentes">
+      <Secao titulo="10. Segurança e incidentes">
         <p>
           As senhas são guardadas com criptografia (hash), o acesso expira automaticamente e cada
           perfil só acessa o que precisa. Se houver um incidente de segurança com risco aos
@@ -150,7 +217,7 @@ export function PolicyContent() {
         </p>
       </Secao>
 
-      <Secao titulo="10. Alterações e contato">
+      <Secao titulo="11. Alterações e contato">
         <p>
           Mudanças importantes nesta política serão avisadas no portal. Dúvidas ou pedidos sobre
           seus dados: secretaria da escola, pelo e-mail secretaria@colegionotus.com.br. Você também

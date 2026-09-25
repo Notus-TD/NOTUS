@@ -19,7 +19,8 @@ export function TermsContent() {
         <p>
           O NOTUS é um portal de gestão escolar que permite acompanhar matrícula, turmas,
           disciplinas, notas, boletins, frequência, atividades e entregas, e a comunicação entre a
-          escola, os alunos e os responsáveis.
+          escola, os alunos e os responsáveis, incluindo avisos automáticos enviados aos
+          responsáveis pelo WhatsApp.
         </p>
         <p>
           O NOTUS é um projeto acadêmico, e o Colégio Notus é uma instituição fictícia usada para
@@ -74,7 +75,10 @@ export function TermsContent() {
             atividades e entregas.
           </li>
           <li>
-            <Destaque>Responsável:</Destaque> acompanha os alunos vinculados a ele.
+            <Destaque>Responsável:</Destaque> acompanha os alunos vinculados a ele e, após aceitar
+            estes Termos e a Política de Privacidade, recebe pelo WhatsApp avisos de faltas,
+            boletins fechados e novas atividades. As mensagens são automáticas e não recebem
+            respostas; para deixar de recebê-las, basta pedir à secretaria.
           </li>
           <li>
             <Destaque>Professor:</Destaque> lança notas, faltas, aulas e atividades das turmas e
@@ -94,7 +98,10 @@ export function TermsContent() {
       <Secao titulo="6. Responsabilidades do usuário">
         <ul className="list-disc space-y-2 pl-6">
           <li>Usar o portal apenas para fins escolares;</li>
-          <li>Manter a senha em sigilo e seus dados de contato atualizados junto à secretaria;</li>
+          <li>
+            Manter a senha em sigilo e seus dados de contato atualizados junto à secretaria,
+            incluindo o celular usado para os avisos pelo WhatsApp;
+          </li>
           <li>
             No caso de professores, lançar notas, faltas e atividades de forma correta e
             responsável;

@@ -3,8 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { getSession, homeForRoles, type Session } from "@/lib/auth";
 
-export const VERSAO_DOCUMENTOS = "1.1";
-export const ATUALIZADO_EM = "24/09/2026";
+export const VERSAO_DOCUMENTOS = "1.2";
+export const ATUALIZADO_EM = "25/09/2026";
 
 export function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
