@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { LinksLegais } from "@/components/LegalPage";
+import { RodapeSite } from "@/components/LegalPage";
 import { ApiError, login } from "@/lib/api";
 import { getSession, homeForRoles } from "@/lib/auth";
 import { emailValido } from "@/lib/validacao";
@@ -363,14 +363,7 @@ function LoginPage() {
         </div>
       </main>
 
-      <footer className="border-t border-border bg-card">
-        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-6 text-base text-muted-foreground sm:px-6">
-          <span>
-            NOTUS · Portal de gestão escolar · Dúvidas: secretaria@colegionotus.com.br · (11) 4002-8922
-          </span>
-          <LinksLegais />
-        </div>
-      </footer>
+      <RodapeSite />
     </div>
   );
 }

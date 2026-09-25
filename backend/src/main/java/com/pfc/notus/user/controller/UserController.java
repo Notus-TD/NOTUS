@@ -15,7 +15,7 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @PreAuthorize("hasAnyRole('ROLE_ALUNO','ROLE_RESPONSAVEL')")
+    @PreAuthorize("hasAnyRole('ROLE_ALUNO','ROLE_RESPONSAVEL','ROLE_PROFESSOR')")
     @PostMapping("/onboarding")
     public ResponseEntity<Void> onBoarding(@Valid @RequestBody OnboardingRequest request) {
         userService.onBoarding(request.newPassword(), request.acceptTerms());

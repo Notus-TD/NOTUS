@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TermsReaderDialog } from "@/components/TermsReaderDialog";
 import { ApiError, completeOnboarding } from "@/lib/api";
 import { clearSession, getSession, homeForRoles, markOnboardingComplete } from "@/lib/auth";
+import { RodapeSite } from "@/components/LegalPage";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -223,6 +224,8 @@ function OnboardingPage() {
           </form>
         </div>
       </main>
+
+      <RodapeSite novaAba />
     </div>
   );
 }
