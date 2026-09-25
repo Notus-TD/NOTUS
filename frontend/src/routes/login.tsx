@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AlertCircle, Eye, EyeOff, Info, LogIn } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Info, LogIn, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LinksLegais } from "@/components/LegalPage";
@@ -215,6 +215,28 @@ function LoginPage() {
               {enviando ? "Entrando..." : "Entrar"}
             </Button>
           </form>
+
+          <div className="mt-6 border-t border-border pt-5 text-center">
+            <p className="text-base text-muted-foreground">
+              Ainda não tem uma conta? Fale com a secretaria:
+            </p>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              <a
+                href="mailto:secretaria@colegionotus.com.br"
+                className="inline-flex items-center gap-1.5 rounded text-base font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Mail className="size-4" aria-hidden="true" />
+                secretaria@colegionotus.com.br
+              </a>
+              <a
+                href="tel:+551140028922"
+                className="inline-flex items-center gap-1.5 rounded text-base font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Phone className="size-4" aria-hidden="true" />
+                (11) 4002-8922
+              </a>
+            </div>
+          </div>
         </div>
       </main>
 
