@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LinksLegais } from "@/components/LegalPage";
@@ -24,6 +24,7 @@ function LoginPage() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [verSenha, setVerSenha] = useState(false);
 
   useEffect(() => {
     const session = getSession();
@@ -96,15 +97,32 @@ function LoginPage() {
               <label htmlFor="senha" className="block text-lg font-semibold text-foreground">
                 Senha
               </label>
-              <Input
-                id="senha"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                className="h-12 text-lg"
-              />
+              <div className="relative">
+                <Input
+                  id="senha"
+                  type={verSenha ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="h-12 pr-12 text-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerSenha((v) => !v)}
+                  aria-label={verSenha ? "Ocultar senha" : "Mostrar senha"}
+                  aria-pressed={verSenha}
+                  aria-controls="senha"
+                  title={verSenha ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {verSenha ? (
+                    <EyeOff className="size-5" aria-hidden="true" />
+                  ) : (
+                    <Eye className="size-5" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {erro && (
