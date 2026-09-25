@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -66,6 +66,7 @@ function LoginPage() {
   const [verSenha, setVerSenha] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [lembrar, setLembrar] = useState(true);
+  const focarEmailAposErro = useRef(false);
   const [errosCampo, setErrosCampo] = useState<{
     email?: string | undefined;
     senha?: string | undefined;
@@ -88,6 +89,17 @@ function LoginPage() {
       document.getElementById("senha")?.focus();
     }
   }, [navigate]);
+
+  // Os campos ficam desabilitados durante o envio; só dá para focar depois que voltam a ficar ativos.
+  useEffect(() => {
+    if (enviando || !focarEmailAposErro.current) return;
+    focarEmailAposErro.current = false;
+    const campoEmail = document.getElementById("email");
+    if (campoEmail instanceof HTMLInputElement) {
+      campoEmail.focus();
+      campoEmail.select();
+    }
+  }, [enviando]);
 
   function validarEmail(v: string): string | undefined {
     if (!v.trim()) return "Informe o e-mail.";
@@ -129,6 +141,7 @@ function LoginPage() {
       });
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : "Erro inesperado ao entrar.");
+      focarEmailAposErro.current = true;
     } finally {
       setEnviando(false);
     }
