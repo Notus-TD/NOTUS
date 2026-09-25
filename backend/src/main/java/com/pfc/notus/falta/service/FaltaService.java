@@ -9,6 +9,8 @@ import com.pfc.notus.falta.dto.FaltaDTO;
 import com.pfc.notus.falta.dto.FaltaRequestDTO;
 import com.pfc.notus.falta.dto.FrequenciaDisciplinaDTO;
 import com.pfc.notus.falta.repository.FaltaRepository;
+import com.pfc.notus.lecionamento.domain.Lecionamento;
+import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
 import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
@@ -24,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,6 +49,9 @@ public class FaltaService {
 
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
+
+    @Autowired
+    private LecionamentoRepository lecionamentoRepository;
 
     @Autowired
     private NotificacaoService notificacaoService;
@@ -97,6 +103,12 @@ public class FaltaService {
 
     @Transactional
     public List<FaltaDTO> getFaltasParaUsuarioLogado(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + email));
+        if (user.hasRole("ROLE_PROFESSOR")) {
+            return getFaltasDoProfessor(user.getId());
+        }
+
         List<Student> alunos = resolverAlunos(email);
         if (alunos.isEmpty()) return List.of();
         List<Long> ids = alunos.stream().map(User::getId).toList();
@@ -126,6 +138,24 @@ public class FaltaService {
         }
 
         return resultado;
+    }
+
+    private List<FaltaDTO> getFaltasDoProfessor(Long professorId) {
+        List<Lecionamento> lecionamentos = lecionamentoRepository.findByProfessorId(professorId);
+        if (lecionamentos.isEmpty()) return List.of();
+
+        Set<String> turmaDisciplina = lecionamentos.stream()
+                .map(l -> l.getTurma().getId() + ":" + l.getDisciplina().getId())
+                .collect(Collectors.toSet());
+        List<Long> turmaIds = lecionamentos.stream().map(l -> l.getTurma().getId()).distinct().toList();
+        List<Long> alunoIds = studentRepository.findByTurmaIdIn(turmaIds).stream().map(User::getId).toList();
+        if (alunoIds.isEmpty()) return List.of();
+
+        return faltaRepository.findByAlunoIdIn(alunoIds).stream()
+                .filter(f -> f.getAluno().getTurma() != null
+                        && turmaDisciplina.contains(f.getAluno().getTurma().getId() + ":" + f.getDisciplina().getId()))
+                .map(this::toDTO)
+                .toList();
     }
 
     private List<Student> resolverAlunos(String email) {
