@@ -25,6 +25,7 @@ public class User implements UserDetails {
     @Getter @Setter
     private Long id;
 
+    @JsonIgnore
     @Getter @Setter
     private String password;
 

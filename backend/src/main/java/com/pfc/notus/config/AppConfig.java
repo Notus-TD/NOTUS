@@ -60,7 +60,8 @@ public class AppConfig {
                                 "/swagger-ui/**",
                                 "/swagger-resources/**",
                                 "/swagger-ui.html",
-                                "/webjars/**"
+                                "/webjars/**",
+                                "/webhooks/whatsapp"
                         ).permitAll()
                         .requestMatchers("/users/me/onboarding", "/auth/me").authenticated()
                         .anyRequest().access(new WebExpressionAuthorizationManager(

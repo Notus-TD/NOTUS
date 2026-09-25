@@ -2,6 +2,7 @@ package com.pfc.notus.user.service;
 
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
+import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Role;
 import com.pfc.notus.user.domain.Student;
@@ -41,6 +42,9 @@ public class UserService implements UserDetailsService {
     @Autowired
     private AuthUtil authUtil;
 
+    @Autowired
+    private NotificacaoService notificacaoService;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         List<UserDetailsProjection> result = userRepository.searchUserAndRolesByEmail(username);
@@ -51,6 +55,7 @@ public class UserService implements UserDetailsService {
         User user = new User(result.getFirst().getUsername(), result.getFirst().getPassword());
         user.setId(result.getFirst().getId());
         user.setFirstLogin(Boolean.TRUE.equals(result.getFirst().getFirstLogin()));
+        user.setAtivo(!Boolean.FALSE.equals(result.getFirst().getAtivo()));
         for (UserDetailsProjection projection : result) {
             user.addRole(new Role(projection.getRoleId(), projection.getAuthority()));
         }
@@ -98,7 +103,7 @@ public class UserService implements UserDetailsService {
 
 
     @Transactional
-    public void onBoarding (String newPassword, Boolean acceptTerms){
+    public void onBoarding (String newPassword, Boolean acceptTerms, Boolean whatsappOptIn){
         User user = authUtil.getLoggedUser();
 
         if (user.getAuthorities().equals("ROLE_ADMIN")) {
@@ -121,6 +126,10 @@ public class UserService implements UserDetailsService {
 
         user.setFirstLogin(false);
 
+        if (user instanceof Responsible responsible && Boolean.TRUE.equals(whatsappOptIn)) {
+            responsible.definirWhatsappOptIn(true);
+        }
+
         userRepository.save(user);
 
     }
@@ -136,11 +145,14 @@ public class UserService implements UserDetailsService {
             student.setFullName("****");
             student.setAtivo(false);
             student.setStatusMatricula(StatusMatricula.FINALIZADA);
+            notificacaoService.cancelarPendentesDoAluno(student.getId(), "Aluno anonimizado");
         } else if (user instanceof Responsible responsible) {
             responsible.setEmail("****");
             responsible.setName("****");
             responsible.setPhone("****");
             responsible.setAtivo(false);
+            responsible.definirWhatsappOptIn(false);
+            notificacaoService.cancelarPendentesDoResponsavel(responsible.getId(), "Responsável anonimizado");
         }
         userRepository.save(user);
     }

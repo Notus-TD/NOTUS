@@ -33,10 +33,10 @@ INSERT INTO tb_user_role (user_id, role_id) VALUES (2026000011, 1);
 INSERT INTO tb_user_role (user_id, role_id) VALUES (2026000012, 1);
 
 -- 4. Responsáveis (herança JOINED: mesmo id do tb_user)
-INSERT INTO tb_responsible (id, name, phone) VALUES (2026000003, 'Marta Responsável', '11977770000');
-INSERT INTO tb_responsible (id, name, phone) VALUES (2026000005, 'Carlos Costa', '11966660000');
-INSERT INTO tb_responsible (id, name, phone) VALUES (2026000006, 'Juliana Santos', '11955550000');
-INSERT INTO tb_responsible (id, name, phone) VALUES (2026000010, 'Fernanda Rocha', '11955550000');
+INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in, whatsapp_opt_in_em) VALUES (2026000003, 'Marta Responsável', '+5511977770000', TRUE, '2026-02-01T08:00:00');
+INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in) VALUES (2026000005, 'Carlos Costa', '+5511966660000', FALSE);
+INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in) VALUES (2026000006, 'Juliana Santos', '+5511955550000', FALSE);
+INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in) VALUES (2026000010, 'Fernanda Rocha', '+5511955550000', FALSE);
 
 -- 4.1 Professores (herança JOINED: mesmo id do tb_user)
 INSERT INTO tb_professor (id, full_name) VALUES (2026000002, 'Pedro Professor');
@@ -69,8 +69,8 @@ INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Lista 
 INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Redação Dissertativa', 'Escrever uma redação sobre o tema sorteado em sala.', 'ABERTA', 2);
 
 -- 9. Boletins (final_average = média das médias por disciplina das notas abaixo)
-INSERT INTO tb_boletim (period, final_average, status, student_id) VALUES ('1º Bimestre', 8.75, 'APROVADO', 2026000001);
-INSERT INTO tb_boletim (period, final_average, status, student_id) VALUES ('1º Bimestre', 7.0, 'APROVADO', 2026000001);
+INSERT INTO tb_boletim (period, final_average, status, situacao, student_id) VALUES ('1º Bimestre', 8.75, 'APROVADO', 'ABERTO', 2026000001);
+INSERT INTO tb_boletim (period, final_average, status, situacao, student_id) VALUES ('1º Bimestre', 7.0, 'APROVADO', 'ABERTO', 2026000001);
 
 -- 10. Notas (cada uma vinculada a um Boletim E a uma Disciplina)
 INSERT INTO tb_nota (period, rate, boletim_id, disciplina_id) VALUES ('1º Bimestre', 8.5, 1, 1);

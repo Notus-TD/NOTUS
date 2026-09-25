@@ -9,6 +9,7 @@ import com.pfc.notus.falta.dto.FaltaDTO;
 import com.pfc.notus.falta.dto.FaltaRequestDTO;
 import com.pfc.notus.falta.dto.FrequenciaDisciplinaDTO;
 import com.pfc.notus.falta.repository.FaltaRepository;
+import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
@@ -46,6 +47,9 @@ public class FaltaService {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
+    @Autowired
+    private NotificacaoService notificacaoService;
+
     public List<FaltaDTO> getAllFaltas() {
         return faltaRepository.findAll().stream().map(this::toDTO).toList();
     }
@@ -67,6 +71,13 @@ public class FaltaService {
         FaltaDomain entity = new FaltaDomain(dto.quantidade(), dto.data(), LocalDateTime.now(), aluno, registradoPor, disciplina);
 
         entity = faltaRepository.save(entity);
+
+        int totalNaDisciplina = faltaRepository.findByAlunoId(aluno.getId()).stream()
+                .filter(f -> f.getDisciplina().getId().equals(disciplina.getId()))
+                .mapToInt(FaltaDomain::getQuantidade)
+                .sum();
+        notificacaoService.notificarFalta(entity, totalNaDisciplina);
+
         return toDTO(entity);
     }
 
@@ -76,6 +87,7 @@ public class FaltaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Falta não encontrada com o id: " + id));
         studentAccessGuardService.assertCanTeach(falta.getAluno().getId(), falta.getDisciplina().getId(), requesterEmail);
         faltaRepository.deleteById(id);
+        notificacaoService.cancelarPorReferencia(NotificacaoService.REF_FALTA, id, "Falta excluída antes do envio");
     }
 
     @Transactional

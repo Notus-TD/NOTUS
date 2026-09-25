@@ -19,7 +19,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query(nativeQuery = true, value = """
 			SELECT tb_user.id AS id, tb_user.email AS username, tb_user.password,
-			       tb_user.first_login AS firstLogin,
+			       tb_user.first_login AS firstLogin, tb_user.ativo AS ativo,
 			       tb_role.id AS roleId, tb_role.authority
 			FROM tb_user
 			INNER JOIN tb_user_role ON tb_user.id = tb_user_role.user_id

@@ -43,6 +43,20 @@ public class BoletimController {
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @PatchMapping("/{id}/fechar")
+    public ResponseEntity<BoletimDTO> fechar(@PathVariable Long id, Authentication authentication) {
+        studentAccessGuardService.assertCanView(boletimService.getStudentId(id), authentication.getName());
+        return ResponseEntity.ok(boletimService.fechar(id));
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @PatchMapping("/{id}/reabrir")
+    public ResponseEntity<BoletimDTO> reabrir(@PathVariable Long id, Authentication authentication) {
+        studentAccessGuardService.assertCanView(boletimService.getStudentId(id), authentication.getName());
+        return ResponseEntity.ok(boletimService.reabrir(id));
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication){
         studentAccessGuardService.assertCanView(boletimService.getStudentId(id), authentication.getName());
