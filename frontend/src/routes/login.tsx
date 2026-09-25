@@ -13,11 +13,39 @@ import {
   Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { LinksLegais } from "@/components/LegalPage";
 import { ApiError, login } from "@/lib/api";
 import { getSession, homeForRoles } from "@/lib/auth";
 import { emailValido } from "@/lib/validacao";
+
+const CHAVE_EMAIL_LEMBRADO = "notus.ultimoEmail";
+
+function lerEmailLembrado(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(CHAVE_EMAIL_LEMBRADO) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function lembrarEmail(email: string) {
+  try {
+    localStorage.setItem(CHAVE_EMAIL_LEMBRADO, email);
+  } catch {
+    /* navegador sem acesso ao armazenamento: segue sem lembrar */
+  }
+}
+
+function esquecerEmail() {
+  try {
+    localStorage.removeItem(CHAVE_EMAIL_LEMBRADO);
+  } catch {
+    /* navegador sem acesso ao armazenamento: nada a apagar */
+  }
+}
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -37,6 +65,7 @@ function LoginPage() {
   const [enviando, setEnviando] = useState(false);
   const [verSenha, setVerSenha] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
+  const [lembrar, setLembrar] = useState(true);
   const [errosCampo, setErrosCampo] = useState<{
     email?: string | undefined;
     senha?: string | undefined;
@@ -50,6 +79,13 @@ function LoginPage() {
         to: session.firstLogin ? "/onboarding" : homeForRoles(session.roles),
         replace: true,
       });
+      return;
+    }
+    const lembrado = lerEmailLembrado();
+    if (lembrado) {
+      setEmail(lembrado);
+      setLembrar(true);
+      document.getElementById("senha")?.focus();
     }
   }, [navigate]);
 
@@ -84,6 +120,8 @@ function LoginPage() {
     setEnviando(true);
     try {
       const session = await login(email.trim(), senha);
+      if (lembrar) lembrarEmail(email.trim());
+      else esquecerEmail();
       toast.success(`Bem-vindo(a), ${session.email}.`);
       navigate({
         to: session.firstLogin ? "/onboarding" : homeForRoles(session.roles),
@@ -232,6 +270,22 @@ function LoginPage() {
                   {errosCampo.senha}
                 </p>
               )}
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <Checkbox
+                id="lembrar-email"
+                checked={lembrar}
+                onCheckedChange={(v) => setLembrar(v === true)}
+                disabled={enviando}
+                className="size-5"
+              />
+              <label
+                htmlFor="lembrar-email"
+                className="cursor-pointer select-none text-base text-foreground"
+              >
+                Lembrar meu e-mail neste dispositivo
+              </label>
             </div>
 
             {erro && (
