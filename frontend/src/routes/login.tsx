@@ -11,6 +11,7 @@ import {
   LogIn,
   Mail,
   Phone,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -302,9 +303,25 @@ function LoginPage() {
             </div>
 
             {erro && (
-              <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-base text-destructive">
-                {erro}
-              </p>
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 py-3 pl-4 pr-2 text-destructive"
+              >
+                <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+                <div className="flex-1 space-y-0.5">
+                  <p className="text-base font-semibold">Não foi possível entrar</p>
+                  <p className="text-sm">{erro}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErro(null)}
+                  aria-label="Fechar aviso"
+                  title="Fechar aviso"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              </div>
             )}
 
             <Button
