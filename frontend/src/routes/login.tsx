@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AlertCircle, Eye, EyeOff, Info, LogIn, Mail, Phone } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Info, Loader2, LogIn, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LinksLegais } from "@/components/LegalPage";
@@ -123,6 +123,7 @@ function LoginPage() {
               </label>
               <Input
                 id="email"
+                disabled={enviando}
                 type="email"
                 autoComplete="username"
                 required
@@ -160,6 +161,7 @@ function LoginPage() {
               <div className="relative">
                 <Input
                   id="senha"
+                  disabled={enviando}
                   type={verSenha ? "text" : "password"}
                   autoComplete="current-password"
                   required
@@ -180,11 +182,12 @@ function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setVerSenha((v) => !v)}
+                  disabled={enviando}
                   aria-label={verSenha ? "Ocultar senha" : "Mostrar senha"}
                   aria-pressed={verSenha}
                   aria-controls="senha"
                   title={verSenha ? "Ocultar senha" : "Mostrar senha"}
-                  className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                 >
                   {verSenha ? (
                     <EyeOff className="size-5" aria-hidden="true" />
@@ -216,7 +219,11 @@ function LoginPage() {
               aria-busy={enviando}
               className="min-h-12 w-full text-lg"
             >
-              <LogIn className="size-5" aria-hidden="true" />
+              {enviando ? (
+                <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+              ) : (
+                <LogIn className="size-5" aria-hidden="true" />
+              )}
               {enviando ? "Entrando..." : "Entrar"}
             </Button>
           </form>
