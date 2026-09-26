@@ -35,7 +35,14 @@ services:
     image: grafana/loki:2.9.0
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    # Configuração própria com retenção de 6 meses (conteúdo em configs.loki-config, no fim do arquivo)
+    command: -config.file=/etc/loki/loki-config.yaml
+    configs:
+      - source: loki-config
+        target: /etc/loki/loki-config.yaml
+    volumes:
+      # Os logs precisam sobreviver à recriação do container para valer o prazo de 6 meses
+      - loki-data:/loki
     networks:
       - naws-net
   grafana:
@@ -67,6 +74,62 @@ services:
       - "3000:3000"
     networks:
       - naws-net
+
+volumes:
+  loki-data:
+
+configs:
+  # Configuração do Loki: a padrão da imagem grafana/loki:2.9.0 mais a retenção dos registros de
+  # acesso exigida pela Política de Privacidade (seção 8) e pelo Marco Civil da Internet (Art. 15):
+  # guardar por 6 meses e depois apagar.
+  loki-config:
+    content: |
+      auth_enabled: false
+
+      server:
+        http_listen_port: 3100
+
+      common:
+        path_prefix: /loki
+        storage:
+          filesystem:
+            chunks_directory: /loki/chunks
+            rules_directory: /loki/rules
+        replication_factor: 1
+        ring:
+          kvstore:
+            store: inmemory
+
+      schema_config:
+        configs:
+          - from: 2020-10-24
+            store: boltdb-shipper
+            object_store: filesystem
+            schema: v11
+            index:
+              prefix: index_
+              period: 24h # a retenção exige índice diário
+
+      limits_config:
+        # 184 dias: cobre qualquer intervalo de 6 meses (o mais longo tem 184 dias), então nada é
+        # apagado antes do prazo mínimo do Marco Civil.
+        retention_period: 4416h
+
+      compactor:
+        working_directory: /loki/compactor
+        shared_store: filesystem
+        compaction_interval: 10m
+        retention_enabled: true # sem isso o retention_period é ignorado e nada é apagado
+        retention_delete_delay: 2h
+        retention_delete_worker_count: 150
+
+      ruler:
+        alertmanager_url: http://localhost:9093
+
+      # Não envia estatísticas de uso para a Grafana Labs: os logs e os metadados ficam só na
+      # nossa infraestrutura, como diz a Política de Privacidade (seção 5).
+      analytics:
+        reporting_enabled: false
 
 networks:
   naws-net:

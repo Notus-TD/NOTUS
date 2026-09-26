@@ -6,7 +6,7 @@ import com.pfc.notus.notificacao.domain.Notificacao;
 import com.pfc.notus.notificacao.domain.StatusNotificacao;
 import com.pfc.notus.notificacao.port.ResultadoEnvio;
 import com.pfc.notus.notificacao.repository.NotificacaoRepository;
-import com.pfc.notus.notificacao.util.TelefoneUtil;
+import com.pfc.notus.notificacao.util.EmailUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,13 +26,12 @@ public class NotificacaoEnvioService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificacaoEnvioService.class);
 
-    private static final Duration[] ESPERAS = {Duration.ofMinutes(1), Duration.ofMinutes(5), Duration.ofMinutes(15)};
-
+    /** Tempo que uma notificação fica reservada (ENVIANDO); passado isso, volta a ser elegível se a aplicação caiu no meio do envio. */
     private static final Duration RESERVA = Duration.ofMinutes(10);
 
     private static final int MAX_ERRO = 500;
 
-    public record EnvioPreparado(Long id, String telefone, String template, List<String> variaveis) {
+    public record EnvioPreparado(Long id, String email, String template, List<String> variaveis) {
     }
 
     @Autowired
@@ -47,14 +46,18 @@ public class NotificacaoEnvioService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * Reserva o próximo lote de notificações prontas até o início do ciclo. O que for reservado ou reagendado
+     * durante o ciclo fica com data posterior a {@code inicioCiclo} e só volta no próximo ciclo.
+     */
     @Transactional
-    public List<Long> reservarLote() {
-        LocalDateTime agora = LocalDateTime.now();
+    public List<Long> reservarLote(LocalDateTime inicioCiclo) {
         List<Long> ids = notificacaoRepository.findIdsProntosParaEnvio(
-                StatusNotificacao.PENDENTE, StatusNotificacao.ENVIANDO, agora, PageRequest.of(0, properties.lote()));
+                StatusNotificacao.PENDENTE, StatusNotificacao.ENVIANDO, inicioCiclo, PageRequest.of(0, properties.lote()));
+        LocalDateTime reservadaAte = LocalDateTime.now().plus(RESERVA);
         for (Notificacao notificacao : notificacaoRepository.findAllById(ids)) {
             notificacao.setStatus(StatusNotificacao.ENVIANDO);
-            notificacao.setProximaTentativaEm(agora.plus(RESERVA));
+            notificacao.setProximaTentativaEm(reservadaAte);
         }
         return ids;
     }
@@ -75,7 +78,7 @@ public class NotificacaoEnvioService {
         }
 
         List<String> variaveis = Arrays.asList(objectMapper.readValue(notificacao.getVariaveis(), String[].class));
-        return Optional.of(new EnvioPreparado(id, notificacao.getResponsavel().getPhone(), notificacao.getTemplate(), variaveis));
+        return Optional.of(new EnvioPreparado(id, notificacao.getResponsavel().getEmail(), notificacao.getTemplate(), variaveis));
     }
 
     @Transactional
@@ -85,7 +88,7 @@ public class NotificacaoEnvioService {
             return;
         }
         notificacao.setTentativas(notificacao.getTentativas() + 1);
-        String destino = TelefoneUtil.mascarar(notificacao.getResponsavel().getPhone());
+        String destino = EmailUtil.mascarar(notificacao.getResponsavel().getEmail());
 
         switch (resultado.tipo()) {
             case SUCESSO -> {
@@ -101,12 +104,12 @@ public class NotificacaoEnvioService {
                 if (notificacao.getTentativas() >= properties.maxTentativas()) {
                     falhar(notificacao, "Tentativas esgotadas: " + resultado.erro(), destino);
                 } else {
-                    Duration espera = ESPERAS[Math.min(notificacao.getTentativas() - 1, ESPERAS.length - 1)];
+                    // Volta para a fila; como a data é posterior ao início do ciclo, só é tentada no próximo ciclo.
                     notificacao.setStatus(StatusNotificacao.PENDENTE);
-                    notificacao.setProximaTentativaEm(LocalDateTime.now().plus(espera));
+                    notificacao.setProximaTentativaEm(LocalDateTime.now());
                     notificacao.setErro(truncar(resultado.erro()));
-                    log.warn("Notificação {} com erro temporário (tentativa {}), nova tentativa em {} min: {}",
-                            id, notificacao.getTentativas(), espera.toMinutes(), resultado.erro());
+                    log.warn("Notificação {} com erro temporário (tentativa {} de {}), nova tentativa no próximo ciclo: {}",
+                            id, notificacao.getTentativas(), properties.maxTentativas(), resultado.erro());
                 }
             }
         }

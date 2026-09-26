@@ -6,6 +6,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @Configuration
 @EnableScheduling
-@EnableConfigurationProperties({WhatsAppProperties.class, NotificacaoProperties.class})
+@EnableConfigurationProperties({ResendProperties.class, NotificacaoProperties.class})
 public class NotificacaoConfig {
 }

@@ -11,6 +11,7 @@ import com.pfc.notus.falta.dto.FrequenciaDisciplinaDTO;
 import com.pfc.notus.falta.repository.FaltaRepository;
 import com.pfc.notus.lecionamento.domain.Lecionamento;
 import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
+import com.pfc.notus.notificacao.event.FaltaRegistradaEvent;
 import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
@@ -20,6 +21,7 @@ import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -56,6 +58,9 @@ public class FaltaService {
     @Autowired
     private NotificacaoService notificacaoService;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
     public List<FaltaDTO> getAllFaltas() {
         return faltaRepository.findAll().stream().map(this::toDTO).toList();
     }
@@ -82,7 +87,8 @@ public class FaltaService {
                 .filter(f -> f.getDisciplina().getId().equals(disciplina.getId()))
                 .mapToInt(FaltaDomain::getQuantidade)
                 .sum();
-        notificacaoService.notificarFalta(entity, totalNaDisciplina);
+        // A notificação é criada só depois do commit (NotificacaoListener): um erro nela não desfaz a falta.
+        eventPublisher.publishEvent(new FaltaRegistradaEvent(entity.getId(), totalNaDisciplina));
 
         return toDTO(entity);
     }

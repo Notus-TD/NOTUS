@@ -3,7 +3,7 @@ package com.pfc.notus.notificacao.dto;
 import com.pfc.notus.notificacao.domain.Notificacao;
 import com.pfc.notus.notificacao.domain.StatusNotificacao;
 import com.pfc.notus.notificacao.domain.TipoNotificacao;
-import com.pfc.notus.notificacao.util.TelefoneUtil;
+import com.pfc.notus.notificacao.util.EmailUtil;
 
 import java.time.LocalDateTime;
 
@@ -13,7 +13,7 @@ public record NotificacaoDTO(
         StatusNotificacao status,
         Long responsavelId,
         String responsavelNome,
-        String telefone,
+        String email,
         Long studentId,
         String studentNome,
         String template,
@@ -30,7 +30,7 @@ public record NotificacaoDTO(
                 n.getStatus(),
                 n.getResponsavel().getId(),
                 n.getResponsavel().getName(),
-                TelefoneUtil.mascarar(n.getResponsavel().getPhone()),
+                EmailUtil.mascarar(n.getResponsavel().getEmail()),
                 n.getStudent() == null ? null : n.getStudent().getId(),
                 n.getStudent() == null ? null : n.getStudent().getFullName(),
                 n.getTemplate(),

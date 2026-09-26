@@ -103,7 +103,7 @@ public class UserService implements UserDetailsService {
 
 
     @Transactional
-    public void onBoarding (String newPassword, Boolean acceptTerms, Boolean whatsappOptIn){
+    public void onBoarding (String newPassword, Boolean acceptTerms){
         User user = authUtil.getLoggedUser();
 
         if (user.getAuthorities().equals("ROLE_ADMIN")) {
@@ -126,10 +126,6 @@ public class UserService implements UserDetailsService {
 
         user.setFirstLogin(false);
 
-        if (user instanceof Responsible responsible && Boolean.TRUE.equals(whatsappOptIn)) {
-            responsible.definirWhatsappOptIn(true);
-        }
-
         userRepository.save(user);
 
     }
@@ -151,7 +147,6 @@ public class UserService implements UserDetailsService {
             responsible.setName("****");
             responsible.setPhone("****");
             responsible.setAtivo(false);
-            responsible.definirWhatsappOptIn(false);
             notificacaoService.cancelarPendentesDoResponsavel(responsible.getId(), "Responsável anonimizado");
         }
         userRepository.save(user);

@@ -26,9 +26,9 @@ export function PolicyContent() {
             identificar o aluno e organizar a vida escolar.
           </li>
           <li>
-            <Destaque>Responsável</Destaque> (nome, e-mail e telefone celular): para
-            identificar o responsável legal, vinculá-lo aos alunos, permitir o contato da escola e
-            enviar avisos automáticos pelo WhatsApp (seção 6).
+            <Destaque>Responsável</Destaque> (nome, e-mail e telefone): para identificar o
+            responsável legal, vinculá-lo aos alunos, permitir o contato da escola e enviar avisos
+            automáticos por e-mail (seção 6).
           </li>
           <li>
             <Destaque>Professor</Destaque> (e-mail e turmas em que leciona): para lançar notas,
@@ -90,9 +90,8 @@ export function PolicyContent() {
           </li>
           <li>
             <Destaque>Administração (secretaria):</Destaque> os cadastros de alunos, responsáveis e
-            professores, as turmas, disciplinas, notas e frequência, e o histórico dos avisos pelo
-            WhatsApp (com o telefone mascarado). Também atende os pedidos sobre dados pessoais e
-            anonimiza contas quando cabível.
+            professores, as turmas, disciplinas, notas e frequência, e o histórico dos avisos por
+            e-mail. Também atende os pedidos sobre dados pessoais e anonimiza contas quando cabível.
           </li>
           <li>
             <Destaque>Equipe técnica:</Destaque> acessa o servidor, o banco de dados e os
@@ -118,17 +117,17 @@ export function PolicyContent() {
             carregar a página.
           </li>
           <li>
-            <Destaque>WhatsApp Business (Meta):</Destaque> recebe o telefone do responsável e o
-            conteúdo de cada aviso para entregá-lo pelo WhatsApp (seção 6).
+            <Destaque>Resend (serviço de envio de e-mails):</Destaque> recebe o e-mail do responsável
+            e o conteúdo de cada aviso para entregá-lo por e-mail (seção 6).
           </li>
         </ul>
         <p>Dados só são entregues a autoridades quando exigido por lei.</p>
       </Secao>
 
-      <Secao titulo="6. Avisos pelo WhatsApp">
+      <Secao titulo="6. Avisos por e-mail">
         <p>
-          O Colégio Notus envia avisos automáticos pelo WhatsApp ao número de celular cadastrado do
-          responsável, sobre os alunos vinculados a ele, quando:
+          O Colégio Notus envia avisos automáticos para o e-mail cadastrado do responsável, sobre os
+          alunos vinculados a ele, quando:
         </p>
         <ul className="list-disc space-y-2 pl-6">
           <li>o aluno recebe uma falta;</li>
@@ -138,13 +137,13 @@ export function PolicyContent() {
         <p>
           Os avisos só começam depois que o responsável aceita esta política e os Termos de Uso no
           primeiro acesso ao portal. Esse aceite vale como a sua autorização para receber os avisos
-          pelo WhatsApp.
+          por e-mail.
         </p>
         <p>
-          Cada aviso leva apenas o necessário: nome do responsável e do aluno, disciplina, data e,
-          conforme o caso, o total de faltas, a média do boletim ou o título e o prazo da
-          atividade. As mensagens são automáticas e o número não recebe respostas; dúvidas devem
-          ser tratadas com a secretaria.
+          Cada aviso leva apenas o necessário: primeiro nome do responsável e do aluno, disciplina,
+          data e, conforme o caso, o total de faltas, a média do boletim ou o título e o prazo da
+          atividade. Os e-mails são automáticos e as respostas não são lidas; dúvidas devem ser
+          tratadas com a secretaria.
         </p>
         <p>
           Para deixar de receber os avisos, basta pedir à secretaria. Guardamos um registro de cada
@@ -190,7 +189,7 @@ export function PolicyContent() {
             e depois são apagados.
           </li>
           <li>
-            <Destaque>Registros de avisos pelo WhatsApp:</Destaque> 6 meses após o envio, e
+            <Destaque>Registros de avisos por e-mail:</Destaque> 6 meses após o envio, e
             depois são apagados.
           </li>
           <li>
