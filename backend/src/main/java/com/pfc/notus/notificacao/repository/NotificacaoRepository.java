@@ -11,14 +11,11 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> {
 
     boolean existsByChaveIdempotencia(String chaveIdempotencia);
-
-    Optional<Notificacao> findByProviderMessageId(String providerMessageId);
 
     @Query("""
             SELECT n.id FROM Notificacao n

@@ -1,16 +1,18 @@
 package com.pfc.notus.notificacao.service;
 
 import com.pfc.notus.boletim.domain.Boletim;
+import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.config.AuditMarker;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.falta.domain.FaltaDomain;
+import com.pfc.notus.falta.repository.FaltaRepository;
 import com.pfc.notus.notificacao.domain.Notificacao;
 import com.pfc.notus.notificacao.domain.StatusNotificacao;
 import com.pfc.notus.notificacao.domain.TipoNotificacao;
 import com.pfc.notus.notificacao.dto.NotificacaoDTO;
 import com.pfc.notus.notificacao.repository.NotificacaoRepository;
-import com.pfc.notus.notificacao.util.TelefoneUtil;
+import com.pfc.notus.notificacao.util.EmailUtil;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
@@ -18,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
@@ -50,16 +53,28 @@ public class NotificacaoService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Transactional
-    public void notificarFalta(FaltaDomain falta, int totalFaltasNaDisciplina) {
+    @Autowired
+    private FaltaRepository faltaRepository;
+
+    @Autowired
+    private BoletimRepository boletimRepository;
+
+    /** Chamado pelo NotificacaoListener depois do commit da falta, numa transação própria. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void notificarFalta(Long faltaId, int totalFaltasNaDisciplina) {
+        FaltaDomain falta = faltaRepository.findById(faltaId).orElse(null);
+        if (falta == null) {
+            log.warn("Falta {} não encontrada ao criar a notificação", faltaId);
+            return;
+        }
         Student aluno = falta.getAluno();
         Responsible responsavel = aluno.getResponsible();
         if (!elegivel(responsavel, aluno)) return;
 
         String chave = "FALTA:%d:%d:%s".formatted(aluno.getId(), falta.getDisciplina().getId(), falta.getData());
         List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.FALTA,
-                responsavel.getName(),
-                aluno.getFullName(),
+                primeiroNome(responsavel.getName()),
+                primeiroNome(aluno.getFullName()),
                 falta.getDisciplina().getTitle(),
                 falta.getData().format(DATA_BR),
                 String.valueOf(totalFaltasNaDisciplina));
@@ -67,8 +82,14 @@ public class NotificacaoService {
         criar(TipoNotificacao.FALTA, responsavel, aluno, REF_FALTA, falta.getId(), chave, variaveis);
     }
 
-    @Transactional
-    public void notificarBoletimFechado(Boletim boletim) {
+    /** Chamado pelo NotificacaoListener depois do commit do fechamento, numa transação própria. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void notificarBoletimFechado(Long boletimId) {
+        Boletim boletim = boletimRepository.findById(boletimId).orElse(null);
+        if (boletim == null) {
+            log.warn("Boletim {} não encontrado ao criar a notificação", boletimId);
+            return;
+        }
         Student aluno = boletim.getStudent();
         Responsible responsavel = aluno.getResponsible();
         if (!elegivel(responsavel, aluno)) return;
@@ -76,8 +97,8 @@ public class NotificacaoService {
         String chave = "BOLETIM:%d:%s".formatted(boletim.getId(), boletim.getFechadoEm());
         float media = boletim.getFinalAverage() == null ? 0f : boletim.getFinalAverage();
         List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.BOLETIM_FECHADO,
-                responsavel.getName(),
-                aluno.getFullName(),
+                primeiroNome(responsavel.getName()),
+                primeiroNome(aluno.getFullName()),
                 boletim.getPeriod(),
                 String.format(PT_BR, "%.1f", media));
 
@@ -99,8 +120,8 @@ public class NotificacaoService {
             Responsible responsavel = aluno.getResponsible();
             String chave = "ATIVIDADE:%d:%d".formatted(atividadeId, responsavel.getId());
             List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.ATIVIDADE,
-                    responsavel.getName(),
-                    aluno.getFullName(),
+                    primeiroNome(responsavel.getName()),
+                    primeiroNome(aluno.getFullName()),
                     disciplina,
                     titulo,
                     prazo == null ? "sem prazo" : prazo.format(DATA_BR));
@@ -163,10 +184,16 @@ public class NotificacaoService {
     public String motivoBloqueio(Responsible responsavel, Student aluno) {
         if (responsavel == null) return "Aluno sem responsável cadastrado";
         if (!responsavel.isAtivo()) return "Responsável inativo ou anonimizado";
-        if (!responsavel.isWhatsappOptIn()) return "Responsável sem opt-in de WhatsApp";
-        if (!TelefoneUtil.isValido(responsavel.getPhone())) return "Telefone do responsável inválido";
+        // O aceite dos Termos e da Política no primeiro acesso é a autorização para receber os avisos.
+        if (responsavel.getTermsAcceptedAt() == null) return "Responsável ainda não aceitou os termos";
         if (aluno != null && aluno.getStatusMatricula() != StatusMatricula.ATIVA) return "Matrícula do aluno não está ativa";
         return null;
+    }
+
+    /** A mensagem passa pela Meta: só o primeiro nome, que basta para o responsável identificar o aluno (minimização, LGPD). */
+    private static String primeiroNome(String nomeCompleto) {
+        if (nomeCompleto == null || nomeCompleto.isBlank()) return nomeCompleto;
+        return nomeCompleto.trim().split("\\s+")[0];
     }
 
     private boolean elegivel(Responsible responsavel, Student aluno) {
@@ -189,6 +216,6 @@ public class NotificacaoService {
                 chave, template, objectMapper.writeValueAsString(variaveis));
         notificacao = notificacaoRepository.save(notificacao);
         log.info(AuditMarker.AUDIT, "Notificação {} criada | {} | responsável {} | {}",
-                notificacao.getId(), tipo, responsavel.getId(), TelefoneUtil.mascarar(responsavel.getPhone()));
+                notificacao.getId(), tipo, responsavel.getId(), EmailUtil.mascarar(responsavel.getEmail()));
     }
 }

@@ -7,7 +7,7 @@ INSERT INTO tb_role (authority) VALUES ('ROLE_ADMIN');
 -- 2. Usuários (id = ano + sequência; senha para todos: 123456; first_login=FALSE pois já têm senha definida)
 INSERT INTO tb_user (id, email, password, first_login, ativo, created_at) VALUES (2026000001, 'ana.aluna@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, TRUE, '2026-02-01');
 INSERT INTO tb_user (id, email, password, first_login, ativo, created_at) VALUES (2026000002, 'pedro.professor@gmail.com', '$2a$10$HiGKZgV0susl4kodrIibkOlc.QPUmCK6D0o2.SqWLZa.Yg2vhOZwS', TRUE, TRUE, '2026-02-01');
-INSERT INTO tb_user (id, email, password, first_login, ativo, created_at) VALUES (2026000003, 'marta.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, TRUE, '2026-02-01');
+INSERT INTO tb_user (id, email, password, first_login, ativo, created_at, terms_accepted_at) VALUES (2026000003, 'marta.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, TRUE, '2026-02-01', '2026-02-01T08:00:00');
 INSERT INTO tb_user (id, email, password, first_login, ativo, created_at) VALUES (2026000004, 'admin@notus.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, TRUE, '2026-02-01');
 INSERT INTO tb_user (id, email, password, first_login, ativo, created_at) VALUES (2026000005, 'carlos.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, TRUE, '2026-02-01');
 INSERT INTO tb_user (id, email, password, first_login, ativo, created_at) VALUES (2026000006, 'juliana.responsavel@gmail.com', '$2a$10$.mmz3OqUecF234Bic.FuYO5uZF9eZZGYM7aDkVLpqGVKUqBfhwrAC', FALSE, TRUE, '2026-02-01');
@@ -33,10 +33,11 @@ INSERT INTO tb_user_role (user_id, role_id) VALUES (2026000011, 1);
 INSERT INTO tb_user_role (user_id, role_id) VALUES (2026000012, 1);
 
 -- 4. Responsáveis (herança JOINED: mesmo id do tb_user)
-INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in, whatsapp_opt_in_em) VALUES (2026000003, 'Marta Responsável', '+5511977770000', TRUE, '2026-02-01T08:00:00');
-INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in) VALUES (2026000005, 'Carlos Costa', '+5511966660000', FALSE);
-INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in) VALUES (2026000006, 'Juliana Santos', '+5511955550000', FALSE);
-INSERT INTO tb_responsible (id, name, phone, whatsapp_opt_in) VALUES (2026000010, 'Fernanda Rocha', '+5511955550000', FALSE);
+-- Só a Marta aceitou os termos, então só ela recebe avisos (no e-mail dela).
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000003, 'Marta Responsável', '11977770000');
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000005, 'Carlos Costa', '11966660000');
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000006, 'Juliana Santos', '11955550000');
+INSERT INTO tb_responsible (id, name, phone) VALUES (2026000010, 'Fernanda Rocha', '11955550000');
 
 -- 4.1 Professores (herança JOINED: mesmo id do tb_user)
 INSERT INTO tb_professor (id, full_name) VALUES (2026000002, 'Pedro Professor');

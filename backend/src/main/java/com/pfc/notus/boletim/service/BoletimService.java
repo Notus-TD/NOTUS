@@ -7,12 +7,13 @@ import com.pfc.notus.boletim.dto.BoletimDTO;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
-import com.pfc.notus.notificacao.service.NotificacaoService;
+import com.pfc.notus.notificacao.event.BoletimFechadoEvent;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.StudentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,7 +30,7 @@ public class BoletimService {
     private StudentRepository studentRepository;
 
     @Autowired
-    private NotificacaoService notificacaoService;
+    private ApplicationEventPublisher eventPublisher;
 
     public List<Boletim> getAllBoletim() {
        return boletimRepository.findAll();
@@ -74,7 +75,8 @@ public class BoletimService {
         entity.setFechadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         entity = boletimRepository.save(entity);
 
-        notificacaoService.notificarBoletimFechado(entity);
+        // A notificação é criada só depois do commit (NotificacaoListener): um erro nela não desfaz o fechamento.
+        eventPublisher.publishEvent(new BoletimFechadoEvent(entity.getId()));
         return toDTO(entity);
     }
 

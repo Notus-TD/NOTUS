@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Size;
 
 public record OnboardingRequest(
         @NotBlank @Size(min = 8) String newPassword,
-        @NotNull @AssertTrue Boolean acceptTerms,
-        Boolean whatsappOptIn
+        @NotNull @AssertTrue Boolean acceptTerms
 ) {
 }

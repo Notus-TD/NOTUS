@@ -14,19 +14,9 @@
                 <pattern>app=${name},host=${HOSTNAME},level=%level</pattern>
                 <readMarkers>true</readMarkers>
             </label>
+            <!-- JSON numa linha só: quebras de linha e espaços do XML iriam para a mensagem. -->
             <message>
-                <pattern>
-                    {
-                    "level":"%level",
-                    "class":"%logger{36}",
-                    "thread":"%thread",
-                    "message": "%message",
-                    "requestId": "%X{X-Request-ID}",
-                    "userId": "%X{userId}",
-                    "user": "%X{user}",
-                    "ip": "%X{ip}"
-                    }
-                </pattern>
+                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}","level":"%level","class":"%logger{36}","thread":"%thread","message":"%message","requestId":"%X{X-Request-ID}","userId":"%X{userId}","user":"%X{user}","ip":"%X{ip}"}</pattern>
             </message>
         </format>
     </appender>
