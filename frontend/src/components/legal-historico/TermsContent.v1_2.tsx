@@ -1,6 +1,10 @@
-import { ATUALIZADO_EM, Destaque, Secao, VERSAO_DOCUMENTOS } from "@/components/LegalPage";
+import { Destaque, Secao } from "@/components/LegalPage";
 
-export function TermsContent() {
+// Versão 1.2 (25/09/2026), arquivada. Não editar: registro do texto aceito pelos usuários nessa versão.
+const VERSAO_DOCUMENTOS = "1.2";
+const ATUALIZADO_EM = "25/09/2026";
+
+export function TermsContentV1_2() {
   return (
     <div className="space-y-10">
       <Secao titulo="1. Aceitação e versão">
@@ -20,7 +24,7 @@ export function TermsContent() {
           O NOTUS é um portal de gestão escolar que permite acompanhar matrícula, turmas,
           disciplinas, notas, boletins, frequência, atividades e entregas, e a comunicação entre a
           escola, os alunos e os responsáveis, incluindo avisos automáticos enviados aos
-          responsáveis por e-mail.
+          responsáveis pelo WhatsApp.
         </p>
         <p>
           O NOTUS é um projeto acadêmico, e o Colégio Notus é uma instituição fictícia usada para
@@ -71,21 +75,21 @@ export function TermsContent() {
       <Secao titulo="5. Perfis e permissões">
         <ul className="list-disc space-y-2 pl-6">
           <li>
-            <Destaque>Aluno:</Destaque> Consulta as próprias notas, boletins, frequência, atividades
+            <Destaque>Aluno:</Destaque> consulta as próprias notas, boletins, frequência, atividades
             e entregas.
           </li>
           <li>
-            <Destaque>Responsável:</Destaque> Acompanha os alunos vinculados a ele e, após aceitar
-            estes Termos e a Política de Privacidade, recebe por e-mail avisos de faltas, boletins
-            fechados e novas atividades. Os e-mails são automáticos e as respostas não são lidas;
-            para deixar de recebê-los, basta pedir à secretaria.
+            <Destaque>Responsável:</Destaque> acompanha os alunos vinculados a ele e, após aceitar
+            estes Termos e a Política de Privacidade, recebe pelo WhatsApp avisos de faltas,
+            boletins fechados e novas atividades. As mensagens são automáticas e não recebem
+            respostas; para deixar de recebê-las, basta pedir à secretaria.
           </li>
           <li>
-            <Destaque>Professor:</Destaque> Lança notas, faltas, aulas e atividades das turmas e
+            <Destaque>Professor:</Destaque> lança notas, faltas, aulas e atividades das turmas e
             disciplinas em que leciona.
           </li>
           <li>
-            <Destaque>Administração:</Destaque> Cadastra alunos, responsáveis, turmas e disciplinas
+            <Destaque>Administração:</Destaque> cadastra alunos, responsáveis, turmas e disciplinas
             e atende pedidos relacionados a dados pessoais.
           </li>
         </ul>
@@ -98,7 +102,10 @@ export function TermsContent() {
       <Secao titulo="6. Responsabilidades do usuário">
         <ul className="list-disc space-y-2 pl-6">
           <li>Usar o portal apenas para fins escolares;</li>
-          <li>Manter a senha em sigilo e seus dados de contato atualizados junto à secretaria;</li>
+          <li>
+            Manter a senha em sigilo e seus dados de contato atualizados junto à secretaria,
+            incluindo o celular usado para os avisos pelo WhatsApp;
+          </li>
           <li>
             No caso de professores, lançar notas, faltas e atividades de forma correta e
             responsável;
@@ -152,9 +159,8 @@ export function TermsContent() {
             até que a situação seja esclarecida.
           </li>
           <li>
-            Com o fim do vínculo com a escola, o acesso é encerrado. Os cadastros e os dados
-            acadêmicos são guardados por mais 5 anos, os registros de acesso e de avisos por e-mail
-            por 6 meses e, depois disso, são anonimizados ou apagados.
+            Com o fim do vínculo com a escola, o acesso é encerrado e os dados passam a seguir os
+            prazos de retenção e descarte da Política de Privacidade.
           </li>
           <li>
             O uso indevido pode resultar, além da suspensão, em medidas disciplinares previstas no
