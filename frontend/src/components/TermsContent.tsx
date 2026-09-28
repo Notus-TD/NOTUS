@@ -32,8 +32,8 @@ export function TermsContent() {
       <Secao titulo="3. Quem pode usar">
         <ul className="list-disc space-y-2 pl-6">
           <li>
-            O portal é destinado a alunos, responsáveis, professores e à administração da escola.
-            As contas são criadas pela própria escola; não há cadastro aberto ao público.
+            O portal é destinado a alunos, responsáveis, professores e à administração da escola. As
+            contas são criadas pela própria escola; não há cadastro aberto ao público.
           </li>
           <li>
             Alunos menores de idade utilizam o portal representados por seus responsáveis legais,
@@ -71,22 +71,22 @@ export function TermsContent() {
       <Secao titulo="5. Perfis e permissões">
         <ul className="list-disc space-y-2 pl-6">
           <li>
-            <Destaque>Aluno:</Destaque> consulta as próprias notas, boletins, frequência,
-            atividades e entregas.
+            <Destaque>Aluno:</Destaque> Consulta as próprias notas, boletins, frequência, atividades
+            e entregas.
           </li>
           <li>
-            <Destaque>Responsável:</Destaque> acompanha os alunos vinculados a ele e, após aceitar
-            estes Termos e a Política de Privacidade, recebe por e-mail avisos de faltas,
-            boletins fechados e novas atividades. Os e-mails são automáticos e as respostas não são
-            lidas; para deixar de recebê-los, basta pedir à secretaria.
+            <Destaque>Responsável:</Destaque> Acompanha os alunos vinculados a ele e, após aceitar
+            estes Termos e a Política de Privacidade, recebe por e-mail avisos de faltas, boletins
+            fechados e novas atividades. Os e-mails são automáticos e as respostas não são lidas;
+            para deixar de recebê-los, basta pedir à secretaria.
           </li>
           <li>
-            <Destaque>Professor:</Destaque> lança notas, faltas, aulas e atividades das turmas e
+            <Destaque>Professor:</Destaque> Lança notas, faltas, aulas e atividades das turmas e
             disciplinas em que leciona.
           </li>
           <li>
-            <Destaque>Administração:</Destaque> cadastra alunos, responsáveis, turmas e
-            disciplinas e atende pedidos relacionados a dados pessoais.
+            <Destaque>Administração:</Destaque> Cadastra alunos, responsáveis, turmas e disciplinas
+            e atende pedidos relacionados a dados pessoais.
           </li>
         </ul>
         <p>
@@ -98,10 +98,7 @@ export function TermsContent() {
       <Secao titulo="6. Responsabilidades do usuário">
         <ul className="list-disc space-y-2 pl-6">
           <li>Usar o portal apenas para fins escolares;</li>
-          <li>
-            Manter a senha em sigilo e seus dados de contato atualizados junto à secretaria,
-            incluindo o e-mail usado para os avisos;
-          </li>
+          <li>Manter a senha em sigilo e seus dados de contato atualizados junto à secretaria;</li>
           <li>
             No caso de professores, lançar notas, faltas e atividades de forma correta e
             responsável;
@@ -125,26 +122,26 @@ export function TermsContent() {
       <Secao titulo="8. Responsabilidades da escola">
         <p>
           A escola e a equipe do NOTUS se comprometem a manter medidas de segurança adequadas,
-          corrigir dados incorretos quando informadas, atender aos direitos dos titulares
-          previstos na Política de Privacidade e comunicar incidentes de segurança relevantes.
-          Estes Termos não retiram direitos garantidos por lei aos usuários.
+          corrigir dados incorretos quando informadas, atender aos direitos dos titulares previstos
+          na Política de Privacidade e comunicar incidentes de segurança relevantes. Estes Termos
+          não retiram direitos garantidos por lei aos usuários.
         </p>
       </Secao>
 
       <Secao titulo="9. Conteúdo e propriedade intelectual">
         <p>
           Notas, frequência, atividades e demais registros acadêmicos são lançados pela escola e
-          pelos professores, que são responsáveis pelo seu conteúdo. A marca, o código e a
-          interface do NOTUS pertencem aos seus autores e não podem ser copiados ou reutilizados
-          sem autorização.
+          pelos professores, que são responsáveis pelo seu conteúdo. A marca, o código e a interface
+          do NOTUS pertencem aos seus autores e não podem ser copiados ou reutilizados sem
+          autorização.
         </p>
       </Secao>
 
       <Secao titulo="10. Disponibilidade, manutenção e suporte">
         <p>
           O portal pode ficar indisponível temporariamente por manutenção, atualização ou falhas
-          técnicas. Sempre que possível, as manutenções programadas serão avisadas com
-          antecedência. Dúvidas e problemas de acesso devem ser encaminhados à secretaria.
+          técnicas. Sempre que possível, as manutenções programadas serão avisadas com antecedência.
+          Dúvidas e problemas de acesso devem ser encaminhados à secretaria.
         </p>
       </Secao>
 
@@ -155,8 +152,9 @@ export function TermsContent() {
             até que a situação seja esclarecida.
           </li>
           <li>
-            Com o fim do vínculo com a escola, o acesso é encerrado e os dados passam a seguir os
-            prazos de retenção e descarte da Política de Privacidade.
+            Com o fim do vínculo com a escola, o acesso é encerrado. Os cadastros e os dados
+            acadêmicos são guardados por mais 5 anos, os registros de acesso e de avisos por e-mail
+            por 6 meses e, depois disso, são anonimizados ou apagados.
           </li>
           <li>
             O uso indevido pode resultar, além da suspensão, em medidas disciplinares previstas no
