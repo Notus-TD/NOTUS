@@ -9,6 +9,7 @@ import com.pfc.notus.user.dto.StudentRegistrationResponse;
 import com.pfc.notus.user.dto.StudentRequest;
 import com.pfc.notus.user.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,8 +52,24 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
+    public List<StudentMinDTO> listStudentsByTurmas(java.util.Collection<Long> turmaIds) {
+        if (turmaIds.isEmpty()) return List.of();
+        return studentRepository.findByTurmaIdIn(turmaIds).stream()
+                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudentsByResponsible(Long responsibleId) {
         return studentRepository.findByResponsibleId(responsibleId).stream()
+                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentMinDTO> listStudentsByTurma(Long turmaId, String sort) {
+        Sort ordenacao = "matricula".equalsIgnoreCase(sort) ? Sort.by("matricula") : Sort.by("fullName");
+        return studentRepository.findByTurmaId(turmaId, ordenacao).stream()
                 .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
                 .toList();
     }

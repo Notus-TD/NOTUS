@@ -5,8 +5,10 @@ import { LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TermsReaderDialog } from "@/components/TermsReaderDialog";
 import { ApiError, completeOnboarding } from "@/lib/api";
 import { clearSession, getSession, homeForRoles, markOnboardingComplete } from "@/lib/auth";
+import { RodapeSite } from "@/components/LegalPage";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -19,9 +21,13 @@ function OnboardingPage() {
   const navigate = useNavigate();
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [termosLidos, setTermosLidos] = useState(false);
+  const [politicaLida, setPoliticaLida] = useState(false);
+  const documentosLidos = termosLidos && politicaLida;
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [ehResponsavel, setEhResponsavel] = useState(false);
 
   useEffect(() => {
     const session = getSession();
@@ -29,6 +35,7 @@ function OnboardingPage() {
       navigate({ to: "/login", replace: true });
       return;
     }
+    setEhResponsavel(session.roles.includes("ROLE_RESPONSAVEL"));
     if (!session.firstLogin) {
       navigate({ to: homeForRoles(session.roles), replace: true });
     }
@@ -49,6 +56,10 @@ function OnboardingPage() {
     }
     if (novaSenha !== confirmarSenha) {
       setErro("As senhas não coincidem.");
+      return;
+    }
+    if (!documentosLidos) {
+      setErro("Abra e leia os termos de uso e a política de privacidade antes de continuar.");
       return;
     }
     if (!aceitouTermos) {
@@ -78,7 +89,9 @@ function OnboardingPage() {
             <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
               N
             </span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">NOTUS</span>
+            <span className="font-display text-xl font-bold tracking-tight text-foreground">
+              NOTUS
+            </span>
           </span>
           <Button variant="outline" className="min-h-11 text-base" onClick={sair}>
             <LogOut className="size-5" aria-hidden="true" />
@@ -98,7 +111,8 @@ function OnboardingPage() {
                 Primeiro acesso
               </h1>
               <p className="text-base text-muted-foreground">
-                Sua senha atual é o mesmo dado usado pra login. Defina uma nova senha antes de continuar.
+                Sua senha atual é o mesmo dado usado pra login. Defina uma nova senha antes de
+                continuar.
               </p>
             </div>
           </div>
@@ -122,7 +136,10 @@ function OnboardingPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="confirmar-senha" className="block text-lg font-semibold text-foreground">
+              <label
+                htmlFor="confirmar-senha"
+                className="block text-lg font-semibold text-foreground"
+              >
                 Confirmar nova senha
               </label>
               <Input
@@ -139,28 +156,60 @@ function OnboardingPage() {
 
             <div className="rounded-xl border border-border bg-secondary/40 p-4">
               <p className="text-base font-semibold text-foreground">Termos de uso e privacidade</p>
-              <p className="mt-1 max-h-32 overflow-y-auto text-sm text-muted-foreground">
-                Ao continuar, você concorda que o NOTUS trate os dados acadêmicos e de contato
-                cadastrados (nome, e-mail, matrícula, notas, presença e informações de contato do
-                responsável) exclusivamente para a gestão escolar do Colégio Notus, conforme a Lei
-                Geral de Proteção de Dados (LGPD). Você pode solicitar a correção ou remoção dos seus
-                dados junto à secretaria a qualquer momento.
+              <p className="mt-1 text-sm text-muted-foreground">
+                Antes de continuar, leia os Termos de Uso, com as regras do portal, e a Política de
+                Privacidade, que explica como a escola trata os dados acadêmicos e de contato
+                conforme a Lei Geral de Proteção de Dados (LGPD).
               </p>
+              <ul className="mt-2 space-y-1 text-sm">
+                <li>
+                  <TermsReaderDialog documento="termos" onConfirm={() => setTermosLidos(true)} />
+                  {termosLidos && (
+                    <span className="ml-2 font-medium text-success">✓ Lidos</span>
+                  )}
+                </li>
+                <li>
+                  <TermsReaderDialog
+                    documento="privacidade"
+                    onConfirm={() => setPoliticaLida(true)}
+                  />
+                  {politicaLida && (
+                    <span className="ml-2 font-medium text-success">✓ Lida</span>
+                  )}
+                </li>
+              </ul>
+              {ehResponsavel && (
+                <p className="mt-3 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
+                  <strong>Aviso ao responsável:</strong> ao aceitar, você consente, como responsável
+                  legal, com o tratamento dos dados dos alunos menores vinculados a você (Art. 14 da
+                  LGPD). Você pode retirar esse consentimento a qualquer momento pela secretaria.
+                </p>
+              )}
             </div>
 
-            <label className="flex items-start gap-3">
+            <label
+              className={`flex items-start gap-3 ${!documentosLidos ? "cursor-not-allowed opacity-60" : ""}`}
+            >
               <Checkbox
                 checked={aceitouTermos}
+                disabled={!documentosLidos}
                 onCheckedChange={(v) => setAceitouTermos(v === true)}
                 className="mt-1"
               />
               <span className="text-base text-foreground">
-                Li e aceito os termos de uso e a política de privacidade.
+                {documentosLidos
+                  ? ehResponsavel
+                    ? "Li e aceito os termos de uso e a política de privacidade, em meu nome e como responsável legal dos alunos vinculados a mim."
+                    : "Li e aceito os termos de uso e a política de privacidade."
+                  : "Abra e leia os dois documentos acima para liberar esta opção."}
               </span>
             </label>
 
             {erro && (
-              <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-base text-destructive">
+              <p
+                role="alert"
+                className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-base text-destructive"
+              >
                 {erro}
               </p>
             )}
@@ -175,6 +224,8 @@ function OnboardingPage() {
           </form>
         </div>
       </main>
+
+      <RodapeSite novaAba />
     </div>
   );
 }

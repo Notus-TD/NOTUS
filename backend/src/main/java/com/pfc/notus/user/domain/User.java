@@ -41,6 +41,9 @@ public class User implements UserDetails {
     @Getter
     private LocalDate createdAt;
 
+    @Getter @Setter
+    private boolean ativo = true;
+
     @ManyToMany
     @JoinTable(name = "tb_user_role",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -90,7 +93,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.ativo;
     }
 
     public void addRole(Role role) {

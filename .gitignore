@@ -1,0 +1,9 @@
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.DS_Store
+
+# Configuracao local do Claude Code
+.claude/launch.json

@@ -19,7 +19,7 @@ public class NotaController {
     @Autowired
     private NotaService notaService;
 
-    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Nota> getAllNota(){return notaService.getAllNota();}
 
@@ -30,22 +30,22 @@ public class NotaController {
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
-    public ResponseEntity<NotaDTO> create(@RequestBody @Valid NotaDTO dto) {
-        NotaDTO created = notaService.save(dto);
+    public ResponseEntity<NotaDTO> create(@RequestBody @Valid NotaDTO dto, Authentication authentication) {
+        NotaDTO created = notaService.save(dto, authentication.getName());
         return ResponseEntity.ok(created);
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<NotaDTO> update(@PathVariable Long id, @RequestBody @Valid NotaDTO dto) {
-        NotaDTO updated = notaService.update(id, dto);
+    public ResponseEntity<NotaDTO> update(@PathVariable Long id, @RequestBody @Valid NotaDTO dto, Authentication authentication) {
+        NotaDTO updated = notaService.update(id, dto, authentication.getName());
         return ResponseEntity.ok(updated);
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id){
-        notaService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication){
+        notaService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 }

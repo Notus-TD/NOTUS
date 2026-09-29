@@ -1,23 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { RefreshCw, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { BoletimMatriz } from "@/components/BoletimMatriz";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { aluno, avisos, conversas, media } from "@/data/notus";
+import { aluno, avisos, conversas } from "@/data/notus";
 import {
   ApiError,
-  getBoletinsByStudent,
   getMeuPerfil,
   getMinhaFrequencia,
-  getNotasByBoletim,
   getStudentsByResponsible,
-  type Boletim,
   type FrequenciaDTO,
   type MeuPerfilDTO,
-  type Nota,
   type StudentMinDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
@@ -251,128 +249,67 @@ function BoletimCompleto() {
   );
 
   return (
-    <div className="space-y-4">
-      <Button
-        variant="outline"
-        className="min-h-10 text-base"
-        onClick={() => setVersao((v) => v + 1)}
-        disabled={filhos.estado === "carregando"}
-      >
-        Atualizar
-      </Button>
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          className="min-h-10 text-base"
+          onClick={() => setVersao((v) => v + 1)}
+          disabled={filhos.estado === "carregando"}
+        >
+          <RefreshCw
+            className={`size-4 ${filhos.estado === "carregando" ? "animate-spin" : ""}`}
+            aria-hidden="true"
+          />
+          Atualizar
+        </Button>
+      </div>
 
       {filhos.estado === "carregando" && (
         <p className="text-base text-muted-foreground">Carregando…</p>
       )}
       {filhos.estado === "erro" && <MensagemErro carga={filhos} />}
       {filhos.estado === "ok" && filhos.dados.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-base text-muted-foreground">
-            Nenhum aluno vinculado a esta conta.
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+            <Users className="size-10 text-muted-foreground/60" aria-hidden="true" />
+            <p className="text-base text-muted-foreground">
+              Nenhum aluno vinculado a esta conta. Procure a secretaria da escola.
+            </p>
           </CardContent>
         </Card>
       )}
       {filhos.estado === "ok" &&
-        filhos.dados.map((filho) => <BoletinsDoFilho key={filho.userId} filho={filho} />)}
+        filhos.dados.map((filho) => (
+          <BoletinsDoFilho key={`${filho.userId}-${versao}`} filho={filho} />
+        ))}
     </div>
   );
 }
 
 function BoletinsDoFilho({ filho }: { filho: StudentMinDTO }) {
-  const boletins = useCarga(() => getBoletinsByStudent(filho.userId), 0);
+  const iniciais = filho.studentName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0]?.toUpperCase())
+    .join("");
 
   return (
-    <div className="space-y-3">
-      <h3 className="font-display text-xl font-bold text-foreground">
-        {filho.studentName} · Matrícula nº {filho.matricula}
-      </h3>
-      {boletins.estado === "carregando" && (
-        <p className="text-base text-muted-foreground">Carregando…</p>
-      )}
-      {boletins.estado === "erro" && <MensagemErro carga={boletins} />}
-      {boletins.estado === "ok" && boletins.dados.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-base text-muted-foreground">
-            Nenhum boletim lançado ainda.
-          </CardContent>
-        </Card>
-      )}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {boletins.estado === "ok" &&
-          boletins.dados.map((b) => <BoletimCard key={b.id} boletim={b} />)}
+    <section className="space-y-3">
+      <div className="flex items-center gap-3">
+        <span
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-display text-base font-bold text-primary"
+          aria-hidden="true"
+        >
+          {iniciais}
+        </span>
+        <div>
+          <h3 className="font-display text-xl font-bold text-foreground">{filho.studentName}</h3>
+          <p className="text-sm text-muted-foreground">Matrícula nº {filho.matricula}</p>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function BoletimCard({ boletim }: { boletim: Boletim }) {
-  const notas = useCarga(() => getNotasByBoletim(boletim.id), 0);
-
-  const grupos =
-    notas.estado === "ok"
-      ? Object.values(
-          notas.dados.reduce<Record<number, { disciplina: Nota["disciplina"]; notas: Nota[] }>>(
-            (acc, n) => {
-              const grupo = (acc[n.disciplina.id] ??= { disciplina: n.disciplina, notas: [] });
-              grupo.notas.push(n);
-              return acc;
-            },
-            {},
-          ),
-        )
-      : [];
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl">{boletim.period}</CardTitle>
-        <CardDescription className="text-base">
-          Média final: {boletim.finalAverage.toFixed(1)} · {boletim.status}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {notas.estado === "carregando" && (
-          <p className="text-base text-muted-foreground">Carregando…</p>
-        )}
-        {notas.estado === "erro" && <MensagemErro carga={notas} />}
-        {notas.estado === "ok" && grupos.length === 0 && (
-          <p className="text-base text-muted-foreground">Nenhuma nota lançada neste boletim.</p>
-        )}
-        {grupos.map((grupo) => {
-          const m = media(grupo.notas.map((n) => n.rate));
-          const aprovado = m >= 7;
-          const recuperacao = m >= 6 && m < 7;
-          return (
-            <div
-              key={grupo.disciplina.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3"
-            >
-              <div>
-                <p className="text-lg font-semibold text-foreground">{grupo.disciplina.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {grupo.notas.map((n) => n.rate.toFixed(1)).join(" · ")}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-display text-xl font-bold text-foreground">
-                  {m.toFixed(1)}
-                </span>
-                <Badge
-                  className={`px-3 py-1 text-sm font-semibold ${
-                    aprovado
-                      ? "bg-success text-success-foreground"
-                      : recuperacao
-                        ? "bg-warning text-warning-foreground"
-                        : "bg-destructive text-destructive-foreground"
-                  }`}
-                >
-                  {aprovado ? "Em dia" : recuperacao ? "Atenção" : "Recuperação"}
-                </Badge>
-              </div>
-            </div>
-          );
-        })}
-      </CardContent>
-    </Card>
+      <BoletimMatriz studentId={filho.userId} />
+    </section>
   );
 }

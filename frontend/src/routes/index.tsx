@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { PerfilSwitcher } from "@/components/PerfilSwitcher";
 import { CalendarDays, BellRing, ClipboardCheck, ShieldCheck, UserPlus } from "lucide-react";
+import { RodapeSite } from "@/components/LegalPage";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
@@ -85,11 +86,7 @@ function Index() {
         </section>
       </main>
 
-      <footer className="mt-12 border-t border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-base text-muted-foreground sm:px-6">
-          NOTUS · Portal de gestão escolar · Dúvidas: secretaria@colegionotus.com.br · (11) 4002-8922
-        </div>
-      </footer>
+      <RodapeSite className="mt-12" />
     </div>
   );
 }

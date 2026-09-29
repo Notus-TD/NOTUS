@@ -9,6 +9,6 @@ import java.util.Optional;
 @Repository
 public interface ResponsibleRepository extends JpaRepository<Responsible, Long> {
 
-    Optional<Responsible> findByCpf(String cpf);
+    Optional<Responsible> findByEmail(String email);
 }
 
