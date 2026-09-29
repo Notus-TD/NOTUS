@@ -1,14 +1,14 @@
 package com.pfc.notus.turma.domain;
 
-import com.pfc.notus.atividade.domain.Atividade;
-import com.pfc.notus.disciplina.domain.Disciplina;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pfc.notus.lecionamento.domain.Lecionamento;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tb_turma")
@@ -24,17 +24,13 @@ public class Turma {
     @Getter @Setter
     private String schoolYear;
 
-    @ManyToMany
-    @JoinTable(
-            name = "tb_turma_disciplina",
-            joinColumns = @JoinColumn(name = "turma_id"),
-            inverseJoinColumns = @JoinColumn(name = "disciplina_id")
-    )
-    private Set<Disciplina> disciplinas = new HashSet<>();
+    @OneToMany(mappedBy = "turma")
+    @JsonIgnore
+    @Getter
+    private List<Lecionamento> lecionamentos = new ArrayList<>();
 
     public Turma(String name,String schoolYear){
         this.name = name;
         this.schoolYear = schoolYear;
     }
 }
-

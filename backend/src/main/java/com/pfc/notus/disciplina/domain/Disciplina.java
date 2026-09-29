@@ -2,7 +2,6 @@ package com.pfc.notus.disciplina.domain;
 
 
 import com.pfc.notus.atividade.domain.Atividade;
-import com.pfc.notus.turma.domain.Turma;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,9 +9,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name ="tb_disciplina")
@@ -33,9 +30,6 @@ public class Disciplina {
     @OneToMany(mappedBy = "disciplina", cascade = CascadeType.ALL, orphanRemoval = true)
     @Getter @Setter
     private List<Atividade> atividades = new ArrayList<>();
-
-    @ManyToMany(mappedBy = "disciplinas")
-    private Set<Turma> turmas = new HashSet<>();
 
     public Disciplina(String title, String description) {
         this.title = title;
