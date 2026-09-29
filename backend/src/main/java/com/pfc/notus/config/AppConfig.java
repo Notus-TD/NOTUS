@@ -66,7 +66,8 @@ public class AppConfig {
                         .anyRequest().access(new WebExpressionAuthorizationManager(
                                 "isAuthenticated() and !principal.firstLogin"))
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new AuditFilter(), JwtFilter.class);
 
         return http.build();
     }

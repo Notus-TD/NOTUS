@@ -4,15 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ApiError, cadastrarAluno, type StudentRegistrationResponse } from "@/lib/api";
-import { emailValido, formatarCpf, formatarTelefone, idadeEm, somenteDigitos, telefoneValido } from "@/lib/validacao";
+import { emailValido, formatarTelefone, idadeEm, somenteDigitos, telefoneValido } from "@/lib/validacao";
 
 
 const inicial = {
   responsavelNome: "",
   responsavelEmail: "",
   responsavelTelefone: "",
-  responsavelEndereco: "",
-  responsavelCpf: "",
   alunoNome: "",
   alunoEmail: "",
   alunoMatricula: "",
@@ -39,12 +37,6 @@ function validarCampo(chave: keyof Campos, valor: string, campos: Campos): strin
     case "responsavelTelefone":
       if (!telefoneValido(v)) return "Informe DDD + número (10 ou 11 dígitos).";
       return;
-    case "responsavelEndereco":
-      if (v.length < 5) return "Informe o endereço.";
-      return;
-    case "responsavelCpf":
-      if (somenteDigitos(v).length !== 11) return "O CPF precisa ter 11 dígitos.";
-      return;
     case "alunoMatricula":
       if (!/^\d{4,12}$/.test(v)) return "Informe só números (4 a 12 dígitos).";
       return;
@@ -69,7 +61,6 @@ function validarTudo(campos: Campos): Erros {
 }
 
 const mascaras: Partial<Record<keyof Campos, (v: string) => string>> = {
-  responsavelCpf: formatarCpf,
   responsavelTelefone: formatarTelefone,
   alunoMatricula: (v) => somenteDigitos(v).slice(0, 12),
 };
@@ -78,8 +69,6 @@ const rotulos: Record<string, string> = {
   "responsible.name": "Nome do responsável",
   "responsible.email": "E-mail do responsável",
   "responsible.phone": "Telefone do responsável",
-  "responsible.address": "Endereço",
-  "responsible.cpf": "CPF do responsável",
   "student.fullName": "Nome do aluno",
   "student.educationalEmail": "E-mail escolar",
   "student.matricula": "Matrícula",
@@ -136,8 +125,6 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
           name: campos.responsavelNome.trim(),
           email: campos.responsavelEmail.trim(),
           phone: somenteDigitos(campos.responsavelTelefone),
-          address: campos.responsavelEndereco.trim(),
-          cpf: campos.responsavelCpf,
         },
         student: {
           fullName: campos.alunoNome.trim(),
@@ -176,10 +163,6 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
             <Campo id="responsavelNome" rotulo="Nome completo" autoComplete="off" {...props("responsavelNome")} />
             <Campo id="responsavelEmail" rotulo="E-mail" type="email" autoComplete="off" {...props("responsavelEmail")} />
             <Campo id="responsavelTelefone" rotulo="Telefone" inputMode="tel" placeholder="(11) 99999-0000" {...props("responsavelTelefone")} />
-            <Campo id="responsavelCpf" rotulo="CPF" inputMode="numeric" placeholder="000.000.000-00" {...props("responsavelCpf")} />
-            <div className="sm:col-span-2">
-              <Campo id="responsavelEndereco" rotulo="Endereço" {...props("responsavelEndereco")} />
-            </div>
           </CardContent>
         </Card>
 
@@ -187,7 +170,7 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
           <CardHeader>
             <CardTitle className="text-xl">Aluno</CardTitle>
             <CardDescription className="text-base">
-              O aluno usa o telefone e o endereço do responsável. Se o CPF do responsável já estiver cadastrado, o aluno é vinculado a ele.
+              O aluno usa o telefone do responsável. Se o e-mail do responsável já estiver cadastrado, o aluno é vinculado a ele.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
