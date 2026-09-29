@@ -20,13 +20,13 @@ public class ResponsibleService {
 
     @Transactional
     public Responsible findOrCreateResponsible(ResponsibleRequest dto) {
-        Optional<Responsible> existente = responsibleRepository.findByCpf(dto.cpf());
+        Optional<Responsible> existente = responsibleRepository.findByEmail(dto.email());
         if (existente.isPresent()) {
             return existente.get();
         }
 
         Responsible responsible = new Responsible(
-                dto.name(), dto.email(), dto.cpf(), dto.phone(), dto.address());
+                dto.name(), dto.email(), dto.phone());
 
         return (Responsible) userService.register(responsible, "ROLE_RESPONSAVEL");
     }

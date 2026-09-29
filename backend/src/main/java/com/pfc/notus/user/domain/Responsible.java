@@ -18,24 +18,16 @@ public class Responsible extends User {
     private String name;
 
     @Getter @Setter
-    private String cpf;
-
-    @Getter @Setter
     private String phone;
-
-    @Getter @Setter
-    private String address;
 
     @OneToMany(mappedBy = "responsible")
     @JsonIgnore
     @Getter @Setter
     private List<Student> students = new ArrayList<>();
 
-    public Responsible(String name, String email, String cpf, String phone, String address) {
+    public Responsible(String name, String email, String phone) {
         super(email);
         this.name = name;
-        this.cpf = cpf;
         this.phone = phone;
-        this.address = address;
     }
 }

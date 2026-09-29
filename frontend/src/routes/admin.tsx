@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ChevronRight,
+  EyeOff,
   GraduationCap,
   LayoutDashboard,
   Megaphone,
@@ -12,17 +13,36 @@ import {
   Send,
   UserPlus,
   Users,
+  UserX,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminShell, type SidebarItem } from "@/components/AdminShell";
 import { CadastroAlunoForm } from "@/components/CadastroAlunoForm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { getStudents, getTurmas, type StudentMinDTO, type TurmaDTO } from "@/lib/api";
+import {
+  ApiError,
+  anonymizeUser,
+  getStudents,
+  getTurmas,
+  type StudentMinDTO,
+  type TurmaDTO,
+} from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { useCarga, MensagemErro, type Carga } from "@/hooks/use-carga";
 
@@ -39,7 +59,7 @@ export const Route = createFileRoute("/admin")({
   component: PainelAdmin,
 });
 
-type SecaoId = "dashboard" | "alunos" | "comunicados";
+type SecaoId = "dashboard" | "alunos" | "usuarios" | "comunicados";
 
 type ModoAlunos =
   { tipo: "lista" } | { tipo: "cadastro" } | { tipo: "ficha"; aluno: StudentMinDTO };
@@ -60,6 +80,13 @@ const itens: SidebarItem<SecaoId>[] = [
     termos: "alunos lista matricula cadastro novo responsavel criar buscar",
   },
   {
+    id: "usuarios",
+    label: "Excluir usuários",
+    descricao: "Anonimizar dados (LGPD)",
+    icon: UserX,
+    termos: "excluir remover deletar anonimizar lgpd usuario dado pessoal privacidade",
+  },
+  {
     id: "comunicados",
     label: "Comunicados",
     descricao: "Avisos para a escola",
@@ -71,6 +98,11 @@ const itens: SidebarItem<SecaoId>[] = [
 const cabecalhos: Record<SecaoId, { titulo: string; subtitulo: string }> = {
   dashboard: { titulo: "Visão geral", subtitulo: "Turmas, matrículas, alunos e comunicados." },
   alunos: { titulo: "Alunos", subtitulo: "Busque um aluno, abra a ficha ou cadastre um novo." },
+  usuarios: {
+    titulo: "Excluir usuários",
+    subtitulo:
+      "Anonimize os dados pessoais de um aluno e do responsável para atender pedidos de exclusão (LGPD). Ação irreversível.",
+  },
   comunicados: {
     titulo: "Comunicados",
     subtitulo: "Envie avisos para alunos, responsáveis e professores.",
@@ -111,6 +143,7 @@ function PainelAdmin() {
     >
       {secao === "dashboard" && <Dashboard irPara={irPara} irParaAlunos={irParaAlunos} />}
       {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
+      {secao === "usuarios" && <ExcluirUsuarios />}
       {secao === "comunicados" && <Comunicados />}
     </AdminShell>
   );
@@ -435,6 +468,145 @@ function fichaExemplo(aluno: StudentMinDTO) {
   };
 }
 
+function BotaoAnonimizar({
+  userId,
+  nome,
+  aoConcluir,
+  compacto = false,
+}: {
+  userId: number;
+  nome: string;
+  aoConcluir?: () => void;
+  compacto?: boolean;
+}) {
+  const [anonimizando, setAnonimizando] = useState(false);
+
+  async function confirmar() {
+    setAnonimizando(true);
+    try {
+      await anonymizeUser(userId);
+      toast.success(`Dados de ${nome} anonimizados.`);
+      aoConcluir?.();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Erro ao anonimizar os dados do usuário.",
+      );
+    } finally {
+      setAnonimizando(false);
+    }
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="destructive"
+          className={compacto ? "min-h-10 text-base" : "min-h-11 text-base"}
+          disabled={anonimizando}
+        >
+          <EyeOff className="size-5" aria-hidden="true" />
+          {anonimizando ? "Anonimizando..." : "Anonimizar dados"}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Anonimizar {nome}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Nome, e-mail, data de nascimento e os dados do responsável serão apagados
+            permanentemente e a matrícula será encerrada. Isso não pode ser desfeito.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmar}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Sim, anonimizar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function ExcluirUsuarios() {
+  const [versao, setVersao] = useState(0);
+  const [busca, setBusca] = useState("");
+  const carga = useCarga<StudentMinDTO[]>(getStudents, versao);
+
+  const termo = busca.trim().toLowerCase();
+  const filtrados =
+    carga.estado === "ok"
+      ? carga.dados.filter(
+          (s) =>
+            !termo ||
+            s.studentName.toLowerCase().includes(termo) ||
+            String(s.matricula).includes(termo),
+        )
+      : [];
+
+  return (
+    <div className="space-y-4">
+      <div className="relative max-w-md">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou matrícula…"
+          aria-label="Buscar usuário"
+          className="h-11 pl-10 text-base"
+        />
+      </div>
+
+      <Card>
+        <CardContent className="p-6">
+          {carga.estado === "carregando" && (
+            <p className="text-base text-muted-foreground">Carregando…</p>
+          )}
+          {carga.estado === "erro" && <MensagemErro carga={carga} />}
+          {carga.estado === "ok" && filtrados.length === 0 && (
+            <p className="text-base text-muted-foreground">
+              {termo
+                ? `Nenhum usuário encontrado para "${busca.trim()}".`
+                : "Nenhum aluno cadastrado ainda."}
+            </p>
+          )}
+          {carga.estado === "ok" && filtrados.length > 0 && (
+            <ul className="divide-y divide-border">
+              {filtrados.map((s) => (
+                <li
+                  key={s.userId}
+                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-foreground">
+                      {s.studentName}
+                    </p>
+                    <p className="text-base text-muted-foreground">
+                      Matrícula nº {s.matricula} · Registro nº {s.userId}
+                    </p>
+                  </div>
+                  <BotaoAnonimizar
+                    userId={s.userId}
+                    nome={s.studentName}
+                    compacto
+                    aoConcluir={() => setVersao((v) => v + 1)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => void }) {
   const ex = fichaExemplo(aluno);
   const nascimento = new Date(`${ex.nascimento}T00:00:00`).toLocaleDateString("pt-BR");
@@ -477,6 +649,19 @@ function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => voi
       <p className="text-sm text-muted-foreground">
         Dados do aluno cadastrados na escola.
       </p>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="text-xl text-destructive">Zona de risco</CardTitle>
+          <CardDescription className="text-base">
+            Substitui os dados pessoais deste aluno e do responsável por "****" e encerra a
+            matrícula. Ação irreversível, usada para atender pedidos de exclusão de dados (LGPD).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BotaoAnonimizar userId={aluno.userId} nome={aluno.studentName} aoConcluir={voltar} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

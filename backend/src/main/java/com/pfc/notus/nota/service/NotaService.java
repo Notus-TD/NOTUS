@@ -41,9 +41,10 @@ public class NotaService {
     }
 
     @Transactional
-    public NotaDTO save(NotaDTO dto) {
+    public NotaDTO save(NotaDTO dto, String requesterEmail) {
         Boletim boletim = boletimRepository.findById(dto.boletimId())
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + dto.boletimId()));
+        studentAccessGuardService.assertCanTeach(boletim.getStudent().getId(), dto.disciplinaId(), requesterEmail);
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
                 .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
         Nota entity = new Nota();
@@ -58,12 +59,15 @@ public class NotaService {
     }
 
     @Transactional
-    public NotaDTO update(Long id, NotaDTO dto) {
+    public NotaDTO update(Long id, NotaDTO dto, String requesterEmail) {
         Nota entity = notaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
+        // precisa poder lançar tanto na nota atual quanto no destino da alteração
+        studentAccessGuardService.assertCanTeach(entity.getBoletim().getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
         Long boletimAntigoId = entity.getBoletim().getId();
         Boletim boletim = boletimRepository.findById(dto.boletimId())
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + dto.boletimId()));
+        studentAccessGuardService.assertCanTeach(boletim.getStudent().getId(), dto.disciplinaId(), requesterEmail);
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
                 .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
 
@@ -81,9 +85,10 @@ public class NotaService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String requesterEmail) {
         Nota entity = notaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
+        studentAccessGuardService.assertCanTeach(entity.getBoletim().getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
         Long boletimId = entity.getBoletim().getId();
         notaRepository.deleteById(id);
         recalcularMedia(boletimId);

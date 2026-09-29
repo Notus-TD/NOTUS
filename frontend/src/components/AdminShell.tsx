@@ -4,6 +4,7 @@ import { LogOut, Search, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { clearSession, getSession, homeForRoles, type Session } from "@/lib/auth";
+import { RodapeSite } from "@/components/LegalPage";
 
 export type SidebarItem<T extends string> = {
   id: T;
@@ -168,6 +169,8 @@ export function AdminShell<T extends string>({
         {subtitulo && <p className="mt-2 max-w-2xl text-lg text-muted-foreground">{subtitulo}</p>}
         <div className="mt-8">{children}</div>
       </main>
+
+      <RodapeSite className="mt-12" />
     </div>
   );
 }

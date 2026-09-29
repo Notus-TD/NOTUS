@@ -6,30 +6,27 @@ import {
   CalendarClock,
   CalendarDays,
   ClipboardList,
+  RefreshCw,
   Search,
   UserX,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { BoletimMatriz } from "@/components/BoletimMatriz";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { aluno, atividades, horarios, media } from "@/data/notus";
+import { aluno, atividades, horarios } from "@/data/notus";
 import {
   ApiError,
-  getBoletinsByStudent,
   getMeuPerfil,
   getMinhaFrequencia,
   getMinhasFaltas,
-  getNotasByBoletim,
-  type Boletim,
   type FaltaDTO,
   type FrequenciaDTO,
-  type Nota,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { useCarga, MensagemErro } from "@/hooks/use-carga";
 
 export const Route = createFileRoute("/aluno")({
   head: () => ({
@@ -373,110 +370,37 @@ function ListaAtividades({ itens }: { itens: typeof atividades }) {
 function Notas() {
   const studentId = getSession()?.userId;
   const [versao, setVersao] = useState(0);
-  const boletins = useCarga(
-    () => (studentId ? getBoletinsByStudent(studentId) : Promise.resolve([])),
-    versao,
-  );
 
   return (
     <Secao
       titulo="Boletim"
       descricao="Notas lançadas pelos professores, por matéria e por período."
     >
-      <div className="space-y-4">
-        <Button
-          variant="outline"
-          className="min-h-10 text-base"
-          onClick={() => setVersao((v) => v + 1)}
-          disabled={boletins.estado === "carregando"}
-        >
-          Atualizar
-        </Button>
-
-        {boletins.estado === "carregando" && (
-          <p className="text-base text-muted-foreground">Carregando…</p>
-        )}
-        {boletins.estado === "erro" && <MensagemErro carga={boletins} />}
-        {boletins.estado === "ok" && boletins.dados.length === 0 && (
-          <Card>
-            <CardContent className="p-6 text-base text-muted-foreground">
-              Nenhum boletim lançado ainda.
-            </CardContent>
-          </Card>
-        )}
-        {boletins.estado === "ok" &&
-          boletins.dados.map((b) => <BoletimDoAluno key={b.id} boletim={b} />)}
-      </div>
-    </Secao>
-  );
-}
-
-function BoletimDoAluno({ boletim }: { boletim: Boletim }) {
-  const notas = useCarga(() => getNotasByBoletim(boletim.id), 0);
-
-  const grupos =
-    notas.estado === "ok"
-      ? Object.values(
-          notas.dados.reduce<Record<number, { disciplina: Nota["disciplina"]; notas: Nota[] }>>(
-            (acc, n) => {
-              const grupo = (acc[n.disciplina.id] ??= { disciplina: n.disciplina, notas: [] });
-              grupo.notas.push(n);
-              return acc;
-            },
-            {},
-          ),
-        )
-      : [];
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl">{boletim.period}</CardTitle>
-        <CardDescription className="text-base">
-          Média final: {boletim.finalAverage.toFixed(1)} · {boletim.status}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {notas.estado === "carregando" && (
-          <p className="text-base text-muted-foreground">Carregando…</p>
-        )}
-        {notas.estado === "erro" && <MensagemErro carga={notas} />}
-        {notas.estado === "ok" && grupos.length === 0 && (
-          <p className="text-base text-muted-foreground">Nenhuma nota lançada neste boletim.</p>
-        )}
-        {grupos.map((grupo) => (
-          <div
-            key={grupo.disciplina.id}
-            className="divide-y divide-border rounded-xl border border-border"
-          >
-            <div className="flex items-center justify-between gap-3 bg-secondary px-4 py-2">
-              <span className="text-base font-semibold text-secondary-foreground">
-                {grupo.disciplina.title}
-              </span>
-              <span className="text-sm text-secondary-foreground">
-                Média: {media(grupo.notas.map((n) => n.rate)).toFixed(1)}
-              </span>
-            </div>
-            {grupo.notas.map((n) => (
-              <div key={n.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                <span className="text-base text-foreground">{n.period}</span>
-                <span
-                  className={`rounded-xl px-4 py-1 font-display text-xl font-bold ${
-                    n.rate >= 7
-                      ? "bg-success text-success-foreground"
-                      : n.rate >= 6
-                        ? "bg-warning text-warning-foreground"
-                        : "bg-destructive text-destructive-foreground"
-                  }`}
-                >
-                  {n.rate.toFixed(1)}
-                </span>
-              </div>
-            ))}
+      {studentId ? (
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              className="min-h-10 text-base"
+              onClick={() => setVersao((v) => v + 1)}
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              Atualizar
+            </Button>
           </div>
-        ))}
-      </CardContent>
-    </Card>
+          <BoletimMatriz key={versao} studentId={studentId} />
+        </div>
+      ) : (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="flex items-center gap-3 p-6">
+            <AlertTriangle className="size-5 shrink-0 text-destructive" aria-hidden="true" />
+            <p className="text-base font-semibold text-destructive">
+              Não foi possível identificar o aluno. Saia e entre novamente.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </Secao>
   );
 }
 

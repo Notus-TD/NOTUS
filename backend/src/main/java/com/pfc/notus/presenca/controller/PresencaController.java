@@ -7,6 +7,7 @@ import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class PresencaController {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Presenca> getAllPresenca() {
         return presencaService.getAllPresenca();
@@ -33,15 +35,17 @@ public class PresencaController {
         return presencaService.getByStudent(studentId);
     }
 
+    @PreAuthorize("hasRole('PROFESSOR')")
     @PostMapping
-    public ResponseEntity<PresencaDTO> create(@RequestBody @Valid PresencaDTO dto) {
-        PresencaDTO created = presencaService.save(dto);
+    public ResponseEntity<PresencaDTO> create(@RequestBody @Valid PresencaDTO dto, Authentication authentication) {
+        PresencaDTO created = presencaService.save(dto, authentication.getName());
         return ResponseEntity.ok(created);
     }
 
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        presencaService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
+        presencaService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 }

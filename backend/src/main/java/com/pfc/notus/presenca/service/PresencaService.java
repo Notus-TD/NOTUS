@@ -7,6 +7,7 @@ import com.pfc.notus.presenca.dto.PresencaDTO;
 import com.pfc.notus.presenca.repository.PresencaRepository;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.StudentRepository;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ public class PresencaService {
     @Autowired
     private StudentRepository studentRepository;
 
+    @Autowired
+    private StudentAccessGuardService studentAccessGuardService;
+
     public List<Presenca> getAllPresenca() {
         return presencaRepository.findAll();
     }
@@ -35,7 +39,8 @@ public class PresencaService {
     }
 
     @Transactional
-    public PresencaDTO save(PresencaDTO dto) {
+    public PresencaDTO save(PresencaDTO dto, String requesterEmail) {
+        studentAccessGuardService.assertCanTeach(dto.studentId(), dto.disciplinaId(), requesterEmail);
         Student student = studentRepository.findById(dto.studentId())
                 .orElseThrow(() -> new EntityNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
@@ -50,10 +55,10 @@ public class PresencaService {
     }
 
     @Transactional
-    public void delete(Long id) {
-        if (!presencaRepository.existsById(id)) {
-            throw new EntityNotFoundException("Presença não encontrada com o id: " + id);
-        }
+    public void delete(Long id, String requesterEmail) {
+        Presenca presenca = presencaRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Presença não encontrada com o id: " + id));
+        studentAccessGuardService.assertCanTeach(presenca.getStudent().getId(), presenca.getDisciplina().getId(), requesterEmail);
         presencaRepository.deleteById(id);
     }
 

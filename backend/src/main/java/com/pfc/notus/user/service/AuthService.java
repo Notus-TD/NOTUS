@@ -6,6 +6,7 @@ import com.pfc.notus.user.dto.security.AccountCredentialsDTO;
 import com.pfc.notus.user.dto.security.TokenDTO;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.util.AuthUtil;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,6 +28,8 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public TokenDTO login(AccountCredentialsDTO dto) {
+        MDC.put("user", dto.email());
+
         Authentication auth = authManager.authenticate(new UsernamePasswordAuthenticationToken(
                 dto.email(),
                 dto.password()));

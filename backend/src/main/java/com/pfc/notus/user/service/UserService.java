@@ -2,10 +2,12 @@ package com.pfc.notus.user.service;
 
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
+import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Role;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
+import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.dto.DependenteDTO;
 import com.pfc.notus.user.dto.MeuPerfilDTO;
 import com.pfc.notus.user.projection.UserDetailsProjection;
@@ -40,6 +42,9 @@ public class UserService implements UserDetailsService {
     @Autowired
     private AuthUtil authUtil;
 
+    @Autowired
+    private NotificacaoService notificacaoService;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         List<UserDetailsProjection> result = userRepository.searchUserAndRolesByEmail(username);
@@ -49,6 +54,8 @@ public class UserService implements UserDetailsService {
 
         User user = new User(result.getFirst().getUsername(), result.getFirst().getPassword());
         user.setId(result.getFirst().getId());
+        user.setFirstLogin(Boolean.TRUE.equals(result.getFirst().getFirstLogin()));
+        user.setAtivo(!Boolean.FALSE.equals(result.getFirst().getAtivo()));
         for (UserDetailsProjection projection : result) {
             user.addRole(new Role(projection.getRoleId(), projection.getAuthority()));
         }
@@ -121,6 +128,28 @@ public class UserService implements UserDetailsService {
 
         userRepository.save(user);
 
+    }
+
+    @Transactional
+    public void anonimyzeUser(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + userId));
+
+        if (user instanceof Student student) {
+            student.setEmail("****");
+            student.setBirthDate(null);
+            student.setFullName("****");
+            student.setAtivo(false);
+            student.setStatusMatricula(StatusMatricula.FINALIZADA);
+            notificacaoService.cancelarPendentesDoAluno(student.getId(), "Aluno anonimizado");
+        } else if (user instanceof Responsible responsible) {
+            responsible.setEmail("****");
+            responsible.setName("****");
+            responsible.setPhone("****");
+            responsible.setAtivo(false);
+            notificacaoService.cancelarPendentesDoResponsavel(responsible.getId(), "Responsável anonimizado");
+        }
+        userRepository.save(user);
     }
 
     private Long gerarProximoId() {

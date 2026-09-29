@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { GraduationCap, Users, ClipboardCheck, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { clearSession, getSession, homeForRoles, type Role, type Session } from "@/lib/auth";
+import { RodapeSite } from "@/components/LegalPage";
 
 const perfil: Record<Role, { label: string; icon: typeof GraduationCap }> = {
   ROLE_ALUNO: { label: "Aluno", icon: GraduationCap },
@@ -92,11 +93,7 @@ export function AppShell({
         <div className="mt-8 space-y-8">{children}</div>
       </main>
 
-      <footer className="mt-12 border-t border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-base text-muted-foreground sm:px-6">
-          NOTUS · Portal de gestão escolar · Dúvidas: secretaria@colegionotus.com.br · (11) 4002-8922
-        </div>
-      </footer>
+      <RodapeSite className="mt-12" />
     </div>
   );
 }
