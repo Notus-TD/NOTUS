@@ -32,7 +32,9 @@ public class Student extends User {
     @Getter @Setter
     private Responsible responsible;
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "turma_id")
+    @Getter @Setter
     private Turma turma;
 
     public Student(String fullName, String email, Long matricula, LocalDate birthDate, Responsible responsible) {

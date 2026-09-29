@@ -6,7 +6,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +27,14 @@ public class Boletim {
     private Float finalAverage;
     @Getter @Setter
     private String status;
+
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'ABERTO'")
+    @Getter @Setter
+    private SituacaoBoletim situacao = SituacaoBoletim.ABERTO;
+
+    @Getter @Setter
+    private LocalDateTime fechadoEm;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)

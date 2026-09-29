@@ -20,7 +20,7 @@ public class FaltaController {
     @Autowired
     private FaltaService faltaService;
 
-    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<FaltaDTO> getAllFaltas() {
         return faltaService.getAllFaltas();
@@ -51,8 +51,8 @@ public class FaltaController {
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        faltaService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
+        faltaService.delete(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 }
