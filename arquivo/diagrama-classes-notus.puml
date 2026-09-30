@@ -1,0 +1,134 @@
+@startuml
+title NOTUS - Diagrama de Classes do Domínio Acadêmico
+
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam shadowing false
+
+abstract class User {
+  +id: Long
+  +email: String
+  +password: String
+  +firstLogin: Boolean
+  +ativo: Boolean
+  +createdAt: LocalDateTime
+  +termsAcceptedAt: LocalDateTime
+}
+
+class Role {
+  +id: Long
+  +authority: String
+}
+
+class Student {
+  +fullName: String
+  +matricula: Long
+  +birthDate: LocalDate
+  +statusMatricula: StatusMatricula
+}
+
+class Responsible {
+  +name: String
+  +phone: String
+}
+
+class Professor {
+  +fullName: String
+}
+
+class Turma {
+  +id: Long
+  +name: String
+  +schoolYear: String
+}
+
+class Disciplina {
+  +id: Long
+  +title: String
+  +description: String
+  +created: LocalDateTime
+}
+
+class Lecionamento {
+  +id: Long
+  +turmaId: Long
+  +disciplinaId: Long
+  +professorId: Long
+}
+
+class Atividade {
+  +id: Long
+  +title: String
+  +content: String
+  +status: StatusAtividade
+}
+
+class Entrega {
+  +id: Long
+  +submittedAt: LocalDateTime
+  +status: String
+}
+
+class Boletim {
+  +id: Long
+  +period: String
+  +finalAverage: BigDecimal
+  +status: String
+  +situacao: String
+}
+
+class Nota {
+  +id: Long
+  +period: String
+  +rate: BigDecimal
+}
+
+class AulaRegistro {
+  +id: Long
+  +data: LocalDate
+}
+
+class Falta {
+  +id: Long
+  +data: LocalDate
+  +quantidade: Integer
+  +registradoEm: LocalDateTime
+}
+
+enum StatusMatricula {
+  ATIVA
+  INATIVA
+  ENCERRADA
+}
+
+enum StatusAtividade {
+  ABERTA
+  ENCERRADA
+  CANCELADA
+}
+
+User "0..*" -- "0..*" Role : possui >
+User <|-- Student
+User <|-- Responsible
+User <|-- Professor
+
+Responsible "1" -- "0..*" Student : responsável por >
+Turma "1" -- "0..*" Student : possui alunos >
+Professor "1" -- "0..*" Lecionamento : ministra >
+Turma "1" -- "0..*" Lecionamento : contém >
+Disciplina "1" -- "0..*" Lecionamento : é ministrada em >
+
+Disciplina "1" -- "0..*" Atividade : possui >
+Student "1" -- "0..*" Entrega : realiza >
+Atividade "1" -- "0..*" Entrega : recebe >
+
+Student "1" -- "0..*" Boletim : possui >
+Boletim "1" -- "1..*" Nota : contém >
+Disciplina "1" -- "0..*" Nota : recebe >
+
+Disciplina "1" -- "0..*" AulaRegistro : possui aulas >
+Student "1" -- "0..*" Falta : possui >
+Disciplina "1" -- "0..*" Falta : ocorre em >
+Professor "1" -- "0..*" Falta : registra >
+
+@enduml
