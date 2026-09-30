@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net" modified="2026-09-30T00:00:00.000Z" agent="NOTUS" version="24.7.17">
+  <diagram id="bpmn-notus" name="BPMN - Lançamento de Chamada">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="inicio" value="Início" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="260" width="90" height="50" as="geometry"/></mxCell>
+        <mxCell id="acesso" value="Professor acessa o painel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="170" y="250" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="turma" value="Seleciona turma" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="380" y="250" width="140" height="70" as="geometry"/></mxCell>
+        <mxCell id="disciplina" value="Seleciona disciplina" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="560" y="250" width="150" height="70" as="geometry"/></mxCell>
+        <mxCell id="carregar" value="Sistema carrega&#xa;alunos ativos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="750" y="250" width="160" height="70" as="geometry"/></mxCell>
+        <mxCell id="registrar" value="Professor registra&#xa;a aula do dia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="950" y="250" width="170" height="70" as="geometry"/></mxCell>
+        <mxCell id="marcar" value="Marca cada aluno como&#xa;presente ou faltoso" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1160" y="250" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="faltosos" value="Há alunos&#xa;faltosos?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1380" y="245" width="120" height="80" as="geometry"/></mxCell>
+        <mxCell id="salvar" value="Salvar chamada com&#xa;todos presentes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="1340" y="400" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="registrarFaltas" value="Registrar uma falta para&#xa;cada aluno ausente" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="1080" y="400" width="210" height="70" as="geometry"/></mxCell>
+        <mxCell id="concluido" value="Registro concluído?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1115" y="535" width="140" height="80" as="geometry"/></mxCell>
+        <mxCell id="erro" value="Exibir erro ao professor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="850" y="680" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="frequencia" value="Atualizar frequência&#xa;da disciplina" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="1320" y="535" width="190" height="80" as="geometry"/></mxCell>
+        <mxCell id="disponibilizar" value="Disponibilizar frequência&#xa;para aluno e responsável" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="1320" y="680" width="210" height="70" as="geometry"/></mxCell>
+        <mxCell id="confirmacao" value="Exibir confirmação" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="1320" y="810" width="190" height="70" as="geometry"/></mxCell>
+        <mxCell id="fim" value="Fim" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1370" y="930" width="90" height="50" as="geometry"/></mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="inicio" target="acesso" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="acesso" target="turma" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="turma" target="disciplina" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="disciplina" target="carregar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="carregar" target="registrar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="registrar" target="marcar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="marcar" target="faltosos" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" value="Não" edge="1" parent="1" source="faltosos" target="salvar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;labelBackgroundColor=#ffffff;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e9" value="Sim" edge="1" parent="1" source="faltosos" target="registrarFaltas" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;labelBackgroundColor=#ffffff;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="registrarFaltas" target="concluido" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e11" value="Não" edge="1" parent="1" source="concluido" target="erro" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;labelBackgroundColor=#ffffff;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e12" value="Sim" edge="1" parent="1" source="concluido" target="frequencia" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;labelBackgroundColor=#ffffff;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="salvar" target="frequencia" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="frequencia" target="disponibilizar" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="disponibilizar" target="confirmacao" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="confirmacao" target="fim" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="erro" target="fim" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
