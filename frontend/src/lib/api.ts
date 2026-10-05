@@ -230,7 +230,24 @@ export type TurmaDTO = {
   id: number;
   name: string;
   schoolYear: string;
-  disciplinas?: { id: number; title: string }[];
+  totalAlunos: number;
+};
+export type TurmaRequestDTO = { name: string; schoolYear: string };
+export type LecionamentoDTO = {
+  id: number;
+  turmaId: number;
+  turmaName: string;
+  disciplinaId: number;
+  disciplinaTitle: string;
+  professorId: number;
+  professorEmail: string;
+};
+export type TurmaDetalheDTO = {
+  id: number;
+  name: string;
+  schoolYear: string;
+  alunos: StudentMinDTO[];
+  lecionamentos: LecionamentoDTO[];
 };
 export type DisciplinaDTO = { id: number; title: string; description?: string };
 export type AtividadeDTO = { id: number; title: string; content?: string; status: string };
@@ -281,6 +298,23 @@ export const getStudentsByResponsible = (responsibleId: number) =>
 export const getStudentsByTurma = (turmaId: number, sort: "nome" | "matricula" = "nome") =>
   getJson<StudentMinDTO[]>(`/students/turma/${turmaId}?sort=${sort}`);
 export const getTurmas = () => getJson<TurmaDTO[]>("/turma");
+export const getTurma = (turmaId: number) => getJson<TurmaDetalheDTO>(`/turma/${turmaId}`);
+export const createTurma = (dto: TurmaRequestDTO) => sendJson<TurmaDTO>("POST", "/turma", dto);
+export const updateTurma = (turmaId: number, dto: TurmaRequestDTO) =>
+  sendJson<TurmaDTO>("PUT", `/turma/${turmaId}`, dto);
+export const deleteTurma = (turmaId: number) => sendJson<void>("DELETE", `/turma/${turmaId}`);
+
+export type TurmaAlunoResponseDTO = {
+  turmaId: number;
+  turmaName: string;
+  studentId: number;
+  studentName: string;
+  matricula: number;
+};
+export const associarAlunoTurma = (turmaId: number, studentId: number) =>
+  sendJson<TurmaAlunoResponseDTO>("POST", `/turma/${turmaId}/alunos`, { studentId });
+export const removerAlunoTurma = (turmaId: number, studentId: number) =>
+  sendJson<void>("DELETE", `/turma/${turmaId}/alunos/${studentId}`);
 
 export type TurmaComDisciplinasDTO = {
   turmaId: number;
