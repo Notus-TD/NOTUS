@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
   ChevronRight,
@@ -7,10 +7,14 @@ import {
   GraduationCap,
   LayoutDashboard,
   Megaphone,
+  Pencil,
+  Plus,
   RefreshCw,
   School,
   Search,
   Send,
+  Trash2,
+  UserMinus,
   UserPlus,
   Users,
   UserX,
@@ -36,12 +40,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ApiError,
   anonymizeUser,
+  associarAlunoTurma,
+  createTurma,
+  deleteTurma,
   getStudents,
+  getTurma,
   getTurmas,
+  removerAlunoTurma,
+  updateTurma,
   type StudentMinDTO,
+  type TurmaDetalheDTO,
   type TurmaDTO,
+  type TurmaRequestDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { useCarga, MensagemErro, type Carga } from "@/hooks/use-carga";
@@ -59,7 +78,7 @@ export const Route = createFileRoute("/admin")({
   component: PainelAdmin,
 });
 
-type SecaoId = "dashboard" | "alunos" | "usuarios" | "comunicados";
+type SecaoId = "dashboard" | "alunos" | "turmas" | "usuarios" | "comunicados";
 
 type ModoAlunos =
   { tipo: "lista" } | { tipo: "cadastro" } | { tipo: "ficha"; aluno: StudentMinDTO };
@@ -80,6 +99,13 @@ const itens: SidebarItem<SecaoId>[] = [
     termos: "alunos lista matricula cadastro novo responsavel criar buscar",
   },
   {
+    id: "turmas",
+    label: "Turmas",
+    descricao: "Alunos de cada turma",
+    icon: School,
+    termos: "turma turmas sala classe associar adicionar aluno enturmar",
+  },
+  {
     id: "usuarios",
     label: "Excluir usuários",
     descricao: "Anonimizar dados (LGPD)",
@@ -98,6 +124,10 @@ const itens: SidebarItem<SecaoId>[] = [
 const cabecalhos: Record<SecaoId, { titulo: string; subtitulo: string }> = {
   dashboard: { titulo: "Visão geral", subtitulo: "Turmas, matrículas, alunos e comunicados." },
   alunos: { titulo: "Alunos", subtitulo: "Busque um aluno, abra a ficha ou cadastre um novo." },
+  turmas: {
+    titulo: "Turmas",
+    subtitulo: "Escolha uma turma para ver os alunos e adicionar novos.",
+  },
   usuarios: {
     titulo: "Excluir usuários",
     subtitulo:
@@ -143,6 +173,7 @@ function PainelAdmin() {
     >
       {secao === "dashboard" && <Dashboard irPara={irPara} irParaAlunos={irParaAlunos} />}
       {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
+      {secao === "turmas" && <Turmas />}
       {secao === "usuarios" && <ExcluirUsuarios />}
       {secao === "comunicados" && <Comunicados />}
     </AdminShell>
@@ -527,6 +558,471 @@ function BotaoAnonimizar({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+function Turmas() {
+  const [versao, setVersao] = useState(0);
+  const [turmaId, setTurmaId] = useState<number | null>(null);
+  const [criando, setCriando] = useState(false);
+  const turmas = useCarga<TurmaDTO[]>(getTurmas, versao);
+  const turmaAtual =
+    turmas.estado === "ok" ? (turmas.dados.find((t) => t.id === turmaId) ?? null) : null;
+  const atualizar = () => setVersao((v) => v + 1);
+
+  async function criar(dados: TurmaRequestDTO) {
+    const criada = await createTurma(dados);
+    toast.success(`Turma ${criada.name} criada.`);
+    setCriando(false);
+    setTurmaId(criada.id);
+    atualizar();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-full max-w-md space-y-2">
+          <label className="block text-lg font-semibold text-foreground">Turma</label>
+          {turmas.estado === "carregando" && (
+            <p className="text-base text-muted-foreground">Carregando…</p>
+          )}
+          {turmas.estado === "erro" && <MensagemErro carga={turmas} />}
+          {turmas.estado === "ok" && (
+            <Select
+              value={turmaId ? String(turmaId) : ""}
+              onValueChange={(v) => setTurmaId(Number(v))}
+            >
+              <SelectTrigger className="h-12 text-lg" aria-label="Turma">
+                <SelectValue placeholder="Selecione a turma" />
+              </SelectTrigger>
+              <SelectContent>
+                {turmas.dados.map((t) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name} · {t.schoolYear} · {t.totalAlunos} aluno(s)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          className="min-h-12 text-base"
+          onClick={atualizar}
+          disabled={turmas.estado === "carregando"}
+        >
+          <RefreshCw
+            className={`size-5 ${turmas.estado === "carregando" ? "animate-spin" : ""}`}
+            aria-hidden="true"
+          />
+          Atualizar
+        </Button>
+        <Button className="min-h-12 text-base" onClick={() => setCriando(true)} disabled={criando}>
+          <Plus className="size-5" aria-hidden="true" />
+          Nova turma
+        </Button>
+      </div>
+
+      {criando && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Nova turma</CardTitle>
+            <CardDescription className="text-base">
+              Não pode existir outra turma com o mesmo nome no mesmo ano letivo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FormularioTurma
+              textoBotao="Criar turma"
+              onSalvar={criar}
+              onCancelar={() => setCriando(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {turmaAtual ? (
+        <DetalheTurma
+          key={`${turmaAtual.id}-${versao}`}
+          turma={turmaAtual}
+          onAlterada={atualizar}
+          onExcluida={() => {
+            setTurmaId(null);
+            atualizar();
+          }}
+        />
+      ) : (
+        !criando && (
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-base text-muted-foreground">
+                Selecione uma turma para ver os alunos e professores, ou crie uma nova.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      )}
+    </div>
+  );
+}
+
+function FormularioTurma({
+  inicial,
+  textoBotao,
+  onSalvar,
+  onCancelar,
+}: {
+  inicial?: TurmaRequestDTO;
+  textoBotao: string;
+  onSalvar: (dados: TurmaRequestDTO) => Promise<void>;
+  onCancelar: () => void;
+}) {
+  const id = useId();
+  const [name, setName] = useState(inicial?.name ?? "");
+  const [schoolYear, setSchoolYear] = useState(
+    inicial?.schoolYear ?? String(new Date().getFullYear()),
+  );
+  const [salvando, setSalvando] = useState(false);
+  const valido = name.trim() !== "" && schoolYear.trim() !== "";
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (!valido) return;
+    setSalvando(true);
+    try {
+      await onSalvar({ name: name.trim(), schoolYear: schoolYear.trim() });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao salvar a turma.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={enviar}
+      className="grid gap-4 sm:grid-cols-[1fr_10rem] lg:grid-cols-[1fr_10rem_auto] lg:items-end"
+    >
+      <div className="space-y-2">
+        <label htmlFor={`${id}-nome`} className="block text-base font-semibold text-foreground">
+          Nome da turma
+        </label>
+        <Input
+          id={`${id}-nome`}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ex.: 9º Ano A"
+          className="h-11 text-base"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label htmlFor={`${id}-ano`} className="block text-base font-semibold text-foreground">
+          Ano letivo
+        </label>
+        <Input
+          id={`${id}-ano`}
+          value={schoolYear}
+          onChange={(e) => setSchoolYear(e.target.value)}
+          inputMode="numeric"
+          maxLength={4}
+          className="h-11 text-base"
+          required
+        />
+      </div>
+      <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
+        <Button type="submit" className="min-h-11 text-base" disabled={!valido || salvando}>
+          {salvando ? "Salvando..." : textoBotao}
+        </Button>
+        <Button type="button" variant="outline" className="min-h-11 text-base" onClick={onCancelar}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function ConfirmarAcao({
+  titulo,
+  descricao,
+  textoConfirmar,
+  onConfirmar,
+  children,
+}: {
+  titulo: string;
+  descricao: string;
+  textoConfirmar: string;
+  onConfirmar: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{titulo}</AlertDialogTitle>
+          <AlertDialogDescription>{descricao}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirmar}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {textoConfirmar}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function DetalheTurma({
+  turma,
+  onAlterada,
+  onExcluida,
+}: {
+  turma: TurmaDTO;
+  onAlterada: () => void;
+  onExcluida: () => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [studentId, setStudentId] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const detalhe = useCarga<TurmaDetalheDTO>(() => getTurma(turma.id), 0);
+  const todos = useCarga<StudentMinDTO[]>(getStudents, 0);
+
+  const idsNaTurma = new Set(
+    detalhe.estado === "ok" ? detalhe.dados.alunos.map((a) => a.userId) : [],
+  );
+  const disponiveis =
+    todos.estado === "ok"
+      ? todos.dados.filter((s) => s.matriculaStatus === "ATIVA" && !idsNaTurma.has(s.userId))
+      : [];
+
+  async function executar(acao: () => Promise<void>, erroPadrao: string) {
+    setOcupado(true);
+    try {
+      await acao();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : erroPadrao);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function salvarEdicao(dados: TurmaRequestDTO) {
+    const atualizada = await updateTurma(turma.id, dados);
+    toast.success(`Turma ${atualizada.name} atualizada.`);
+    setEditando(false);
+    onAlterada();
+  }
+
+  function excluir() {
+    executar(async () => {
+      await deleteTurma(turma.id);
+      toast.success(`Turma ${turma.name} excluída.`);
+      onExcluida();
+    }, "Erro ao excluir a turma.");
+  }
+
+  function adicionar(e: FormEvent) {
+    e.preventDefault();
+    if (!studentId) return;
+    executar(async () => {
+      const associado = await associarAlunoTurma(turma.id, Number(studentId));
+      toast.success(`${associado.studentName} adicionado(a) à turma ${associado.turmaName}.`);
+      onAlterada();
+    }, "Erro ao adicionar o aluno à turma.");
+  }
+
+  function remover(aluno: StudentMinDTO) {
+    executar(async () => {
+      await removerAlunoTurma(turma.id, aluno.userId);
+      toast.success(`${aluno.studentName} removido(a) da turma ${turma.name}.`);
+      onAlterada();
+    }, "Erro ao remover o aluno da turma.");
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="space-y-4 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="truncate font-display text-2xl font-bold text-foreground">
+                {turma.name}
+              </p>
+              <p className="text-base text-muted-foreground">
+                Ano letivo {turma.schoolYear} · {turma.totalAlunos} aluno(s)
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                className="min-h-11 text-base"
+                onClick={() => setEditando(true)}
+                disabled={editando || ocupado}
+              >
+                <Pencil className="size-5" aria-hidden="true" />
+                Editar
+              </Button>
+              <ConfirmarAcao
+                titulo={`Excluir a turma ${turma.name}?`}
+                descricao="A turma só pode ser excluída se não tiver alunos nem professores vinculados. Essa ação não pode ser desfeita."
+                textoConfirmar="Sim, excluir"
+                onConfirmar={excluir}
+              >
+                <Button variant="destructive" className="min-h-11 text-base" disabled={ocupado}>
+                  <Trash2 className="size-5" aria-hidden="true" />
+                  Excluir
+                </Button>
+              </ConfirmarAcao>
+            </div>
+          </div>
+          {editando && (
+            <FormularioTurma
+              inicial={{ name: turma.name, schoolYear: turma.schoolYear }}
+              textoBotao="Salvar alterações"
+              onSalvar={salvarEdicao}
+              onCancelar={() => setEditando(false)}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {detalhe.estado === "carregando" && (
+        <p className="text-base text-muted-foreground">Carregando…</p>
+      )}
+      {detalhe.estado === "erro" && <MensagemErro carga={detalhe} />}
+      {detalhe.estado === "ok" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Adicionar aluno</CardTitle>
+                <CardDescription className="text-base">
+                  Somente alunos com matrícula ativa. Um aluno pode estar em apenas uma turma.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {todos.estado === "carregando" && (
+                  <p className="text-base text-muted-foreground">Carregando…</p>
+                )}
+                {todos.estado === "erro" && <MensagemErro carga={todos} />}
+                {todos.estado === "ok" && (
+                  <form onSubmit={adicionar} className="space-y-4">
+                    <Select value={studentId} onValueChange={setStudentId}>
+                      <SelectTrigger className="h-12 text-lg" aria-label="Aluno">
+                        <SelectValue placeholder="Selecione o aluno" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {disponiveis.map((s) => (
+                          <SelectItem key={s.userId} value={String(s.userId)}>
+                            {s.studentName} · Matrícula nº {s.matricula}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {disponiveis.length === 0 && (
+                      <p className="text-base text-muted-foreground">
+                        Nenhum aluno ativo disponível para esta turma.
+                      </p>
+                    )}
+                    <Button
+                      type="submit"
+                      className="min-h-11 w-full text-base"
+                      disabled={!studentId || ocupado}
+                    >
+                      <UserPlus className="size-5" aria-hidden="true" />
+                      {ocupado ? "Salvando..." : `Adicionar à turma ${turma.name}`}
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl">Professores e disciplinas</CardTitle>
+                <CardDescription className="text-base">
+                  Vínculos cadastrados no lecionamento desta turma.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {detalhe.dados.lecionamentos.length === 0 ? (
+                  <p className="text-base text-muted-foreground">
+                    Nenhum professor vinculado a esta turma.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {detalhe.dados.lecionamentos.map((l) => (
+                      <li key={l.id} className="py-3">
+                        <p className="text-lg font-semibold text-foreground">{l.disciplinaTitle}</p>
+                        <p className="truncate text-base text-muted-foreground">
+                          {l.professorEmail}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Alunos da turma</CardTitle>
+              <CardDescription className="text-base">
+                {detalhe.dados.alunos.length} aluno(s) em {turma.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {detalhe.dados.alunos.length === 0 ? (
+                <p className="text-base text-muted-foreground">Nenhum aluno nesta turma ainda.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {detalhe.dados.alunos.map((s) => (
+                    <li
+                      key={s.userId}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-lg font-semibold text-foreground">
+                          {s.studentName}
+                        </p>
+                        <p className="text-base text-muted-foreground">
+                          Matrícula nº {s.matricula}
+                        </p>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <BadgeStatus status={s.matriculaStatus} />
+                        <ConfirmarAcao
+                          titulo={`Remover ${s.studentName} da turma?`}
+                          descricao={`O aluno continua cadastrado, mas fica sem turma até ser associado a outra. Professores de ${turma.name} deixam de vê-lo.`}
+                          textoConfirmar="Sim, remover"
+                          onConfirmar={() => remover(s)}
+                        >
+                          <Button
+                            variant="outline"
+                            className="min-h-10 text-base"
+                            disabled={ocupado}
+                            aria-label={`Remover ${s.studentName} da turma`}
+                          >
+                            <UserMinus className="size-5" aria-hidden="true" />
+                            Remover
+                          </Button>
+                        </ConfirmarAcao>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 }
 

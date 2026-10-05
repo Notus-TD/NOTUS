@@ -8,4 +8,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TurmaRepository extends JpaRepository<Turma, Long> {
 
+    boolean existsByNameAndSchoolYear(String name, String schoolYear);
+
+    boolean existsByNameAndSchoolYearAndIdNot(String name, String schoolYear, Long id);
 }
