@@ -1,9 +1,21 @@
-import { useState, type FormEvent } from "react";
-import { AlertCircle, ArrowLeft, HelpCircle, Loader2, Mail, Phone, Send } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  HelpCircle,
+  Loader2,
+  Mail,
+  MailCheck,
+  Phone,
+  RotateCw,
+  Send,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, solicitarRedefinicaoSenha } from "@/lib/api";
 import { emailValido } from "@/lib/validacao";
+
+const SEGUNDOS_PARA_REENVIAR = 30;
 
 function validarEmail(v: string): string | undefined {
   if (!v.trim()) return "Informe o e-mail.";
@@ -17,6 +29,34 @@ export function EsqueciSenhaForm({ aoVoltar }: { aoVoltar: () => void }) {
   const [erro, setErro] = useState<string | null>(null);
   const [erroEmail, setErroEmail] = useState<string | undefined>();
   const [tocado, setTocado] = useState(false);
+  const [enviadoPara, setEnviadoPara] = useState<string | null>(null);
+  const [esperaReenvio, setEsperaReenvio] = useState(0);
+
+  useEffect(() => {
+    if (esperaReenvio <= 0) return;
+    const timer = setTimeout(() => setEsperaReenvio((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [esperaReenvio]);
+
+  async function solicitar(endereco: string) {
+    setErro(null);
+    setEnviando(true);
+    try {
+      await solicitarRedefinicaoSenha(endereco);
+      setEnviadoPara(endereco);
+      setEsperaReenvio(SEGUNDOS_PARA_REENVIAR);
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : "Erro inesperado ao solicitar o link.");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  function usarOutroEmail() {
+    setEnviadoPara(null);
+    setErro(null);
+    setEsperaReenvio(0);
+  }
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -30,14 +70,77 @@ export function EsqueciSenhaForm({ aoVoltar }: { aoVoltar: () => void }) {
       return;
     }
 
-    setEnviando(true);
-    try {
-      await solicitarRedefinicaoSenha(email.trim());
-    } catch (err) {
-      setErro(err instanceof ApiError ? err.message : "Erro inesperado ao solicitar o link.");
-    } finally {
-      setEnviando(false);
-    }
+    await solicitar(email.trim());
+  }
+
+  if (enviadoPara) {
+    return (
+      <div className="text-center">
+        <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-success/10">
+          <MailCheck className="size-7 text-success" aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-foreground">
+          Verifique seu e-mail
+        </h1>
+        <p className="mt-3 text-base text-muted-foreground" role="status">
+          Se <strong className="break-all text-foreground">{enviadoPara}</strong> estiver cadastrado
+          na escola, você vai receber um link para criar uma senha nova.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Não chegou? Confira a caixa de spam ou lixo eletrônico.
+        </p>
+
+        {erro && (
+          <div
+            role="alert"
+            className="mt-5 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-left text-destructive"
+          >
+            <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+            <p className="text-sm">{erro}</p>
+          </div>
+        )}
+
+        <div className="mt-6 space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => solicitar(enviadoPara)}
+            disabled={enviando || esperaReenvio > 0}
+            aria-busy={enviando}
+            className="min-h-11 w-full text-base"
+          >
+            {enviando ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <RotateCw className="size-4" aria-hidden="true" />
+            )}
+            {enviando
+              ? "Reenviando..."
+              : esperaReenvio > 0
+                ? `Reenviar link em ${esperaReenvio}s`
+                : "Reenviar link"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={usarOutroEmail}
+            disabled={enviando}
+            className="min-h-11 w-full text-base"
+          >
+            Usar outro e-mail
+          </Button>
+          <Button
+            type="button"
+            onClick={aoVoltar}
+            disabled={enviando}
+            className="min-h-12 w-full text-lg"
+          >
+            <ArrowLeft className="size-5" aria-hidden="true" />
+            Voltar para o login
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
