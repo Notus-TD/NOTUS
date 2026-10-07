@@ -23,8 +23,14 @@ function validarEmail(v: string): string | undefined {
   return undefined;
 }
 
-export function EsqueciSenhaForm({ aoVoltar }: { aoVoltar: () => void }) {
-  const [email, setEmail] = useState("");
+export function EsqueciSenhaForm({
+  aoVoltar,
+  emailInicial = "",
+}: {
+  aoVoltar: () => void;
+  emailInicial?: string;
+}) {
+  const [email, setEmail] = useState(emailInicial);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [erroEmail, setErroEmail] = useState<string | undefined>();
