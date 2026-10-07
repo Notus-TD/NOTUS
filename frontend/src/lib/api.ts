@@ -28,6 +28,30 @@ export async function login(email: string, password: string): Promise<Session> {
   return saveSession(data);
 }
 
+export async function solicitarRedefinicaoSenha(email: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/auth/esqueci-senha`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+  } catch {
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
+  }
+  // Enquanto o backend não expõe /auth/esqueci-senha como rota pública, ela responde 401/403/404.
+  if ([401, 403, 404, 501].includes(res.status)) {
+    throw new ApiError(
+      res.status,
+      "A recuperação de senha ainda não está disponível. Procure a secretaria da escola.",
+    );
+  }
+  if (res.status === 429) {
+    throw new ApiError(res.status, "Muitas tentativas seguidas. Aguarde alguns minutos.");
+  }
+  if (!res.ok) throw new ApiError(res.status, `Falha ao solicitar o link: ${res.status}`);
+}
+
 export type FaltaDTO = {
   id: number;
   data: string;
