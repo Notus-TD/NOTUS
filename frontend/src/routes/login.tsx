@@ -171,7 +171,7 @@ function LoginPage() {
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
           {modo === "recuperar" ? (
-            <EsqueciSenhaForm aoVoltar={() => setModo("entrar")} />
+            <EsqueciSenhaForm emailInicial={email.trim()} aoVoltar={() => setModo("entrar")} />
           ) : (
             <>
               <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
