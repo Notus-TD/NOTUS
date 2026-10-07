@@ -245,19 +245,19 @@ export function EsqueciSenhaForm({
           <p className="text-sm text-muted-foreground">
             Entre em contato com a secretaria da escola para confirmar o e-mail do seu cadastro.
           </p>
-          <div className="flex flex-col gap-1 pt-0.5 text-sm sm:flex-row sm:gap-4">
+          <div className="flex flex-col items-start gap-1.5 pt-1 text-sm">
             <a
               href="mailto:secretaria@colegionotus.com.br"
-              className="inline-flex items-center gap-1.5 rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1.5 break-all rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Mail className="size-4" aria-hidden="true" />
+              <Mail className="size-4 shrink-0" aria-hidden="true" />
               secretaria@colegionotus.com.br
             </a>
             <a
               href="tel:+551140028922"
-              className="inline-flex items-center gap-1.5 rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Phone className="size-4" aria-hidden="true" />
+              <Phone className="size-4 shrink-0" aria-hidden="true" />
               (11) 4002-8922
             </a>
           </div>
