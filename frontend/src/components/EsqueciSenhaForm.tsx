@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { AlertCircle, ArrowLeft, Loader2, Send } from "lucide-react";
+import { AlertCircle, ArrowLeft, HelpCircle, Loader2, Mail, Phone, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, solicitarRedefinicaoSenha } from "@/lib/api";
@@ -123,6 +123,37 @@ export function EsqueciSenhaForm({ aoVoltar }: { aoVoltar: () => void }) {
           Voltar para o login
         </Button>
       </form>
+
+      <div
+        role="note"
+        className="mt-6 flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+          <HelpCircle className="size-4 text-muted-foreground" aria-hidden="true" />
+        </span>
+        <div className="space-y-1.5">
+          <p className="text-base font-semibold text-foreground">Esqueceu o e-mail?</p>
+          <p className="text-sm text-muted-foreground">
+            Entre em contato com a secretaria da escola para confirmar o e-mail do seu cadastro.
+          </p>
+          <div className="flex flex-col gap-1 pt-0.5 text-sm sm:flex-row sm:gap-4">
+            <a
+              href="mailto:secretaria@colegionotus.com.br"
+              className="inline-flex items-center gap-1.5 rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Mail className="size-4" aria-hidden="true" />
+              secretaria@colegionotus.com.br
+            </a>
+            <a
+              href="tel:+551140028922"
+              className="inline-flex items-center gap-1.5 rounded font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Phone className="size-4" aria-hidden="true" />
+              (11) 4002-8922
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
