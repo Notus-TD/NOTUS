@@ -3,15 +3,33 @@ import { AlertCircle, ArrowLeft, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, solicitarRedefinicaoSenha } from "@/lib/api";
+import { emailValido } from "@/lib/validacao";
+
+function validarEmail(v: string): string | undefined {
+  if (!v.trim()) return "Informe o e-mail.";
+  if (!emailValido(v)) return "Informe um e-mail válido.";
+  return undefined;
+}
 
 export function EsqueciSenhaForm({ aoVoltar }: { aoVoltar: () => void }) {
   const [email, setEmail] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [erroEmail, setErroEmail] = useState<string | undefined>();
+  const [tocado, setTocado] = useState(false);
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
     setErro(null);
+
+    const erroValidacao = validarEmail(email);
+    setTocado(true);
+    setErroEmail(erroValidacao);
+    if (erroValidacao) {
+      document.getElementById("email-recuperacao")?.focus();
+      return;
+    }
+
     setEnviando(true);
     try {
       await solicitarRedefinicaoSenha(email.trim());
@@ -46,10 +64,28 @@ export function EsqueciSenhaForm({ aoVoltar }: { aoVoltar: () => void }) {
             autoFocus
             disabled={enviando}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (tocado) setErroEmail(validarEmail(e.target.value));
+            }}
+            onBlur={() => {
+              setTocado(true);
+              setErroEmail(validarEmail(email));
+            }}
             placeholder="nome@escola.edu.br"
-            className="h-12 text-lg"
+            aria-invalid={erroEmail ? true : undefined}
+            aria-describedby={erroEmail ? "email-recuperacao-erro" : undefined}
+            className={`h-12 text-lg ${erroEmail ? "border-destructive focus-visible:ring-destructive" : ""}`}
           />
+          {erroEmail && (
+            <p
+              id="email-recuperacao-erro"
+              className="flex items-center gap-1.5 text-sm font-medium text-destructive"
+            >
+              <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
+              {erroEmail}
+            </p>
+          )}
         </div>
 
         {erro && (
