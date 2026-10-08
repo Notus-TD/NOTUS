@@ -34,6 +34,23 @@ public class NotaController {
         return notaService.getByBoletim(boletimId, authentication.getName());
     }
 
+    @GetMapping("/boletim/{boletimId}/periodo/{period}")
+    public List<Nota> getByBoletimAndPeriod(@PathVariable Long boletimId, @PathVariable String period, Authentication authentication) {
+        return notaService.getByBoletimAndPeriod(boletimId, period, authentication.getName());
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @GetMapping("/disciplina/{disciplinaId}")
+    public List<Nota> getByDisciplina(@PathVariable Long disciplinaId) {
+        return notaService.getByDisciplina(disciplinaId);
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @GetMapping("/disciplina/{disciplinaId}/periodo/{period}")
+    public List<Nota> getByDisciplinaAndPeriod(@PathVariable Long disciplinaId, @PathVariable String period) {
+        return notaService.getByDisciplinaAndPeriod(disciplinaId, period);
+    }
+
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
     public ResponseEntity<NotaDTO> create(@RequestBody @Valid NotaDTO dto, Authentication authentication) {
