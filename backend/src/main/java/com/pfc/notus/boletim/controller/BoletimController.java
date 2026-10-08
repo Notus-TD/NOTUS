@@ -81,6 +81,30 @@ public class BoletimController {
         return ResponseEntity.ok(boletimService.getByPeriodPaged(period, pageable));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/status/{status}")
+    public List<Boletim> getByStatus(@PathVariable String status) {
+        return boletimService.getByStatus(status);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/status/{status}/paginado")
+    public ResponseEntity<Page<Boletim>> getByStatusPaged(@PathVariable String status, Pageable pageable) {
+        return ResponseEntity.ok(boletimService.getByStatusPaged(status, pageable));
+    }
+
+    @GetMapping("/student/{studentId}/status/{status}")
+    public List<Boletim> getByStudentAndStatus(@PathVariable Long studentId, @PathVariable String status, Authentication authentication) {
+        studentAccessGuardService.assertCanView(studentId, authentication.getName());
+        return boletimService.getByStudentAndStatus(studentId, status);
+    }
+
+    @GetMapping("/student/{studentId}/status/{status}/paginado")
+    public ResponseEntity<Page<Boletim>> getByStudentAndStatusPaged(@PathVariable Long studentId, @PathVariable String status, Pageable pageable, Authentication authentication) {
+        studentAccessGuardService.assertCanView(studentId, authentication.getName());
+        return ResponseEntity.ok(boletimService.getByStudentAndStatusPaged(studentId, status, pageable));
+    }
+
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
     public ResponseEntity<BoletimDTO> create(@RequestBody @Valid BoletimDTO dto, Authentication authentication) {

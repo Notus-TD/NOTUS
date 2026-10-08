@@ -23,4 +23,12 @@ public interface BoletimRepository extends JpaRepository<Boletim, Long> {
     List<Boletim> findByPeriod(String period);
 
     Page<Boletim> findByPeriod(String period, Pageable pageable);
+
+    List<Boletim> findByStatus(String status);
+
+    Page<Boletim> findByStatus(String status, Pageable pageable);
+
+    List<Boletim> findByStudentIdAndStatus(Long studentId, String status);
+
+    Page<Boletim> findByStudentIdAndStatus(Long studentId, String status, Pageable pageable);
 }
