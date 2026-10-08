@@ -28,6 +28,13 @@ public class BoletimController {
     @GetMapping
     public List<Boletim> getAllBoletim(){return boletimService.getAllBoletim();}
 
+    @GetMapping("/{id}")
+    public ResponseEntity<BoletimDTO> getById(@PathVariable Long id, Authentication authentication) {
+        BoletimDTO boletim = boletimService.getById(id);
+        studentAccessGuardService.assertCanView(boletim.studentId(), authentication.getName());
+        return ResponseEntity.ok(boletim);
+    }
+
     @GetMapping("/student/{studentId}")
     public List<Boletim> getByStudent(@PathVariable Long studentId, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
