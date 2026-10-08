@@ -33,6 +33,13 @@ public class NotaService {
 
     public List<Nota> getAllNota(){return notaRepository.findAll();}
 
+    public NotaDTO getById(Long id, String requesterEmail) {
+        Nota entity = notaRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
+        studentAccessGuardService.assertCanView(entity.getBoletim().getStudent().getId(), requesterEmail);
+        return toDTO(entity);
+    }
+
     public List<Nota> getByBoletim(Long boletimId, String requesterEmail) {
         Boletim boletim = boletimRepository.findById(boletimId)
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
