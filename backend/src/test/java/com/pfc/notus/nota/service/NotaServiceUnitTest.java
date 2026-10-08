@@ -4,6 +4,7 @@ import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.repository.NotaRepository;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -184,6 +187,61 @@ class NotaServiceUnitTest {
 
         // Assert
         assertEquals(mediaEsperada, boletim.getFinalAverage(), 0.0001f);
+    }
+
+    @ParameterizedTest(name = "nota {0} deve ser recusada")
+    @NullSource
+    @ValueSource(floats = {-0.1f, 10.1f, -5f, 15f, Float.NaN})
+    void deveRecusarLancamentoQuandoNotaEstaForaDoIntervaloDeZeroADez(Float valorInvalido) {
+        // Arrange
+        NotaDTO pedido = new NotaDTO(null, valorInvalido, "Prova", 1L, 5L);
+
+        // Act
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> notaService.save(pedido, PROFESSOR));
+
+        // Assert
+        assertEquals("A nota deve estar entre 0 e 10.", excecao.getMessage());
+        verify(boletimRepository, never()).findById(anyLong());
+        verify(notaRepository, never()).save(any());
+    }
+
+    @ParameterizedTest(name = "nota {0} deve ser aceita")
+    @ValueSource(floats = {0f, 10f})
+    void deveAceitarNotaExatamenteNosLimitesDeZeroEDez(float valorNoLimite) {
+        // Arrange
+        Boletim boletim = criarBoletim(1L, criarAluno(10L));
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        NotaDTO pedido = new NotaDTO(null, valorNoLimite, "Prova", 1L, 5L);
+
+        when(boletimRepository.findById(1L)).thenReturn(Optional.of(boletim));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
+        when(notaRepository.save(any(Nota.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
+        when(notaRepository.findByBoletimId(1L))
+                .thenReturn(List.of(criarNota(1L, valorNoLimite, boletim, matematica)));
+
+        // Act
+        NotaDTO resultado = notaService.save(pedido, PROFESSOR);
+
+        // Assert
+        assertEquals(valorNoLimite, resultado.rate());
+        assertEquals(valorNoLimite, boletim.getFinalAverage());
+        verify(notaRepository).save(any(Nota.class));
+    }
+
+    @Test
+    void deveRecusarEdicaoSemConsultarANotaQuandoNovoValorPassaDeDez() {
+        // Arrange
+        NotaDTO alteracao = new NotaDTO(50L, 11f, "Prova", 1L, 5L);
+
+        // Act
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> notaService.update(50L, alteracao, PROFESSOR));
+
+        // Assert
+        assertEquals("A nota deve estar entre 0 e 10.", excecao.getMessage());
+        verify(notaRepository, never()).findById(anyLong());
+        verify(notaRepository, never()).save(any());
     }
 
     @Test
