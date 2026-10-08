@@ -42,6 +42,7 @@ public class Boletim {
     private Student student;
 
     @OneToMany(mappedBy = "boletim", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Getter
     private List<Nota> notas = new ArrayList<>();
 
     public Boletim(String period, Float finalAverage){
