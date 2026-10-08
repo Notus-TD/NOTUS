@@ -23,6 +23,12 @@ public class NotaController {
     @GetMapping
     public List<Nota> getAllNota(){return notaService.getAllNota();}
 
+    @GetMapping("/{id}")
+    public ResponseEntity<NotaDTO> getById(@PathVariable Long id, Authentication authentication) {
+        NotaDTO nota = notaService.getById(id, authentication.getName());
+        return ResponseEntity.ok(nota);
+    }
+
     @GetMapping("/boletim/{boletimId}")
     public List<Nota> getByBoletim(@PathVariable Long boletimId, Authentication authentication) {
         return notaService.getByBoletim(boletimId, authentication.getName());
