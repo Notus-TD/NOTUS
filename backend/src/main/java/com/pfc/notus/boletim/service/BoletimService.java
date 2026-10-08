@@ -41,6 +41,12 @@ public class BoletimService {
         return boletimRepository.findByStudentId(studentId);
     }
 
+    public BoletimDTO getById(Long id) {
+        Boletim entity = boletimRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
+        return toDTO(entity);
+    }
+
     @Transactional
     public Long getStudentId(Long boletimId) {
         return boletimRepository.findById(boletimId)
