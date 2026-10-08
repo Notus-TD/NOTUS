@@ -5,6 +5,8 @@ import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.service.NotaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -49,6 +51,28 @@ public class NotaController {
     @GetMapping("/disciplina/{disciplinaId}/periodo/{period}")
     public List<Nota> getByDisciplinaAndPeriod(@PathVariable Long disciplinaId, @PathVariable String period) {
         return notaService.getByDisciplinaAndPeriod(disciplinaId, period);
+    }
+
+    @GetMapping("/boletim/{boletimId}/paginado")
+    public ResponseEntity<Page<Nota>> getByBoletimPaged(@PathVariable Long boletimId, Pageable pageable, Authentication authentication) {
+        return ResponseEntity.ok(notaService.getByBoletimPaged(boletimId, authentication.getName(), pageable));
+    }
+
+    @GetMapping("/boletim/{boletimId}/periodo/{period}/paginado")
+    public ResponseEntity<Page<Nota>> getByBoletimAndPeriodPaged(@PathVariable Long boletimId, @PathVariable String period, Pageable pageable, Authentication authentication) {
+        return ResponseEntity.ok(notaService.getByBoletimAndPeriodPaged(boletimId, period, authentication.getName(), pageable));
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @GetMapping("/disciplina/{disciplinaId}/paginado")
+    public ResponseEntity<Page<Nota>> getByDisciplinaPaged(@PathVariable Long disciplinaId, Pageable pageable) {
+        return ResponseEntity.ok(notaService.getByDisciplinaPaged(disciplinaId, pageable));
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @GetMapping("/disciplina/{disciplinaId}/periodo/{period}/paginado")
+    public ResponseEntity<Page<Nota>> getByDisciplinaAndPeriodPaged(@PathVariable Long disciplinaId, @PathVariable String period, Pageable pageable) {
+        return ResponseEntity.ok(notaService.getByDisciplinaAndPeriodPaged(disciplinaId, period, pageable));
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")

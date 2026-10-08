@@ -11,6 +11,8 @@ import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -60,6 +62,28 @@ public class NotaService {
 
     public List<Nota> getByDisciplinaAndPeriod(Long disciplinaId, String period) {
         return notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period);
+    }
+
+    public Page<Nota> getByBoletimPaged(Long boletimId, String requesterEmail, Pageable pageable) {
+        Boletim boletim = boletimRepository.findById(boletimId)
+                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
+        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
+        return notaRepository.findByBoletimId(boletimId, pageable);
+    }
+
+    public Page<Nota> getByBoletimAndPeriodPaged(Long boletimId, String period, String requesterEmail, Pageable pageable) {
+        Boletim boletim = boletimRepository.findById(boletimId)
+                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
+        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
+        return notaRepository.findByBoletimIdAndPeriod(boletimId, period, pageable);
+    }
+
+    public Page<Nota> getByDisciplinaPaged(Long disciplinaId, Pageable pageable) {
+        return notaRepository.findByDisciplinaId(disciplinaId, pageable);
+    }
+
+    public Page<Nota> getByDisciplinaAndPeriodPaged(Long disciplinaId, String period, Pageable pageable) {
+        return notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period, pageable);
     }
 
     @Transactional
