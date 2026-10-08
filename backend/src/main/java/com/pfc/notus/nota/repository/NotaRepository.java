@@ -11,4 +11,10 @@ import java.util.List;
 public interface NotaRepository extends JpaRepository<Nota, Long> {
 
     List<Nota> findByBoletimId(Long boletimId);
+
+    List<Nota> findByBoletimIdAndPeriod(Long boletimId, String period);
+
+    List<Nota> findByDisciplinaId(Long disciplinaId);
+
+    List<Nota> findByDisciplinaIdAndPeriod(Long disciplinaId, String period);
 }
