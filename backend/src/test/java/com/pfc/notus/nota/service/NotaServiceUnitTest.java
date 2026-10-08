@@ -1,9 +1,11 @@
 package com.pfc.notus.nota.service;
 
 import com.pfc.notus.boletim.domain.Boletim;
+import com.pfc.notus.boletim.domain.SituacaoBoletim;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
@@ -241,6 +243,80 @@ class NotaServiceUnitTest {
         // Assert
         assertEquals("A nota deve estar entre 0 e 10.", excecao.getMessage());
         verify(notaRepository, never()).findById(anyLong());
+        verify(notaRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRecusarLancamentoDeNotaQuandoBoletimEstaFechado() {
+        // Arrange
+        Boletim boletimFechado = criarBoletim(1L, criarAluno(10L));
+        boletimFechado.setSituacao(SituacaoBoletim.FECHADO);
+        NotaDTO pedido = new NotaDTO(null, 7f, "Prova", 1L, 5L);
+        when(boletimRepository.findById(1L)).thenReturn(Optional.of(boletimFechado));
+
+        // Act
+        ConflictException excecao = assertThrows(ConflictException.class,
+                () -> notaService.save(pedido, PROFESSOR));
+
+        // Assert
+        assertEquals("Boletim fechado: reabra o boletim para alterar as notas.", excecao.getMessage());
+        verify(disciplinaRepository, never()).findById(anyLong());
+        verify(notaRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRecusarApagarNotaQuandoBoletimEstaFechado() {
+        // Arrange
+        Boletim boletimFechado = criarBoletim(1L, criarAluno(10L));
+        boletimFechado.setSituacao(SituacaoBoletim.FECHADO);
+        Nota nota = criarNota(50L, 8f, boletimFechado, criarDisciplina(5L, "Matemática"));
+        when(notaRepository.findById(50L)).thenReturn(Optional.of(nota));
+
+        // Act
+        ConflictException excecao = assertThrows(ConflictException.class,
+                () -> notaService.delete(50L, PROFESSOR));
+
+        // Assert
+        assertEquals("Boletim fechado: reabra o boletim para alterar as notas.", excecao.getMessage());
+        verify(notaRepository, never()).deleteById(anyLong());
+        verify(boletimRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRecusarMoverNotaDeBoletimAbertoParaBoletimFechado() {
+        // Arrange
+        Student aluno = criarAluno(10L);
+        Boletim boletimAberto = criarBoletim(1L, aluno);
+        Boletim boletimFechado = criarBoletim(2L, aluno);
+        boletimFechado.setSituacao(SituacaoBoletim.FECHADO);
+        Nota nota = criarNota(50L, 6f, boletimAberto, criarDisciplina(5L, "Matemática"));
+        NotaDTO alteracao = new NotaDTO(50L, 6f, "Prova", 2L, 5L);
+
+        when(notaRepository.findById(50L)).thenReturn(Optional.of(nota));
+        when(boletimRepository.findById(2L)).thenReturn(Optional.of(boletimFechado));
+
+        // Act
+        ConflictException excecao = assertThrows(ConflictException.class,
+                () -> notaService.update(50L, alteracao, PROFESSOR));
+
+        // Assert
+        assertEquals("Boletim fechado: reabra o boletim para alterar as notas.", excecao.getMessage());
+        assertEquals(boletimAberto, nota.getBoletim(), "a nota deve continuar no boletim de origem");
+        verify(notaRepository, never()).save(any());
+    }
+
+    @Test
+    void deveNegarPorPermissaoAntesDeAvisarQueOBoletimEstaFechado() {
+        // Arrange
+        Boletim boletimFechado = criarBoletim(1L, criarAluno(10L));
+        boletimFechado.setSituacao(SituacaoBoletim.FECHADO);
+        NotaDTO pedido = new NotaDTO(null, 7f, "Prova", 1L, 5L);
+        when(boletimRepository.findById(1L)).thenReturn(Optional.of(boletimFechado));
+        doThrow(new AccessDeniedException("Sem permissão para lançar dados desta disciplina para este aluno."))
+                .when(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
+
+        // Act + Assert
+        assertThrows(AccessDeniedException.class, () -> notaService.save(pedido, PROFESSOR));
         verify(notaRepository, never()).save(any());
     }
 
