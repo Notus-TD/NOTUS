@@ -49,6 +49,18 @@ public class BoletimController {
         return boletimService.getByStudent(studentId);
     }
 
+    @GetMapping("/student/{studentId}/periodo/{period}")
+    public List<Boletim> getByStudentAndPeriod(@PathVariable Long studentId, @PathVariable String period, Authentication authentication) {
+        studentAccessGuardService.assertCanView(studentId, authentication.getName());
+        return boletimService.getByStudentAndPeriod(studentId, period);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/periodo/{period}")
+    public List<Boletim> getByPeriod(@PathVariable String period) {
+        return boletimService.getByPeriod(period);
+    }
+
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
     public ResponseEntity<BoletimDTO> create(@RequestBody @Valid BoletimDTO dto, Authentication authentication) {

@@ -43,6 +43,14 @@ public class BoletimService {
         return boletimRepository.findByStudentId(studentId);
     }
 
+    public List<Boletim> getByStudentAndPeriod(Long studentId, String period) {
+        return boletimRepository.findByStudentIdAndPeriod(studentId, period);
+    }
+
+    public List<Boletim> getByPeriod(String period) {
+        return boletimRepository.findByPeriod(period);
+    }
+
     public BoletimDTO getById(Long id) {
         Boletim entity = boletimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
