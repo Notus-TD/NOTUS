@@ -1,6 +1,7 @@
 package com.pfc.notus.exception.handler;
 
 import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.exception.dto.StandardError;
 import com.pfc.notus.exception.dto.ValidationError;
@@ -25,6 +26,11 @@ public class ResourceExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<StandardError> handleNotFound(ResourceNotFoundException e, HttpServletRequest request) {
         return buildStandardResponse(HttpStatus.NOT_FOUND, e, request);
+    }
+
+    @ExceptionHandler(RegraNegocioException.class)
+    public ResponseEntity<StandardError> handleRegraNegocio(RegraNegocioException e, HttpServletRequest request) {
+        return buildStandardResponse(HttpStatus.UNPROCESSABLE_ENTITY, e, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
