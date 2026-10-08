@@ -157,8 +157,9 @@ export function AdminShell<T extends string>({
                 {session.email}
               </span>
             </span>
-            <Button variant="ghost" size="icon" aria-label="Sair" title="Sair" onClick={sair} className="size-10">
-              <LogOut className="size-5" aria-hidden="true" />
+            <Button variant="outline" size="sm" onClick={sair} className="min-h-10 gap-2">
+              <LogOut className="size-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>
