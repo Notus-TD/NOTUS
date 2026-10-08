@@ -47,6 +47,21 @@ public class NotaService {
         return notaRepository.findByBoletimId(boletimId);
     }
 
+    public List<Nota> getByBoletimAndPeriod(Long boletimId, String period, String requesterEmail) {
+        Boletim boletim = boletimRepository.findById(boletimId)
+                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
+        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
+        return notaRepository.findByBoletimIdAndPeriod(boletimId, period);
+    }
+
+    public List<Nota> getByDisciplina(Long disciplinaId) {
+        return notaRepository.findByDisciplinaId(disciplinaId);
+    }
+
+    public List<Nota> getByDisciplinaAndPeriod(Long disciplinaId, String period) {
+        return notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period);
+    }
+
     @Transactional
     public NotaDTO save(NotaDTO dto, String requesterEmail) {
         Boletim boletim = boletimRepository.findById(dto.boletimId())
