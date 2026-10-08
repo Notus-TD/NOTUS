@@ -3,8 +3,10 @@ package com.pfc.notus.boletim.service;
 
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.domain.SituacaoBoletim;
+import com.pfc.notus.boletim.dto.BoletimComNotasDTO;
 import com.pfc.notus.boletim.dto.BoletimDTO;
 import com.pfc.notus.boletim.repository.BoletimRepository;
+import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.notificacao.event.BoletimFechadoEvent;
@@ -45,6 +47,12 @@ public class BoletimService {
         Boletim entity = boletimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
         return toDTO(entity);
+    }
+
+    public BoletimComNotasDTO getByIdComNotas(Long id) {
+        Boletim entity = boletimRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
+        return toDTOComNotas(entity);
     }
 
     @Transactional
@@ -109,5 +117,13 @@ public class BoletimService {
     private BoletimDTO toDTO(Boletim entity) {
         return new BoletimDTO(entity.getId(), entity.getPeriod(), entity.getFinalAverage(), entity.getStatus(), entity.getStudent().getId(),
                 entity.getSituacao(), entity.getFechadoEm());
+    }
+
+    private BoletimComNotasDTO toDTOComNotas(Boletim entity) {
+        var notas = entity.getNotas().stream()
+                .map(n -> new NotaDTO(n.getId(), n.getRate(), n.getPeriod(), n.getBoletim().getId(), n.getDisciplina().getId()))
+                .toList();
+        return new BoletimComNotasDTO(entity.getId(), entity.getPeriod(), entity.getFinalAverage(), entity.getStatus(),
+                entity.getStudent().getId(), entity.getSituacao(), entity.getFechadoEm(), notas);
     }
 }

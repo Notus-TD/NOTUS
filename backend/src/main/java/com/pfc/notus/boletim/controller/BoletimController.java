@@ -2,6 +2,7 @@ package com.pfc.notus.boletim.controller;
 
 
 import com.pfc.notus.boletim.domain.Boletim;
+import com.pfc.notus.boletim.dto.BoletimComNotasDTO;
 import com.pfc.notus.boletim.dto.BoletimDTO;
 import com.pfc.notus.boletim.service.BoletimService;
 import com.pfc.notus.user.service.StudentAccessGuardService;
@@ -31,6 +32,13 @@ public class BoletimController {
     @GetMapping("/{id}")
     public ResponseEntity<BoletimDTO> getById(@PathVariable Long id, Authentication authentication) {
         BoletimDTO boletim = boletimService.getById(id);
+        studentAccessGuardService.assertCanView(boletim.studentId(), authentication.getName());
+        return ResponseEntity.ok(boletim);
+    }
+
+    @GetMapping("/{id}/notas")
+    public ResponseEntity<BoletimComNotasDTO> getByIdComNotas(@PathVariable Long id, Authentication authentication) {
+        BoletimComNotasDTO boletim = boletimService.getByIdComNotas(id);
         studentAccessGuardService.assertCanView(boletim.studentId(), authentication.getName());
         return ResponseEntity.ok(boletim);
     }
