@@ -18,6 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -49,6 +52,18 @@ public class BoletimService {
 
     public List<Boletim> getByPeriod(String period) {
         return boletimRepository.findByPeriod(period);
+    }
+
+    public Page<Boletim> getByStudentPaged(Long studentId, Pageable pageable) {
+        return boletimRepository.findByStudentId(studentId, pageable);
+    }
+
+    public Page<Boletim> getByStudentAndPeriodPaged(Long studentId, String period, Pageable pageable) {
+        return boletimRepository.findByStudentIdAndPeriod(studentId, period, pageable);
+    }
+
+    public Page<Boletim> getByPeriodPaged(String period, Pageable pageable) {
+        return boletimRepository.findByPeriod(period, pageable);
     }
 
     public BoletimDTO getById(Long id) {
