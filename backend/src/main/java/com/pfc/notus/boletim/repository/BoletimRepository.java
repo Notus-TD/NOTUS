@@ -11,4 +11,8 @@ import java.util.List;
 public interface BoletimRepository extends JpaRepository<Boletim, Long> {
 
     List<Boletim> findByStudentId(Long studentId);
+
+    List<Boletim> findByStudentIdAndPeriod(Long studentId, String period);
+
+    List<Boletim> findByPeriod(String period);
 }
