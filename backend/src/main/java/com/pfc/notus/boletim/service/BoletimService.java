@@ -66,6 +66,22 @@ public class BoletimService {
         return boletimRepository.findByPeriod(period, pageable);
     }
 
+    public List<Boletim> getByStatus(String status) {
+        return boletimRepository.findByStatus(status);
+    }
+
+    public Page<Boletim> getByStatusPaged(String status, Pageable pageable) {
+        return boletimRepository.findByStatus(status, pageable);
+    }
+
+    public List<Boletim> getByStudentAndStatus(Long studentId, String status) {
+        return boletimRepository.findByStudentIdAndStatus(studentId, status);
+    }
+
+    public Page<Boletim> getByStudentAndStatusPaged(Long studentId, String status, Pageable pageable) {
+        return boletimRepository.findByStudentIdAndStatus(studentId, status, pageable);
+    }
+
     public BoletimDTO getById(Long id) {
         Boletim entity = boletimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
