@@ -1,9 +1,12 @@
 package com.pfc.notus.nota.service;
 
 import com.pfc.notus.boletim.domain.Boletim;
+import com.pfc.notus.boletim.domain.SituacaoBoletim;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.repository.NotaRepository;
@@ -20,6 +23,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class NotaService {
+
+    private static final float NOTA_MINIMA = 0f;
+    private static final float NOTA_MAXIMA = 10f;
 
     @Autowired
     private NotaRepository notaRepository;
@@ -88,9 +94,11 @@ public class NotaService {
 
     @Transactional
     public NotaDTO save(NotaDTO dto, String requesterEmail) {
+        validarValorDaNota(dto.rate());
         Boletim boletim = boletimRepository.findById(dto.boletimId())
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + dto.boletimId()));
         studentAccessGuardService.assertCanTeach(boletim.getStudent().getId(), dto.disciplinaId(), requesterEmail);
+        garantirBoletimAberto(boletim);
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
                 .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
         Nota entity = new Nota();
@@ -106,6 +114,7 @@ public class NotaService {
 
     @Transactional
     public NotaDTO update(Long id, NotaDTO dto, String requesterEmail) {
+        validarValorDaNota(dto.rate());
         Nota entity = notaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
         // precisa poder lançar tanto na nota atual quanto no destino da alteração
@@ -114,6 +123,9 @@ public class NotaService {
         Boletim boletim = boletimRepository.findById(dto.boletimId())
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + dto.boletimId()));
         studentAccessGuardService.assertCanTeach(boletim.getStudent().getId(), dto.disciplinaId(), requesterEmail);
+        // nem o boletim de origem nem o de destino podem estar fechados
+        garantirBoletimAberto(entity.getBoletim());
+        garantirBoletimAberto(boletim);
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
                 .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
 
@@ -135,9 +147,22 @@ public class NotaService {
         Nota entity = notaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
         studentAccessGuardService.assertCanTeach(entity.getBoletim().getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
+        garantirBoletimAberto(entity.getBoletim());
         Long boletimId = entity.getBoletim().getId();
         notaRepository.deleteById(id);
         recalcularMedia(boletimId);
+    }
+
+    private void validarValorDaNota(Float rate) {
+        if (rate == null || rate.isNaN() || rate < NOTA_MINIMA || rate > NOTA_MAXIMA) {
+            throw new RegraNegocioException("A nota deve estar entre 0 e 10.");
+        }
+    }
+
+    private void garantirBoletimAberto(Boletim boletim) {
+        if (boletim.getSituacao() == SituacaoBoletim.FECHADO) {
+            throw new ConflictException("Boletim fechado: reabra o boletim para alterar as notas.");
+        }
     }
 
     /**
