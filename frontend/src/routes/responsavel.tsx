@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { RefreshCw, Users } from "lucide-react";
+import { BarChart3, Bell, MessageCircle, RefreshCw, Users, UserX } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BoletimMatriz } from "@/components/BoletimMatriz";
+import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +42,42 @@ export const Route = createFileRoute("/responsavel")({
   component: PainelResponsavel,
 });
 
+type SecaoId = "avisos" | "notas" | "faltas" | "conversa";
+
+const secoes: SecaoPainel<SecaoId>[] = [
+  {
+    id: "avisos",
+    label: "Avisos",
+    descricao: "Comunicados da escola",
+    icon: Bell,
+    termos: "aviso avisos notificacao comunicado reuniao novo",
+  },
+  {
+    id: "notas",
+    label: "Boletim completo",
+    descricao: "Notas por matéria e período",
+    icon: BarChart3,
+    termos: "boletim nota notas prova avaliacao media periodo",
+  },
+  {
+    id: "faltas",
+    label: "Controle de faltas",
+    descricao: "Presença em cada disciplina",
+    icon: UserX,
+    termos: "falta faltas presenca frequencia limite",
+  },
+  {
+    id: "conversa",
+    label: "Falar com a escola",
+    descricao: "Mensagens com a coordenação",
+    icon: MessageCircle,
+    termos: "mensagem conversa coordenacao professor contato escrever",
+  },
+];
+
 function PainelResponsavel() {
+  const [busca, setBusca] = useState("");
+  const [secao, setSecao] = useState<SecaoId>("avisos");
   const [lidos, setLidos] = useState<string[]>([]);
   const [mensagens, setMensagens] = useState(conversas);
   const [texto, setTexto] = useState("");
@@ -85,157 +121,173 @@ function PainelResponsavel() {
     toast.success("Mensagem enviada para a coordenação.");
   }
 
+  const naoLidos = avisos.filter((a) => a.naoLido && !lidos.includes(a.titulo)).length;
+  const secoesComContador = secoes.map((s) =>
+    s.id === "avisos" ? { ...s, contador: naoLidos } : s,
+  );
+
   return (
     <AppShell
       role="ROLE_RESPONSAVEL"
       titulo={`Boa tarde, ${perfil?.nome ?? "..."}`}
-      subtitulo={`Acompanhamento de ${perfil?.dependentes[0]?.nome ?? "..."} — ${aluno.turma}. Avisos da escola, boletim, faltas e conversa com a equipe.`}
+      subtitulo={`Acompanhamento de ${perfil?.dependentes[0]?.nome ?? "..."} — ${aluno.turma}. Use a busca ao lado para encontrar o que precisa.`}
     >
-      <section>
-        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">
-          Avisos e notificações
-        </h2>
-        <div className="grid gap-4">
-          {avisos.map((a) => {
-            const naoLido = a.naoLido && !lidos.includes(a.titulo);
-            return (
-              <Card key={a.titulo} className={naoLido ? "border-2 border-primary" : undefined}>
-                <CardHeader className="pb-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-xl">{a.titulo}</CardTitle>
-                      <CardDescription className="mt-1 text-base">
-                        {a.origem} · {a.data}
-                      </CardDescription>
-                    </div>
-                    {naoLido && (
-                      <Badge className="bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground">
-                        Novo
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-lg leading-relaxed text-foreground">{a.texto}</p>
-                  {naoLido && (
-                    <Button
-                      variant="outline"
-                      className="min-h-11 text-base"
-                      onClick={() => setLidos([...lidos, a.titulo])}
-                    >
-                      Marcar como lido
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
+      <PainelLateral
+        secoes={secoesComContador}
+        secaoAtiva={secao}
+        aoSelecionarSecao={setSecao}
+        busca={busca}
+        aoMudarBusca={setBusca}
+        placeholderBusca="Pesquisar... (ex.: faltas, notas)"
+      >
+        {secao === "avisos" && (
+          <Secao titulo="Avisos e notificações">
+            <div className="grid gap-4">
+              {avisos.map((a) => {
+                const naoLido = a.naoLido && !lidos.includes(a.titulo);
+                return (
+                  <Card key={a.titulo} className={naoLido ? "border-2 border-primary" : undefined}>
+                    <CardHeader className="pb-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="text-xl">{a.titulo}</CardTitle>
+                          <CardDescription className="mt-1 text-base">
+                            {a.origem} · {a.data}
+                          </CardDescription>
+                        </div>
+                        {naoLido && (
+                          <Badge className="bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground">
+                            Novo
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-lg leading-relaxed text-foreground">{a.texto}</p>
+                      {naoLido && (
+                        <Button
+                          variant="outline"
+                          className="min-h-11 text-base"
+                          onClick={() => setLidos([...lidos, a.titulo])}
+                        >
+                          Marcar como lido
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </Secao>
+        )}
 
-      <section>
-        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Boletim completo</h2>
-        <BoletimCompleto />
-      </section>
+        {secao === "notas" && (
+          <Secao titulo="Boletim completo">
+            <BoletimCompleto />
+          </Secao>
+        )}
 
-      <section>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-2xl font-bold text-foreground">Controle de faltas</h2>
-          <Button
-            onClick={buscarFrequencia}
-            disabled={carregandoFrequencia}
-            variant="outline"
-            className="min-h-11 text-base"
-          >
-            {carregandoFrequencia ? "Atualizando..." : "Atualizar"}
-          </Button>
-        </div>
-        {erroFrequencia && (
-          <p className="text-base font-semibold text-destructive">{erroFrequencia}</p>
-        )}
-        {!erroFrequencia && frequencia === null && (
-          <p className="text-base text-muted-foreground">Carregando…</p>
-        )}
-        {frequencia && frequencia.length === 0 && (
-          <p className="text-base text-muted-foreground">
-            Nenhuma aula registrada ainda pelo professor — as faltas aparecem aqui assim que a
-            chamada começar.
-          </p>
-        )}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {frequencia?.map((f) => {
-            const limite = Math.floor(f.totalAulas * 0.25);
-            const alerta = f.totalFaltas >= limite && limite > 0;
-            return (
-              <Card
-                key={`${f.studentId}-${f.disciplinaId}`}
-                className={alerta ? "border-2 border-warning" : undefined}
+        {secao === "faltas" && (
+          <Secao titulo="Controle de faltas" descricao="Faltas e presença em cada disciplina.">
+            <div className="mb-4 flex justify-end">
+              <Button
+                onClick={buscarFrequencia}
+                disabled={carregandoFrequencia}
+                variant="outline"
+                className="min-h-11 text-base"
               >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl">{f.disciplinaTitle}</CardTitle>
-                  <CardDescription className="text-base">
-                    {f.totalFaltas} de {f.totalAulas} aulas perdidas ·{" "}
-                    {Math.round(f.percentualPresenca)}% de presença
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-base">
-                  {alerta ? (
-                    <p className="font-semibold text-warning">
-                      Atenção: o limite é de {limite} faltas nesta disciplina.
-                    </p>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      Dentro do limite permitido ({limite} faltas).
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Falar com a escola</h2>
-        <Card>
-          <CardContent className="space-y-5 p-6">
-            <ul className="space-y-4">
-              {mensagens.map((m, i) => (
-                <li
-                  key={i}
-                  className={`max-w-2xl rounded-2xl p-4 ${
-                    m.meu
-                      ? "ml-auto bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground"
-                  }`}
-                >
-                  <p className="text-base font-semibold">
-                    {m.de} · <span className="font-normal opacity-80">{m.quando}</span>
-                  </p>
-                  <p className="mt-1 text-lg leading-relaxed">{m.texto}</p>
-                </li>
-              ))}
-            </ul>
-
-            <div className="space-y-3 border-t border-border pt-5">
-              <label htmlFor="mensagem" className="block text-lg font-semibold text-foreground">
-                Escreva sua mensagem para a coordenação
-              </label>
-              <Textarea
-                id="mensagem"
-                rows={4}
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-                placeholder="Ex.: Gostaria de conversar sobre as faltas em Ciências."
-                className="text-lg"
-              />
-              <Button onClick={enviar} className="min-h-12 px-6 text-lg">
-                Enviar mensagem
+                {carregandoFrequencia ? "Atualizando..." : "Atualizar"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </section>
+            {erroFrequencia && (
+              <p className="text-base font-semibold text-destructive">{erroFrequencia}</p>
+            )}
+            {!erroFrequencia && frequencia === null && (
+              <p className="text-base text-muted-foreground">Carregando…</p>
+            )}
+            {frequencia && frequencia.length === 0 && (
+              <p className="text-base text-muted-foreground">
+                Nenhuma aula registrada ainda pelo professor — as faltas aparecem aqui assim que a
+                chamada começar.
+              </p>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {frequencia?.map((f) => {
+                const limite = Math.floor(f.totalAulas * 0.25);
+                const alerta = f.totalFaltas >= limite && limite > 0;
+                return (
+                  <Card
+                    key={`${f.studentId}-${f.disciplinaId}`}
+                    className={alerta ? "border-2 border-warning" : undefined}
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xl">{f.disciplinaTitle}</CardTitle>
+                      <CardDescription className="text-base">
+                        {f.totalFaltas} de {f.totalAulas} aulas perdidas ·{" "}
+                        {Math.round(f.percentualPresenca)}% de presença
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-base">
+                      {alerta ? (
+                        <p className="font-semibold text-warning">
+                          Atenção: o limite é de {limite} faltas nesta disciplina.
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground">
+                          Dentro do limite permitido ({limite} faltas).
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </Secao>
+        )}
+
+        {secao === "conversa" && (
+          <Secao titulo="Falar com a escola" descricao="Mensagens com a coordenação.">
+            <Card>
+              <CardContent className="space-y-5 p-6">
+                <ul className="space-y-4">
+                  {mensagens.map((m, i) => (
+                    <li
+                      key={i}
+                      className={`max-w-2xl rounded-2xl p-4 ${
+                        m.meu
+                          ? "ml-auto bg-primary text-primary-foreground"
+                          : "bg-secondary text-secondary-foreground"
+                      }`}
+                    >
+                      <p className="text-base font-semibold">
+                        {m.de} · <span className="font-normal opacity-80">{m.quando}</span>
+                      </p>
+                      <p className="mt-1 text-lg leading-relaxed">{m.texto}</p>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="space-y-3 border-t border-border pt-5">
+                  <label htmlFor="mensagem" className="block text-lg font-semibold text-foreground">
+                    Escreva sua mensagem para a coordenação
+                  </label>
+                  <Textarea
+                    id="mensagem"
+                    rows={4}
+                    value={texto}
+                    onChange={(e) => setTexto(e.target.value)}
+                    placeholder="Ex.: Gostaria de conversar sobre as faltas em Ciências."
+                    className="text-lg"
+                  />
+                  <Button onClick={enviar} className="min-h-12 px-6 text-lg">
+                    Enviar mensagem
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </Secao>
+        )}
+      </PainelLateral>
     </AppShell>
   );
 }

@@ -37,6 +37,40 @@ cd backend
 
 A API sobe em `http://localhost:8080`. Autenticação em `POST /auth/login`.
 
+Por padrão o backend usa o perfil `h2` (banco em memória, recriado a cada subida).
+
+### Rodando com o Supabase
+
+O perfil `supabase` usa o PostgreSQL hospedado no Supabase. As tabelas ficam no schema `notus` (e não no `public`, que o Supabase expõe pela Data API). A configuração vem de variáveis de ambiente:
+
+| Variável | Obrigatória | Padrão |
+|---|---|---|
+| `SUPABASE_DB_PASSWORD` | sim | — (senha do banco, definida no painel do Supabase) |
+| `SUPABASE_DB_URL` | não | conexão direta do projeto (`db.jvznbyhigagxgbihnpmx.supabase.co:5432`) |
+| `SUPABASE_DB_USER` | não | `postgres` |
+| `SUPABASE_DDL_AUTO` | não | `update` |
+
+**Primeira subida (cria as tabelas e carrega os dados de exemplo do `import.sql`)** — no PowerShell:
+
+```powershell
+cd backend
+$env:SPRING_PROFILES_ACTIVE = "supabase"
+$env:SUPABASE_DB_PASSWORD = "<senha do banco>"
+$env:SUPABASE_DDL_AUTO = "create"
+./mvnw spring-boot:run
+```
+
+> ⚠️ `create` **apaga e recria todas as tabelas** a cada subida. Depois da primeira vez, remova a variável (`Remove-Item Env:SUPABASE_DDL_AUTO`) para voltar ao padrão `update`, que preserva os dados.
+
+**Subidas seguintes:** mesmos comandos, sem o `SUPABASE_DDL_AUTO`.
+
+**Rede sem IPv6:** a conexão direta do Supabase só funciona por IPv6. Se a rede não tiver IPv6, a API não conecta ao banco. Nesse caso, use o *Session pooler* (painel do Supabase → **Connect**), que funciona por IPv4:
+
+```powershell
+$env:SUPABASE_DB_URL = "jdbc:postgresql://<host do session pooler>:5432/postgres?sslmode=require"
+$env:SUPABASE_DB_USER = "postgres.jvznbyhigagxgbihnpmx"
+```
+
 ---
 
 ## Frontend (`frontend/`)

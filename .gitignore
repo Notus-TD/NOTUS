@@ -5,3 +5,5 @@
 .vscode/
 .DS_Store
 
+# Anotacoes locais de decisoes (nao versionar)
+DECISOES.md
