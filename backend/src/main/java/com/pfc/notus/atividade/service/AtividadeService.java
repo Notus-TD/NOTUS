@@ -1,40 +1,183 @@
 package com.pfc.notus.atividade.service;
 
-
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.pfc.notus.disciplina.domain.Disciplina;
+import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.entrega.domain.StatusEntrega;
+import com.pfc.notus.entrega.repository.EntregaRepository;
+import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.RegraNegocioException;
+import com.pfc.notus.exception.ResourceNotFoundException;
+import com.pfc.notus.lecionamento.domain.Lecionamento;
+import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
+import com.pfc.notus.notificacao.event.AtividadePublicadaEvent;
+import com.pfc.notus.notificacao.service.NotificacaoService;
+import com.pfc.notus.turma.domain.Turma;
+import com.pfc.notus.turma.repository.TurmaRepository;
+import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.domain.User;
+import com.pfc.notus.user.repository.UserRepository;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AtividadeService {
 
-       @Autowired
+    private static final String STATUS_ABERTA = "ABERTA";
+
+    @Autowired
     private AtividadeRepository atividadeRepository;
 
-       public List<Atividade> getAllAtividade(){return atividadeRepository.findAll();}
+    @Autowired
+    private TurmaRepository turmaRepository;
+
+    @Autowired
+    private DisiciplinaRepository disciplinaRepository;
+
+    @Autowired
+    private LecionamentoRepository lecionamentoRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EntregaRepository entregaRepository;
+
+    @Autowired
+    private StudentAccessGuardService studentAccessGuardService;
+
+    @Autowired
+    private NotificacaoService notificacaoService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public AtividadeDTO save(AtividadeDTO dto){
-        Atividade entity = new Atividade();
-        entity.setTitle(dto.title());
-        entity.setContent(dto.content());
-        entity.setStatus(dto.status());
-
-        entity = atividadeRepository.save(entity);
-        return new AtividadeDTO(entity.getId(), entity.getTitle(), entity.getContent(), entity.getStatus());
+    public List<AtividadeDTO> getAllAtividade() {
+        return atividadeRepository.findAll().stream().map(a -> toDTO(a, null)).toList();
     }
 
     @Transactional
-    public void delete(Long id){
-        if (!atividadeRepository.existsById(id)){
-            throw new EntityNotFoundException("Atividade não encontrado com o id: " + id);
+    public List<AtividadeDTO> getByTurma(Long turmaId, String requesterEmail) {
+        studentAccessGuardService.assertCanViewTurma(turmaId, requesterEmail);
+        return atividadeRepository.findByTurmaIdOrderByPrazoAsc(turmaId).stream()
+                .map(a -> toDTO(a, null))
+                .toList();
+    }
+
+    /** Atividades da turma do aluno logado, marcando as que ele já entregou. */
+    @Transactional
+    public List<AtividadeDTO> getMinhas(String requesterEmail) {
+        User requester = buscarUsuario(requesterEmail);
+        if (!(requester instanceof Student aluno) || aluno.getTurma() == null) {
+            return List.of();
         }
-        atividadeRepository.deleteById(id);
+        Set<Long> entregues = entregaRepository.findByStudentId(aluno.getId()).stream()
+                .filter(e -> e.getStatus() == StatusEntrega.ENTREGUE || e.getStatus() == StatusEntrega.AVALIADA)
+                .map(e -> e.getAtividade().getId())
+                .collect(Collectors.toSet());
+        return atividadeRepository.findByTurmaIdOrderByPrazoAsc(aluno.getTurma().getId()).stream()
+                .map(a -> toDTO(a, entregues.contains(a.getId())))
+                .toList();
+    }
+
+    @Transactional
+    public AtividadeDTO publicar(AtividadeDTO dto, String requesterEmail) {
+        if (dto.prazo().isBefore(LocalDate.now())) {
+            throw new RegraNegocioException("O prazo da atividade não pode ser uma data passada.");
+        }
+        User requester = buscarUsuario(requesterEmail);
+        Turma turma = turmaRepository.findById(dto.turmaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + dto.turmaId()));
+        Disciplina disciplina = resolverDisciplina(requester, turma.getId(), dto.disciplinaId());
+
+        Atividade entity = new Atividade();
+        entity.setTitle(dto.title().trim());
+        entity.setContent(dto.content().trim());
+        entity.setStatus(STATUS_ABERTA);
+        entity.setPrazo(dto.prazo());
+        entity.setPublicadaEm(LocalDateTime.now());
+        entity.setTurma(turma);
+        entity.setDisciplina(disciplina);
+
+        entity = atividadeRepository.save(entity);
+        eventPublisher.publishEvent(new AtividadePublicadaEvent(entity.getId()));
+        return toDTO(entity, null);
+    }
+
+    @Transactional
+    public void delete(Long id, String requesterEmail) {
+        Atividade atividade = atividadeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + id));
+        User requester = buscarUsuario(requesterEmail);
+        boolean podeExcluir = requester.hasRole("ROLE_ADMIN")
+                || (requester.hasRole("ROLE_PROFESSOR") && lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(
+                        requester.getId(), atividade.getTurma().getId(), atividade.getDisciplina().getId()));
+        if (!podeExcluir) {
+            throw new AccessDeniedException("Sem permissão para excluir esta atividade.");
+        }
+        if (entregaRepository.existsByAtividadeId(id)) {
+            throw new ConflictException("A atividade já tem entregas e não pode ser excluída.");
+        }
+        atividadeRepository.delete(atividade);
+        notificacaoService.cancelarPorReferencia(NotificacaoService.REF_ATIVIDADE, id, "Atividade excluída antes do envio");
+    }
+
+    /**
+     * Admin informa a disciplina. Professor não escolhe: como cada professor leciona uma única
+     * disciplina (regra do LecionamentoService), ela vem do lecionamento dele na turma.
+     */
+    private Disciplina resolverDisciplina(User requester, Long turmaId, Long disciplinaId) {
+        if (requester.hasRole("ROLE_ADMIN")) {
+            if (disciplinaId == null) {
+                throw new RegraNegocioException("Informe a disciplina da atividade.");
+            }
+            return disciplinaRepository.findById(disciplinaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + disciplinaId));
+        }
+        if (requester.hasRole("ROLE_PROFESSOR")) {
+            Lecionamento lecionamento = lecionamentoRepository.findByProfessorId(requester.getId()).stream()
+                    .filter(l -> l.getTurma().getId().equals(turmaId))
+                    .findFirst()
+                    .orElseThrow(() -> new AccessDeniedException("Você não leciona nesta turma."));
+            if (disciplinaId != null && !disciplinaId.equals(lecionamento.getDisciplina().getId())) {
+                throw new AccessDeniedException("Você só pode publicar atividades da disciplina que leciona.");
+            }
+            return lecionamento.getDisciplina();
+        }
+        throw new AccessDeniedException("Sem permissão para publicar atividades.");
+    }
+
+    private User buscarUsuario(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + email));
+    }
+
+    private AtividadeDTO toDTO(Atividade entity, Boolean entregue) {
+        return new AtividadeDTO(
+                entity.getId(),
+                entity.getTitle(),
+                entity.getContent(),
+                entity.getStatus(),
+                entity.getPrazo(),
+                entity.getTurma().getId(),
+                entity.getDisciplina().getId(),
+                entity.getTurma().getName(),
+                entity.getDisciplina().getTitle(),
+                entity.getPublicadaEm(),
+                entregue
+        );
     }
 }

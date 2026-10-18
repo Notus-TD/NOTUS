@@ -1,5 +1,7 @@
 package com.pfc.notus.notificacao.service;
 
+import com.pfc.notus.atividade.domain.Atividade;
+import com.pfc.notus.atividade.repository.AtividadeRepository;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.config.AuditMarker;
@@ -16,9 +18,11 @@ import com.pfc.notus.notificacao.util.EmailUtil;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
+import com.pfc.notus.user.repository.StudentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +62,12 @@ public class NotificacaoService {
 
     @Autowired
     private BoletimRepository boletimRepository;
+
+    @Autowired
+    private AtividadeRepository atividadeRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
 
     /** Chamado pelo NotificacaoListener depois do commit da falta, numa transação própria. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -103,6 +113,19 @@ public class NotificacaoService {
                 String.format(PT_BR, "%.1f", media));
 
         criar(TipoNotificacao.BOLETIM_FECHADO, responsavel, aluno, REF_BOLETIM, boletim.getId(), chave, variaveis);
+    }
+
+    /** Chamado pelo NotificacaoListener depois do commit da atividade, numa transação própria. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void notificarAtividadePublicada(Long atividadeId) {
+        Atividade atividade = atividadeRepository.findById(atividadeId).orElse(null);
+        if (atividade == null) {
+            log.warn("Atividade {} não encontrada ao criar as notificações", atividadeId);
+            return;
+        }
+        List<Student> alunosDaTurma = studentRepository.findByTurmaId(atividade.getTurma().getId(), Sort.unsorted());
+        notificarAtividade(atividade.getId(), alunosDaTurma, atividade.getDisciplina().getTitle(),
+                atividade.getTitle(), atividade.getPrazo());
     }
 
     @Transactional
