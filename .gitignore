@@ -7,3 +7,6 @@
 
 # Configuracao local do Claude Code
 .claude/launch.json
+
+# Anotacoes locais de decisoes (nao versionar)
+DECISOES.md
