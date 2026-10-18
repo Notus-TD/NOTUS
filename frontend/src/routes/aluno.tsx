@@ -16,17 +16,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { aluno, atividades, horarios } from "@/data/notus";
+import { aluno, horarios } from "@/data/notus";
 import {
   ApiError,
   getMeuPerfil,
   getMinhaFrequencia,
+  getMinhasAtividades,
   getMinhasFaltas,
+  type AtividadeDTO,
   type FaltaDTO,
   type FrequenciaDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { normalizar } from "@/lib/busca";
+import { diasEntre, formatarData, hojeLocal } from "@/lib/datas";
 
 export const Route = createFileRoute("/aluno")({
   head: () => ({
@@ -130,6 +133,28 @@ function PainelAluno() {
     };
   }, []);
 
+  const [atividadesApi, setAtividadesApi] = useState<AtividadeDTO[] | null>(null);
+  const [erroAtividades, setErroAtividades] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    getMinhasAtividades()
+      .then((lista) => ativo && setAtividadesApi(lista))
+      .catch(
+        (e) =>
+          ativo &&
+          setErroAtividades(e instanceof ApiError ? e.message : "Erro ao carregar as atividades."),
+      );
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const atividades = useMemo(() => {
+    const hoje = hojeLocal();
+    return (atividadesApi ?? []).map((a) => paraAtividadeAluno(a, hoje));
+  }, [atividadesApi]);
+
   const atrasadas = atividades.filter((a) => a.situacao === "atrasada");
   const secoesComContador = secoes.map((s) =>
     s.id === "atrasadas" ? { ...s, contador: atrasadas.length } : s,
@@ -141,7 +166,13 @@ function PainelAluno() {
     return atividades.filter((a) =>
       normalizar(`${a.titulo} ${a.disciplina} ${a.descricao}`).includes(q),
     );
-  }, [busca]);
+  }, [busca, atividades]);
+
+  const avisoCarga = erroAtividades ? (
+    <p className="mb-4 text-base font-semibold text-destructive">{erroAtividades}</p>
+  ) : atividadesApi === null ? (
+    <p className="mb-4 text-base text-muted-foreground">Carregando atividades…</p>
+  ) : null;
 
   return (
     <AppShell
@@ -176,6 +207,7 @@ function PainelAluno() {
                 : "Nenhuma atividade atrasada. Parabéns!"
             }
           >
+            {avisoCarga}
             <ListaAtividades itens={atrasadas} />
           </Secao>
         )}
@@ -184,6 +216,7 @@ function PainelAluno() {
             titulo="Todas as atividades"
             descricao={`${atividades.filter((a) => a.situacao !== "entregue").length} para entregar`}
           >
+            {avisoCarga}
             <ListaAtividades itens={atividades} />
           </Secao>
         )}
@@ -227,7 +260,47 @@ function AulasDeHoje() {
   );
 }
 
-function ListaAtividades({ itens }: { itens: typeof atividades }) {
+type Situacao = keyof typeof situacaoInfo;
+
+type AtividadeAluno = {
+  id: number;
+  titulo: string;
+  disciplina: string;
+  prazo: string;
+  situacao: Situacao;
+  descricao: string;
+};
+
+/** Converte a atividade da API no formato da lista, com a situação calculada pelo prazo. */
+function paraAtividadeAluno(a: AtividadeDTO, hoje: string): AtividadeAluno {
+  const dias = diasEntre(hoje, a.prazo);
+  let situacao: Situacao;
+  let prazo: string;
+  if (a.entregue) {
+    situacao = "entregue";
+    prazo = `Prazo ${formatarData(a.prazo)}`;
+  } else if (dias < 0) {
+    situacao = "atrasada";
+    prazo = dias === -1 ? "Prazo venceu ontem" : `Prazo venceu em ${formatarData(a.prazo)}`;
+  } else if (dias === 0) {
+    situacao = "hoje";
+    prazo = "Entregar hoje";
+  } else {
+    situacao = "proxima";
+    prazo =
+      dias === 1 ? "Entregar amanhã" : `Entregar até ${formatarData(a.prazo)} (em ${dias} dias)`;
+  }
+  return {
+    id: a.id,
+    titulo: a.title,
+    disciplina: a.disciplinaTitle,
+    prazo,
+    situacao,
+    descricao: a.content,
+  };
+}
+
+function ListaAtividades({ itens }: { itens: AtividadeAluno[] }) {
   if (itens.length === 0) {
     return (
       <Card>
@@ -242,7 +315,7 @@ function ListaAtividades({ itens }: { itens: typeof atividades }) {
       {itens.map((a) => {
         const info = situacaoInfo[a.situacao];
         return (
-          <Card key={a.titulo}>
+          <Card key={a.id}>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>

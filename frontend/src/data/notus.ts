@@ -1,48 +1,9 @@
-export type Situacao = "atrasada" | "hoje" | "proxima" | "entregue";
-
 export const aluno = {
   nome: "Beatriz Camargo",
   turma: "7º ano B",
   escola: "Colégio Notus",
   responsavel: "Sr. Antônio Camargo",
 };
-
-export const atividades: {
-  titulo: string;
-  disciplina: string;
-  prazo: string;
-  situacao: Situacao;
-  descricao: string;
-}[] = [
-  {
-    titulo: "Lista de frações e porcentagem",
-    disciplina: "Matemática",
-    prazo: "Entregar hoje, até 23h59",
-    situacao: "hoje",
-    descricao: "Exercícios 1 a 12 do capítulo 4. Envie pelo portal ou entregue impresso.",
-  },
-  {
-    titulo: "Resumo do livro 'O Menino do Dedo Verde'",
-    disciplina: "Português",
-    prazo: "Prazo venceu ontem",
-    situacao: "atrasada",
-    descricao: "Uma página escrita à mão. Fale com a professora Helena para reenviar.",
-  },
-  {
-    titulo: "Maquete do sistema solar",
-    disciplina: "Ciências",
-    prazo: "Entregar em 4 dias",
-    situacao: "proxima",
-    descricao: "Trabalho em grupo de até 4 pessoas. Traga o material na quinta-feira.",
-  },
-  {
-    titulo: "Mapa das regiões do Brasil",
-    disciplina: "Geografia",
-    prazo: "Entregue no dia 8",
-    situacao: "entregue",
-    descricao: "Recebido pela professora. Aguardando correção.",
-  },
-];
 
 export const notasRecentes = [
   { disciplina: "Matemática", avaliacao: "Prova bimestral", nota: 8.5 },
@@ -163,21 +124,6 @@ export const alunosPorTurma: Record<string, string[]> = {
     "Vitória Nunes",
   ],
 };
-
-export const recadosPublicados = [
-  {
-    titulo: "Prova de Matemática",
-    turma: "7º ano B",
-    quando: "Publicado em 10 de setembro",
-    texto: "A prova do 3º bimestre será na próxima terça-feira. Conteúdo: frações, porcentagem e razão.",
-  },
-  {
-    titulo: "Traga material de desenho",
-    turma: "8º ano A",
-    quando: "Publicado em 9 de setembro",
-    texto: "Régua, compasso e lápis de cor para a aula de geometria.",
-  },
-];
 
 export function media(n: number[]) {
   return n.reduce((a, b) => a + b, 0) / n.length;

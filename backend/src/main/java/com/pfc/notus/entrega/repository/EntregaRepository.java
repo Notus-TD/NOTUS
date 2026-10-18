@@ -12,4 +12,6 @@ public interface EntregaRepository extends JpaRepository<Entrega, Long> {
     List<Entrega> findByStudentId(Long studentId);
 
     List<Entrega> findByAtividadeId(Long atividadeId);
+
+    boolean existsByAtividadeId(Long atividadeId);
 }
