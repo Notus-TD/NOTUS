@@ -274,7 +274,29 @@ export type TurmaDetalheDTO = {
   lecionamentos: LecionamentoDTO[];
 };
 export type DisciplinaDTO = { id: number; title: string; description?: string };
-export type AtividadeDTO = { id: number; title: string; content?: string; status: string };
+export type AtividadeDTO = {
+  id: number;
+  title: string;
+  content: string;
+  status: string;
+  /** aaaa-mm-dd */
+  prazo: string;
+  turmaId: number;
+  disciplinaId: number;
+  turmaName: string;
+  disciplinaTitle: string;
+  publicadaEm: string;
+  /** Só vem preenchido em /atividade/me (visão do aluno). */
+  entregue: boolean | null;
+};
+/** O professor não manda a disciplina: o backend usa a que ele leciona na turma. */
+export type NovaAtividade = {
+  title: string;
+  content: string;
+  prazo: string;
+  turmaId: number;
+  disciplinaId?: number;
+};
 
 export type BoletimDTO = {
   id: number;
@@ -350,6 +372,12 @@ export const getMinhasTurmas = () => getJson<TurmaComDisciplinasDTO[]>("/turma/m
 
 export const getDisciplinas = () => getJson<DisciplinaDTO[]>("/disciplina");
 export const getAtividades = () => getJson<AtividadeDTO[]>("/atividade");
+export const getAtividadesDaTurma = (turmaId: number) =>
+  getJson<AtividadeDTO[]>(`/atividade/turma/${turmaId}`);
+export const getMinhasAtividades = () => getJson<AtividadeDTO[]>("/atividade/me");
+export const publicarAtividade = (dto: NovaAtividade) =>
+  sendJson<AtividadeDTO>("POST", "/atividade", dto);
+export const deleteAtividade = (id: number) => sendJson<void>("DELETE", `/atividade/${id}`);
 export const getBoletins = () => getJson<BoletimDTO[]>("/boletim");
 export const getBoletinsByStudent = (studentId: number) =>
   getJson<Boletim[]>(`/boletim/student/${studentId}`);

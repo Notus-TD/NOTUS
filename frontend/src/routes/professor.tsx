@@ -1,29 +1,44 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BarChart3, ClipboardCheck, Megaphone, Search, Users } from "lucide-react";
+import { BarChart3, ClipboardCheck, ClipboardList, Search, Trash2, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BoletimMatriz } from "@/components/BoletimMatriz";
 import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { recadosPublicados } from "@/data/notus";
 import {
   ApiError,
   associarFalta,
+  deleteAtividade,
   deleteFalta,
+  getAtividadesDaTurma,
   getFaltasByStudent,
   getMeuPerfil,
   getMinhasTurmas,
   getStudentsByTurma,
+  publicarAtividade,
   registrarAula,
+  type AtividadeDTO,
   type FaltaDTO,
   type StudentMinDTO,
   type TurmaComDisciplinasDTO,
 } from "@/lib/api";
 import { normalizar } from "@/lib/busca";
+import { formatarData, hojeLocal } from "@/lib/datas";
 
 export const Route = createFileRoute("/professor")({
   head: () => ({
@@ -32,7 +47,7 @@ export const Route = createFileRoute("/professor")({
       {
         name: "description",
         content:
-          "Diário de classe simplificado: chamada, lançamento de notas e recados para as turmas.",
+          "Diário de classe simplificado: chamada, lançamento de notas e atividades para as turmas.",
       },
       { property: "og:title", content: "Painel do Professor · NOTUS" },
       {
@@ -45,7 +60,7 @@ export const Route = createFileRoute("/professor")({
   component: PainelProfessor,
 });
 
-type SecaoId = "chamada" | "notas" | "recados";
+type SecaoId = "chamada" | "notas" | "atividades";
 
 const secoes: SecaoPainel<SecaoId>[] = [
   {
@@ -63,27 +78,15 @@ const secoes: SecaoPainel<SecaoId>[] = [
     termos: "nota notas avaliacao prova lancar",
   },
   {
-    id: "recados",
-    label: "Recados e atividades",
-    descricao: "Avisos para a turma",
-    icon: Megaphone,
-    termos: "recado aviso atividade publicar",
+    id: "atividades",
+    label: "Atividades",
+    descricao: "Publicar tarefas com prazo",
+    icon: ClipboardList,
+    termos: "atividade atividades tarefa trabalho prazo publicar recado aviso",
   },
 ];
 
 type DisciplinaRef = { id: number; title: string };
-
-/** Data de hoje no fuso do navegador, no formato do input date (aaaa-mm-dd). */
-function hojeLocal() {
-  const d = new Date();
-  const mes = String(d.getMonth() + 1).padStart(2, "0");
-  const dia = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mes}-${dia}`;
-}
-
-function formatarData(iso: string) {
-  return iso.split("-").reverse().join("/");
-}
 
 async function alunosAtivosDaTurma(turmaId: number) {
   const alunos = await getStudentsByTurma(turmaId, "nome");
@@ -194,7 +197,7 @@ function PainelProfessor() {
     <AppShell
       role="ROLE_PROFESSOR"
       titulo="Diário de classe"
-      subtitulo={`${nomeProfessor ? `Prof. ${nomeProfessor} · ` : ""}Escolha a turma ao lado e registre a chamada, as notas e os recados.`}
+      subtitulo={`${nomeProfessor ? `Prof. ${nomeProfessor} · ` : ""}Escolha a turma ao lado e registre a chamada, as notas e as atividades.`}
     >
       <PainelLateral
         secoes={secoes}
@@ -241,7 +244,14 @@ function PainelProfessor() {
             disciplina={disciplina}
           />
         )}
-        {turmaAtual && secao === "recados" && <Recados turmaName={turmaAtual.turmaName} />}
+        {turmaAtual && disciplina && secao === "atividades" && (
+          <Atividades
+            key={turmaAtual.turmaId}
+            turmaId={turmaAtual.turmaId}
+            turmaName={turmaAtual.turmaName}
+            disciplina={disciplina}
+          />
+        )}
       </PainelLateral>
     </AppShell>
   );
@@ -570,33 +580,85 @@ function NotasDaTurma({
   );
 }
 
-function Recados({ turmaName }: { turmaName: string }) {
-  const [recados, setRecados] = useState(recadosPublicados);
+function Atividades({
+  turmaId,
+  turmaName,
+  disciplina,
+}: {
+  turmaId: number;
+  turmaName: string;
+  disciplina: DisciplinaRef;
+}) {
+  const hoje = hojeLocal();
+  const [atividades, setAtividades] = useState<AtividadeDTO[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [versao, setVersao] = useState(0);
   const [titulo, setTitulo] = useState("");
   const [corpo, setCorpo] = useState("");
+  const [prazo, setPrazo] = useState("");
+  const [publicando, setPublicando] = useState(false);
 
-  function publicar() {
-    if (!titulo.trim() || !corpo.trim()) {
-      toast.error("Preencha o título e o texto do recado.");
+  useEffect(() => {
+    let ativo = true;
+    getAtividadesDaTurma(turmaId)
+      .then((lista) => {
+        if (!ativo) return;
+        // mais recentes primeiro
+        setAtividades([...lista].sort((a, b) => b.publicadaEm.localeCompare(a.publicadaEm)));
+      })
+      .catch(
+        (e) =>
+          ativo &&
+          setErro(e instanceof ApiError ? e.message : "Erro ao carregar as atividades da turma."),
+      );
+    return () => {
+      ativo = false;
+    };
+  }, [turmaId, versao]);
+
+  async function publicar() {
+    if (!titulo.trim() || !corpo.trim() || !prazo) {
+      toast.error("Preencha o título, o texto e o prazo da atividade.");
       return;
     }
-    setRecados([
-      { titulo: titulo.trim(), turma: turmaName, quando: "Publicado agora", texto: corpo.trim() },
-      ...recados,
-    ]);
-    setTitulo("");
-    setCorpo("");
-    toast.success(`Recado publicado para o ${turmaName}.`);
+    if (prazo < hoje) {
+      toast.error("O prazo não pode ser uma data passada.");
+      return;
+    }
+    setPublicando(true);
+    try {
+      await publicarAtividade({ title: titulo.trim(), content: corpo.trim(), prazo, turmaId });
+      setTitulo("");
+      setCorpo("");
+      setPrazo("");
+      toast.success(`Atividade publicada para o ${turmaName}.`);
+      setVersao((v) => v + 1);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao publicar a atividade.");
+    } finally {
+      setPublicando(false);
+    }
+  }
+
+  async function excluir(atividade: AtividadeDTO) {
+    try {
+      await deleteAtividade(atividade.id);
+      toast.success("Atividade excluída.");
+      setVersao((v) => v + 1);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao excluir a atividade.");
+    }
   }
 
   return (
-    <Secao titulo="Recados e atividades" descricao={turmaName}>
+    <Secao titulo="Atividades" descricao={`${turmaName} · ${disciplina.title}`}>
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Novo recado ou atividade</CardTitle>
+            <CardTitle className="text-xl">Nova atividade</CardTitle>
             <CardDescription className="text-base">
-              O texto aparece no painel dos alunos e dos responsáveis da turma.
+              A atividade aparece no painel dos alunos da turma, e os responsáveis recebem um aviso
+              por e-mail.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -621,28 +683,84 @@ function Recados({ turmaName }: { turmaName: string }) {
                 rows={4}
                 value={corpo}
                 onChange={(e) => setCorpo(e.target.value)}
-                placeholder="Explique a atividade, o prazo e o que precisa ser entregue."
+                placeholder="Explique a atividade e o que precisa ser entregue."
                 className="text-lg"
               />
             </div>
-            <Button onClick={publicar} className="min-h-12 px-6 text-lg">
-              Publicar para a turma
+            <div className="space-y-2">
+              <label htmlFor="prazo" className="block text-lg font-semibold text-foreground">
+                Prazo de entrega
+              </label>
+              <Input
+                id="prazo"
+                type="date"
+                value={prazo}
+                min={hoje}
+                onChange={(e) => setPrazo(e.target.value)}
+                className="h-12 w-48 text-lg"
+              />
+            </div>
+            <Button onClick={publicar} disabled={publicando} className="min-h-12 px-6 text-lg">
+              {publicando ? "Publicando..." : "Publicar para a turma"}
             </Button>
           </CardContent>
         </Card>
 
         <div>
-          <h3 className="mb-4 font-display text-xl font-bold text-foreground">Já publicados</h3>
+          <h3 className="mb-4 font-display text-xl font-bold text-foreground">Já publicadas</h3>
+          {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
+          {!erro && atividades === null && (
+            <p className="text-base text-muted-foreground">Carregando atividades…</p>
+          )}
+          {atividades?.length === 0 && (
+            <p className="text-base text-muted-foreground">
+              Nenhuma atividade publicada para esta turma ainda.
+            </p>
+          )}
           <div className="grid gap-4">
-            {recados.map((r, i) => (
-              <Card key={`${r.titulo}-${i}`}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl">{r.titulo}</CardTitle>
-                  <CardDescription className="text-base">
-                    {r.turma} · {r.quando}
-                  </CardDescription>
+            {atividades?.map((a) => (
+              <Card key={a.id}>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                  <div>
+                    <CardTitle className="text-xl">{a.title}</CardTitle>
+                    <CardDescription className="text-base">
+                      {a.disciplinaTitle} · prazo {formatarData(a.prazo)}
+                      {a.prazo < hoje && " (encerrado)"}
+                    </CardDescription>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={`Excluir ${a.title}`}
+                        title="Excluir"
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir esta atividade?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          "{a.title}" deixa de aparecer para os alunos do {turmaName}. Atividades
+                          que já têm entregas não podem ser excluídas.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => excluir(a)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </CardHeader>
-                <CardContent className="text-base text-muted-foreground">{r.texto}</CardContent>
+                <CardContent className="text-base text-muted-foreground">{a.content}</CardContent>
               </Card>
             ))}
           </div>

@@ -65,9 +65,10 @@ INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, 
 INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 1, 2026000002);
 INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (2, 1, 2026000002);
 
--- 8. Atividades
-INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Lista de Exercícios 1', 'Resolver os exercícios das páginas 10 a 15.', 'ABERTA', 1);
-INSERT INTO tb_atividade (title, content, status, disciplina_id) VALUES ('Redação Dissertativa', 'Escrever uma redação sobre o tema sorteado em sala.', 'ABERTA', 2);
+-- 8. Atividades (cada uma publicada para uma turma, com prazo de entrega)
+INSERT INTO tb_atividade (title, content, status, prazo, publicada_em, disciplina_id, turma_id) VALUES ('Lista de Exercícios 1', 'Resolver os exercícios das páginas 10 a 15.', 'ABERTA', '2026-10-30', '2026-10-13T10:00:00', 1, 1);
+INSERT INTO tb_atividade (title, content, status, prazo, publicada_em, disciplina_id, turma_id) VALUES ('Redação Dissertativa', 'Escrever uma redação sobre o tema sorteado em sala.', 'ABERTA', '2026-10-15', '2026-10-06T10:00:00', 2, 1);
+INSERT INTO tb_atividade (title, content, status, prazo, publicada_em, disciplina_id, turma_id) VALUES ('Lista de Equações', 'Resolver as equações do 1º grau da página 42.', 'ABERTA', '2026-11-05', '2026-10-14T10:00:00', 1, 2);
 
 -- 9. Boletins (final_average = média das médias por disciplina das notas abaixo)
 INSERT INTO tb_boletim (period, final_average, status, situacao, student_id) VALUES ('1º Bimestre', 8.75, 'APROVADO', 'ABERTO', 2026000001);

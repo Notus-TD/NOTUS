@@ -1,5 +1,6 @@
 package com.pfc.notus.notificacao.service;
 
+import com.pfc.notus.notificacao.event.AtividadePublicadaEvent;
 import com.pfc.notus.notificacao.event.BoletimFechadoEvent;
 import com.pfc.notus.notificacao.event.FaltaRegistradaEvent;
 import org.slf4j.Logger;
@@ -10,9 +11,9 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Cria as notificações só depois do commit da falta ou do boletim.
+ * Cria as notificações só depois do commit da falta, do boletim ou da atividade.
  * A operação principal já está salva quando isto roda, então um erro aqui
- * nunca desfaz a falta/boletim nem vira 500: vira apenas uma linha de log.
+ * nunca desfaz a falta/boletim/atividade nem vira 500: vira apenas uma linha de log.
  */
 @Component
 public class NotificacaoListener {
@@ -37,6 +38,15 @@ public class NotificacaoListener {
             notificacaoService.notificarBoletimFechado(evento.boletimId());
         } catch (RuntimeException e) {
             log.error("Falha ao criar a notificação do boletim {}. O boletim foi fechado normalmente.", evento.boletimId(), e);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAtividadePublicada(AtividadePublicadaEvent evento) {
+        try {
+            notificacaoService.notificarAtividadePublicada(evento.atividadeId());
+        } catch (RuntimeException e) {
+            log.error("Falha ao criar as notificações da atividade {}. A atividade foi publicada normalmente.", evento.atividadeId(), e);
         }
     }
 }
