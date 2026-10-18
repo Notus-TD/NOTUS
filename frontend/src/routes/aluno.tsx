@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -7,15 +7,14 @@ import {
   CalendarDays,
   ClipboardList,
   RefreshCw,
-  Search,
   UserX,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BoletimMatriz } from "@/components/BoletimMatriz";
+import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { aluno, atividades, horarios } from "@/data/notus";
 import {
@@ -27,6 +26,7 @@ import {
   type FrequenciaDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { normalizar } from "@/lib/busca";
 
 export const Route = createFileRoute("/aluno")({
   head: () => ({
@@ -57,13 +57,7 @@ const situacaoInfo = {
 
 type SecaoId = "hoje" | "atrasadas" | "atividades" | "notas" | "presenca" | "semana" | "faltas";
 
-const secoes: {
-  id: SecaoId;
-  label: string;
-  descricao: string;
-  icon: typeof Search;
-  termos: string;
-}[] = [
+const secoes: SecaoPainel<SecaoId>[] = [
   {
     id: "hoje",
     label: "Aulas de hoje",
@@ -115,10 +109,6 @@ const secoes: {
   },
 ];
 
-function normalizar(s: string) {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-}
-
 function diaDeHoje() {
   const idx = new Date().getDay() - 1; // 0 = segunda ... 4 = sexta
   const util = idx >= 0 && idx <= 4;
@@ -141,12 +131,9 @@ function PainelAluno() {
   }, []);
 
   const atrasadas = atividades.filter((a) => a.situacao === "atrasada");
-
-  const secoesFiltradas = useMemo(() => {
-    const q = normalizar(busca.trim());
-    if (!q) return secoes;
-    return secoes.filter((s) => normalizar(`${s.label} ${s.descricao} ${s.termos}`).includes(q));
-  }, [busca]);
+  const secoesComContador = secoes.map((s) =>
+    s.id === "atrasadas" ? { ...s, contador: atrasadas.length } : s,
+  );
 
   const atividadesEncontradas = useMemo(() => {
     const q = normalizar(busca.trim());
@@ -156,146 +143,56 @@ function PainelAluno() {
     );
   }, [busca]);
 
-  function aoTeclar(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && secoesFiltradas[0]) {
-      setSecao(secoesFiltradas[0].id);
-      setBusca("");
-    }
-    if (e.key === "Escape") setBusca("");
-  }
-
   return (
     <AppShell
       role="ROLE_ALUNO"
       titulo={`Olá, ${primeiroNome ?? "..."}!`}
       subtitulo={`${aluno.turma} · Use a busca ao lado para encontrar o que precisa.`}
     >
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <aside className="lg:sticky lg:top-6 lg:self-start">
-          <Card>
-            <CardContent className="space-y-3 p-4">
-              <div className="relative">
-                <Search
-                  className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <Input
-                  type="search"
-                  aria-label="Pesquisar no painel"
-                  placeholder="Pesquisar... (ex.: atraso, notas)"
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  onKeyDown={aoTeclar}
-                  className="h-12 pl-10 text-base"
-                />
-              </div>
+      <PainelLateral
+        secoes={secoesComContador}
+        secaoAtiva={secao}
+        aoSelecionarSecao={setSecao}
+        busca={busca}
+        aoMudarBusca={setBusca}
+        placeholderBusca="Pesquisar... (ex.: atraso, notas)"
+      >
+        {atividadesEncontradas.length > 0 && (
+          <div>
+            <h2 className="mb-3 font-display text-xl font-bold text-foreground">
+              Atividades que combinam com "{busca}"
+            </h2>
+            <ListaAtividades itens={atividadesEncontradas} />
+          </div>
+        )}
 
-              <nav aria-label="Seções do painel" className="space-y-1">
-                {secoesFiltradas.length === 0 && (
-                  <p className="px-3 py-2 text-base text-muted-foreground">
-                    Nada encontrado para "{busca}".
-                  </p>
-                )}
-                {secoesFiltradas.map((s) => {
-                  const ativa = s.id === secao;
-                  const contador = s.id === "atrasadas" ? atrasadas.length : undefined;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      aria-current={ativa ? "page" : undefined}
-                      onClick={() => {
-                        setSecao(s.id);
-                        setBusca("");
-                      }}
-                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
-                        ativa ? "bg-primary text-primary-foreground" : "hover:bg-accent"
-                      }`}
-                    >
-                      <s.icon className="size-5 shrink-0" aria-hidden="true" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-base font-semibold">{s.label}</span>
-                        <span
-                          className={`block truncate text-sm ${ativa ? "text-primary-foreground/80" : "text-muted-foreground"}`}
-                        >
-                          {s.descricao}
-                        </span>
-                      </span>
-                      {contador !== undefined && contador > 0 && (
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-sm font-bold ${
-                            ativa
-                              ? "bg-primary-foreground/20"
-                              : "bg-destructive text-destructive-foreground"
-                          }`}
-                        >
-                          {contador}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
-            </CardContent>
-          </Card>
-        </aside>
-
-        <section className="min-w-0 space-y-6">
-          {atividadesEncontradas.length > 0 && (
-            <div>
-              <h2 className="mb-3 font-display text-xl font-bold text-foreground">
-                Atividades que combinam com "{busca}"
-              </h2>
-              <ListaAtividades itens={atividadesEncontradas} />
-            </div>
-          )}
-
-          {secao === "hoje" && <AulasDeHoje />}
-          {secao === "atrasadas" && (
-            <Secao
-              titulo="Atividades em atraso"
-              descricao={
-                atrasadas.length
-                  ? `${atrasadas.length} com prazo vencido`
-                  : "Nenhuma atividade atrasada. Parabéns!"
-              }
-            >
-              <ListaAtividades itens={atrasadas} />
-            </Secao>
-          )}
-          {secao === "atividades" && (
-            <Secao
-              titulo="Todas as atividades"
-              descricao={`${atividades.filter((a) => a.situacao !== "entregue").length} para entregar`}
-            >
-              <ListaAtividades itens={atividades} />
-            </Secao>
-          )}
-          {secao === "notas" && <Notas />}
-          {secao === "presenca" && <Presenca />}
-          {secao === "semana" && <QuadroSemanal />}
-          {secao === "faltas" && <FaltasBackend />}
-        </section>
-      </div>
+        {secao === "hoje" && <AulasDeHoje />}
+        {secao === "atrasadas" && (
+          <Secao
+            titulo="Atividades em atraso"
+            descricao={
+              atrasadas.length
+                ? `${atrasadas.length} com prazo vencido`
+                : "Nenhuma atividade atrasada. Parabéns!"
+            }
+          >
+            <ListaAtividades itens={atrasadas} />
+          </Secao>
+        )}
+        {secao === "atividades" && (
+          <Secao
+            titulo="Todas as atividades"
+            descricao={`${atividades.filter((a) => a.situacao !== "entregue").length} para entregar`}
+          >
+            <ListaAtividades itens={atividades} />
+          </Secao>
+        )}
+        {secao === "notas" && <Notas />}
+        {secao === "presenca" && <Presenca />}
+        {secao === "semana" && <QuadroSemanal />}
+        {secao === "faltas" && <FaltasBackend />}
+      </PainelLateral>
     </AppShell>
-  );
-}
-
-function Secao({
-  titulo,
-  descricao,
-  children,
-}: {
-  titulo: string;
-  descricao?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <h2 className="font-display text-2xl font-bold text-foreground">{titulo}</h2>
-      {descricao && <p className="mt-1 text-base text-muted-foreground">{descricao}</p>}
-      <div className="mt-4">{children}</div>
-    </div>
   );
 }
 

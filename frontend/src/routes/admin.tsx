@@ -21,7 +21,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AdminShell, type SidebarItem } from "@/components/AdminShell";
+import { AppShell } from "@/components/AppShell";
+import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
 import { CadastroAlunoForm } from "@/components/CadastroAlunoForm";
 import {
   AlertDialog,
@@ -83,7 +84,7 @@ type SecaoId = "dashboard" | "alunos" | "turmas" | "usuarios" | "comunicados";
 type ModoAlunos =
   { tipo: "lista" } | { tipo: "cadastro" } | { tipo: "ficha"; aluno: StudentMinDTO };
 
-const itens: SidebarItem<SecaoId>[] = [
+const itens: SecaoPainel<SecaoId>[] = [
   {
     id: "dashboard",
     label: "Visão geral",
@@ -149,6 +150,7 @@ const cabecalhoAlunos: Record<ModoAlunos["tipo"], { titulo: string; subtitulo: s
 };
 
 function PainelAdmin() {
+  const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("dashboard");
   const [modo, setModo] = useState<ModoAlunos>({ tipo: "lista" });
   const { titulo, subtitulo } = secao === "alunos" ? cabecalhoAlunos[modo.tipo] : cabecalhos[secao];
@@ -164,19 +166,28 @@ function PainelAdmin() {
   }
 
   return (
-    <AdminShell
-      itens={itens}
-      ativo={secao}
-      onSelecionar={irPara}
-      titulo={titulo}
-      subtitulo={subtitulo}
+    <AppShell
+      role="ROLE_ADMIN"
+      titulo="Administração"
+      subtitulo="Turmas, alunos e comunicados da escola. Use a busca ao lado para encontrar o que precisa."
     >
-      {secao === "dashboard" && <Dashboard irPara={irPara} irParaAlunos={irParaAlunos} />}
-      {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
-      {secao === "turmas" && <Turmas />}
-      {secao === "usuarios" && <ExcluirUsuarios />}
-      {secao === "comunicados" && <Comunicados />}
-    </AdminShell>
+      <PainelLateral
+        secoes={itens}
+        secaoAtiva={secao}
+        aoSelecionarSecao={irPara}
+        busca={busca}
+        aoMudarBusca={setBusca}
+        placeholderBusca="Pesquisar... (ex.: turma, LGPD)"
+      >
+        <Secao titulo={titulo} descricao={subtitulo}>
+          {secao === "dashboard" && <Dashboard irPara={irPara} irParaAlunos={irParaAlunos} />}
+          {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
+          {secao === "turmas" && <Turmas />}
+          {secao === "usuarios" && <ExcluirUsuarios />}
+          {secao === "comunicados" && <Comunicados />}
+        </Secao>
+      </PainelLateral>
+    </AppShell>
   );
 }
 
