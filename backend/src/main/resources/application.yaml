@@ -15,7 +15,6 @@ security:
 
 resend:
   api-key: ${RESEND_API_KEY:}
-  # Sem domínio verificado no Resend: só onboarding@resend.dev e só entrega para o e-mail da própria conta
   remetente: ${RESEND_REMETENTE:NOTUS <onboarding@resend.dev>}
 
 notificacao:
@@ -55,3 +54,27 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: supabase
+
+  datasource:
+    url: ${SUPABASE_DB_URL:jdbc:postgresql://db.jvznbyhigagxgbihnpmx.supabase.co:5432/postgres?sslmode=require}
+    username: ${SUPABASE_DB_USER:postgres}
+    password: ${SUPABASE_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      schema: notus
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SUPABASE_DDL_AUTO:update}
+    properties:
+      hibernate:
+        default_schema: notus
+        hbm2ddl:
+          create_namespaces: true
