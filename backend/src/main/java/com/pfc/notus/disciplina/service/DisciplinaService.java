@@ -22,8 +22,8 @@ public class DisciplinaService {
     @Autowired
     private AulaRegistroRepository aulaRegistroRepository;
 
-    public List<Disciplina> getAllDisciplina() {
-        return disciplinaRepository.findAll();
+    public List<DisciplinaDTO> getAllDisciplina() {
+        return disciplinaRepository.findAll().stream().map(this::toDTO).toList();
     }
 
     @Transactional
@@ -34,7 +34,7 @@ public class DisciplinaService {
         entity.setCreated(dto.dueDate());
 
         entity = disciplinaRepository.save(entity);
-        return new DisciplinaDTO(entity.getId(), entity.getTitle(), entity.getDescription(), entity.getCreated());
+        return toDTO(entity);
     }
 
     @Transactional
@@ -53,5 +53,9 @@ public class DisciplinaService {
         if (!aulaRegistroRepository.existsByDisciplinaIdAndData(disciplinaId, data)) {
             aulaRegistroRepository.save(new AulaRegistro(data, disciplina));
         }
+    }
+
+    private DisciplinaDTO toDTO(Disciplina entity) {
+        return new DisciplinaDTO(entity.getId(), entity.getTitle(), entity.getDescription(), entity.getCreated());
     }
 }

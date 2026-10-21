@@ -1,7 +1,6 @@
 package com.pfc.notus.boletim.controller;
 
 
-import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimComNotasDTO;
 import com.pfc.notus.boletim.dto.BoletimDTO;
 import com.pfc.notus.boletim.service.BoletimService;
@@ -29,7 +28,7 @@ public class BoletimController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<Boletim> getAllBoletim(){return boletimService.getAllBoletim();}
+    public List<BoletimDTO> getAllBoletim(){return boletimService.getAllBoletim();}
 
     @GetMapping("/{id}")
     public ResponseEntity<BoletimDTO> getById(@PathVariable Long id, Authentication authentication) {
@@ -46,61 +45,61 @@ public class BoletimController {
     }
 
     @GetMapping("/student/{studentId}")
-    public List<Boletim> getByStudent(@PathVariable Long studentId, Authentication authentication) {
+    public List<BoletimDTO> getByStudent(@PathVariable Long studentId, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return boletimService.getByStudent(studentId);
     }
 
     @GetMapping("/student/{studentId}/periodo/{period}")
-    public List<Boletim> getByStudentAndPeriod(@PathVariable Long studentId, @PathVariable String period, Authentication authentication) {
+    public List<BoletimDTO> getByStudentAndPeriod(@PathVariable Long studentId, @PathVariable String period, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return boletimService.getByStudentAndPeriod(studentId, period);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/periodo/{period}")
-    public List<Boletim> getByPeriod(@PathVariable String period) {
+    public List<BoletimDTO> getByPeriod(@PathVariable String period) {
         return boletimService.getByPeriod(period);
     }
 
     @GetMapping("/student/{studentId}/paginado")
-    public ResponseEntity<Page<Boletim>> getByStudentPaged(@PathVariable Long studentId, Pageable pageable, Authentication authentication) {
+    public ResponseEntity<Page<BoletimDTO>> getByStudentPaged(@PathVariable Long studentId, Pageable pageable, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return ResponseEntity.ok(boletimService.getByStudentPaged(studentId, pageable));
     }
 
     @GetMapping("/student/{studentId}/periodo/{period}/paginado")
-    public ResponseEntity<Page<Boletim>> getByStudentAndPeriodPaged(@PathVariable Long studentId, @PathVariable String period, Pageable pageable, Authentication authentication) {
+    public ResponseEntity<Page<BoletimDTO>> getByStudentAndPeriodPaged(@PathVariable Long studentId, @PathVariable String period, Pageable pageable, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return ResponseEntity.ok(boletimService.getByStudentAndPeriodPaged(studentId, period, pageable));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/periodo/{period}/paginado")
-    public ResponseEntity<Page<Boletim>> getByPeriodPaged(@PathVariable String period, Pageable pageable) {
+    public ResponseEntity<Page<BoletimDTO>> getByPeriodPaged(@PathVariable String period, Pageable pageable) {
         return ResponseEntity.ok(boletimService.getByPeriodPaged(period, pageable));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/status/{status}")
-    public List<Boletim> getByStatus(@PathVariable String status) {
+    public List<BoletimDTO> getByStatus(@PathVariable String status) {
         return boletimService.getByStatus(status);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/status/{status}/paginado")
-    public ResponseEntity<Page<Boletim>> getByStatusPaged(@PathVariable String status, Pageable pageable) {
+    public ResponseEntity<Page<BoletimDTO>> getByStatusPaged(@PathVariable String status, Pageable pageable) {
         return ResponseEntity.ok(boletimService.getByStatusPaged(status, pageable));
     }
 
     @GetMapping("/student/{studentId}/status/{status}")
-    public List<Boletim> getByStudentAndStatus(@PathVariable Long studentId, @PathVariable String status, Authentication authentication) {
+    public List<BoletimDTO> getByStudentAndStatus(@PathVariable Long studentId, @PathVariable String status, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return boletimService.getByStudentAndStatus(studentId, status);
     }
 
     @GetMapping("/student/{studentId}/status/{status}/paginado")
-    public ResponseEntity<Page<Boletim>> getByStudentAndStatusPaged(@PathVariable Long studentId, @PathVariable String status, Pageable pageable, Authentication authentication) {
+    public ResponseEntity<Page<BoletimDTO>> getByStudentAndStatusPaged(@PathVariable Long studentId, @PathVariable String status, Pageable pageable, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return ResponseEntity.ok(boletimService.getByStudentAndStatusPaged(studentId, status, pageable));
     }

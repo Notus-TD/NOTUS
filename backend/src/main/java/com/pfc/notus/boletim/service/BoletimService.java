@@ -37,57 +37,69 @@ public class BoletimService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    public List<Boletim> getAllBoletim() {
-       return boletimRepository.findAll();
-
+    @Transactional
+    public List<BoletimDTO> getAllBoletim() {
+        return toDTOs(boletimRepository.findAll());
     }
 
-    public List<Boletim> getByStudent(Long studentId) {
-        return boletimRepository.findByStudentId(studentId);
+    @Transactional
+    public List<BoletimDTO> getByStudent(Long studentId) {
+        return toDTOs(boletimRepository.findByStudentId(studentId));
     }
 
-    public List<Boletim> getByStudentAndPeriod(Long studentId, String period) {
-        return boletimRepository.findByStudentIdAndPeriod(studentId, period);
+    @Transactional
+    public List<BoletimDTO> getByStudentAndPeriod(Long studentId, String period) {
+        return toDTOs(boletimRepository.findByStudentIdAndPeriod(studentId, period));
     }
 
-    public List<Boletim> getByPeriod(String period) {
-        return boletimRepository.findByPeriod(period);
+    @Transactional
+    public List<BoletimDTO> getByPeriod(String period) {
+        return toDTOs(boletimRepository.findByPeriod(period));
     }
 
-    public Page<Boletim> getByStudentPaged(Long studentId, Pageable pageable) {
-        return boletimRepository.findByStudentId(studentId, pageable);
+    @Transactional
+    public Page<BoletimDTO> getByStudentPaged(Long studentId, Pageable pageable) {
+        return boletimRepository.findByStudentId(studentId, pageable).map(this::toDTO);
     }
 
-    public Page<Boletim> getByStudentAndPeriodPaged(Long studentId, String period, Pageable pageable) {
-        return boletimRepository.findByStudentIdAndPeriod(studentId, period, pageable);
+    @Transactional
+    public Page<BoletimDTO> getByStudentAndPeriodPaged(Long studentId, String period, Pageable pageable) {
+        return boletimRepository.findByStudentIdAndPeriod(studentId, period, pageable).map(this::toDTO);
     }
 
-    public Page<Boletim> getByPeriodPaged(String period, Pageable pageable) {
-        return boletimRepository.findByPeriod(period, pageable);
+    @Transactional
+    public Page<BoletimDTO> getByPeriodPaged(String period, Pageable pageable) {
+        return boletimRepository.findByPeriod(period, pageable).map(this::toDTO);
     }
 
-    public List<Boletim> getByStatus(String status) {
-        return boletimRepository.findByStatus(status);
+    @Transactional
+    public List<BoletimDTO> getByStatus(String status) {
+        return toDTOs(boletimRepository.findByStatus(status));
     }
 
-    public Page<Boletim> getByStatusPaged(String status, Pageable pageable) {
-        return boletimRepository.findByStatus(status, pageable);
+    @Transactional
+    public Page<BoletimDTO> getByStatusPaged(String status, Pageable pageable) {
+        return boletimRepository.findByStatus(status, pageable).map(this::toDTO);
     }
 
-    public List<Boletim> getByStudentAndStatus(Long studentId, String status) {
-        return boletimRepository.findByStudentIdAndStatus(studentId, status);
+    @Transactional
+    public List<BoletimDTO> getByStudentAndStatus(Long studentId, String status) {
+        return toDTOs(boletimRepository.findByStudentIdAndStatus(studentId, status));
     }
 
-    public Page<Boletim> getByStudentAndStatusPaged(Long studentId, String status, Pageable pageable) {
-        return boletimRepository.findByStudentIdAndStatus(studentId, status, pageable);
+    @Transactional
+    public Page<BoletimDTO> getByStudentAndStatusPaged(Long studentId, String status, Pageable pageable) {
+        return boletimRepository.findByStudentIdAndStatus(studentId, status, pageable).map(this::toDTO);
     }
 
+    @Transactional
     public BoletimDTO getById(Long id) {
         Boletim entity = boletimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
         return toDTO(entity);
     }
 
+    @Transactional
     public BoletimComNotasDTO getByIdComNotas(Long id) {
         Boletim entity = boletimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
@@ -151,6 +163,10 @@ public class BoletimService {
             throw  new EntityNotFoundException("Boletim não encontrado com o id: " + id);
         }
         boletimRepository.deleteById(id);
+    }
+
+    private List<BoletimDTO> toDTOs(List<Boletim> boletins) {
+        return boletins.stream().map(this::toDTO).toList();
     }
 
     private BoletimDTO toDTO(Boletim entity) {

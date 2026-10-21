@@ -1,6 +1,5 @@
 package com.pfc.notus.presenca.controller;
 
-import com.pfc.notus.presenca.domain.Presenca;
 import com.pfc.notus.presenca.dto.PresencaDTO;
 import com.pfc.notus.presenca.service.PresencaService;
 import com.pfc.notus.user.service.StudentAccessGuardService;
@@ -25,12 +24,12 @@ public class PresencaController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<Presenca> getAllPresenca() {
+    public List<PresencaDTO> getAllPresenca() {
         return presencaService.getAllPresenca();
     }
 
     @GetMapping("/student/{studentId}")
-    public List<Presenca> getByStudent(@PathVariable Long studentId, Authentication authentication) {
+    public List<PresencaDTO> getByStudent(@PathVariable Long studentId, Authentication authentication) {
         studentAccessGuardService.assertCanView(studentId, authentication.getName());
         return presencaService.getByStudent(studentId);
     }
