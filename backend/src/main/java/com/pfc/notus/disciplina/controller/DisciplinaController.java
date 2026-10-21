@@ -2,7 +2,6 @@ package com.pfc.notus.disciplina.controller;
 
 import org.springframework.security.core.Authentication;
 import com.pfc.notus.user.service.StudentAccessGuardService;
-import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.dto.AulaRequestDTO;
 import com.pfc.notus.disciplina.dto.DisciplinaDTO;
 import com.pfc.notus.disciplina.service.DisciplinaService;
@@ -25,7 +24,7 @@ public class DisciplinaController {
     private StudentAccessGuardService studentAccessGuardService;
     
     @GetMapping
-    public List<Disciplina> getAllDisciplina(){
+    public List<DisciplinaDTO> getAllDisciplina(){
         return disciplinaService.getAllDisciplina();
     }
 

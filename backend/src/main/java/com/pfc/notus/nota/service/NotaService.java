@@ -39,8 +39,10 @@ public class NotaService {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
-    public List<Nota> getAllNota(){return notaRepository.findAll();}
+    @Transactional
+    public List<NotaDTO> getAllNota(){return toDTOs(notaRepository.findAll());}
 
+    @Transactional
     public NotaDTO getById(Long id, String requesterEmail) {
         Nota entity = notaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
@@ -48,48 +50,56 @@ public class NotaService {
         return toDTO(entity);
     }
 
-    public List<Nota> getByBoletim(Long boletimId, String requesterEmail) {
+    @Transactional
+    public List<NotaDTO> getByBoletim(Long boletimId, String requesterEmail) {
         Boletim boletim = boletimRepository.findById(boletimId)
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
         studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return notaRepository.findByBoletimId(boletimId);
+        return toDTOs(notaRepository.findByBoletimId(boletimId));
     }
 
-    public List<Nota> getByBoletimAndPeriod(Long boletimId, String period, String requesterEmail) {
+    @Transactional
+    public List<NotaDTO> getByBoletimAndPeriod(Long boletimId, String period, String requesterEmail) {
         Boletim boletim = boletimRepository.findById(boletimId)
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
         studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return notaRepository.findByBoletimIdAndPeriod(boletimId, period);
+        return toDTOs(notaRepository.findByBoletimIdAndPeriod(boletimId, period));
     }
 
-    public List<Nota> getByDisciplina(Long disciplinaId) {
-        return notaRepository.findByDisciplinaId(disciplinaId);
+    @Transactional
+    public List<NotaDTO> getByDisciplina(Long disciplinaId) {
+        return toDTOs(notaRepository.findByDisciplinaId(disciplinaId));
     }
 
-    public List<Nota> getByDisciplinaAndPeriod(Long disciplinaId, String period) {
-        return notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period);
+    @Transactional
+    public List<NotaDTO> getByDisciplinaAndPeriod(Long disciplinaId, String period) {
+        return toDTOs(notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period));
     }
 
-    public Page<Nota> getByBoletimPaged(Long boletimId, String requesterEmail, Pageable pageable) {
+    @Transactional
+    public Page<NotaDTO> getByBoletimPaged(Long boletimId, String requesterEmail, Pageable pageable) {
         Boletim boletim = boletimRepository.findById(boletimId)
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
         studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return notaRepository.findByBoletimId(boletimId, pageable);
+        return notaRepository.findByBoletimId(boletimId, pageable).map(this::toDTO);
     }
 
-    public Page<Nota> getByBoletimAndPeriodPaged(Long boletimId, String period, String requesterEmail, Pageable pageable) {
+    @Transactional
+    public Page<NotaDTO> getByBoletimAndPeriodPaged(Long boletimId, String period, String requesterEmail, Pageable pageable) {
         Boletim boletim = boletimRepository.findById(boletimId)
                 .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
         studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return notaRepository.findByBoletimIdAndPeriod(boletimId, period, pageable);
+        return notaRepository.findByBoletimIdAndPeriod(boletimId, period, pageable).map(this::toDTO);
     }
 
-    public Page<Nota> getByDisciplinaPaged(Long disciplinaId, Pageable pageable) {
-        return notaRepository.findByDisciplinaId(disciplinaId, pageable);
+    @Transactional
+    public Page<NotaDTO> getByDisciplinaPaged(Long disciplinaId, Pageable pageable) {
+        return notaRepository.findByDisciplinaId(disciplinaId, pageable).map(this::toDTO);
     }
 
-    public Page<Nota> getByDisciplinaAndPeriodPaged(Long disciplinaId, String period, Pageable pageable) {
-        return notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period, pageable);
+    @Transactional
+    public Page<NotaDTO> getByDisciplinaAndPeriodPaged(Long disciplinaId, String period, Pageable pageable) {
+        return notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period, pageable).map(this::toDTO);
     }
 
     @Transactional
@@ -186,7 +196,12 @@ public class NotaService {
         boletimRepository.save(boletim);
     }
 
+    private List<NotaDTO> toDTOs(List<Nota> notas) {
+        return notas.stream().map(this::toDTO).toList();
+    }
+
     private NotaDTO toDTO(Nota entity) {
-        return new NotaDTO(entity.getId(), entity.getRate(), entity.getPeriod(), entity.getBoletim().getId(), entity.getDisciplina().getId());
+        return new NotaDTO(entity.getId(), entity.getRate(), entity.getPeriod(), entity.getBoletim().getId(), entity.getDisciplina().getId(),
+                entity.getDisciplina().getTitle());
     }
 }

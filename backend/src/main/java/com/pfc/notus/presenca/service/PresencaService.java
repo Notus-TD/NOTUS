@@ -30,12 +30,14 @@ public class PresencaService {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
-    public List<Presenca> getAllPresenca() {
-        return presencaRepository.findAll();
+    @Transactional
+    public List<PresencaDTO> getAllPresenca() {
+        return presencaRepository.findAll().stream().map(this::toDTO).toList();
     }
 
-    public List<Presenca> getByStudent(Long studentId) {
-        return presencaRepository.findByStudentId(studentId);
+    @Transactional
+    public List<PresencaDTO> getByStudent(Long studentId) {
+        return presencaRepository.findByStudentId(studentId).stream().map(this::toDTO).toList();
     }
 
     @Transactional

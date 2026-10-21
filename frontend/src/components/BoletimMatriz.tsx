@@ -130,13 +130,13 @@ export function BoletimMatriz({
     ? [...(disciplinasDisponiveis ?? [])].sort((a, b) => a.title.localeCompare(b.title, "pt-BR"))
     : Object.values(
         notas.reduce<Record<number, DisciplinaRef>>((acc, n) => {
-          acc[n.disciplina.id] ??= n.disciplina;
+          acc[n.disciplinaId] ??= { id: n.disciplinaId, title: n.disciplinaTitle };
           return acc;
         }, {}),
       ).sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
 
   function notasDaCelula(disciplinaId: number, boletimId: number) {
-    return notas.filter((n) => n.disciplina.id === disciplinaId && n.boletim.id === boletimId);
+    return notas.filter((n) => n.disciplinaId === disciplinaId && n.boletimId === boletimId);
   }
 
   function mediaCelula(disciplinaId: number, boletimId: number) {

@@ -305,12 +305,9 @@ export type BoletimDTO = {
   status: string;
   studentId: number;
 };
-export type Boletim = {
-  id: number;
-  period: string;
-  finalAverage: number;
-  status: string;
-  student: { id: number; fullName?: string };
+export type Boletim = BoletimDTO & {
+  situacao: "ABERTO" | "FECHADO";
+  fechadoEm: string | null;
 };
 
 export type NotaDTO = {
@@ -320,13 +317,7 @@ export type NotaDTO = {
   boletimId: number;
   disciplinaId: number;
 };
-export type Nota = {
-  id: number;
-  rate: number;
-  period: string;
-  boletim: { id: number; period: string; finalAverage: number; status: string };
-  disciplina: { id: number; title: string };
-};
+export type Nota = NotaDTO & { disciplinaTitle: string };
 
 export type FrequenciaDTO = {
   studentId: number;
