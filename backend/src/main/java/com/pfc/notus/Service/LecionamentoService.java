@@ -50,12 +50,8 @@ public class LecionamentoService {
         if (!professor.hasRole("ROLE_PROFESSOR")) {
             throw new ConflictException("Usuário informado não é um professor.");
         }
-        if (lecionamentoRepository.existsByTurmaIdAndDisciplinaIdAndProfessorId(
-                turma.getId(), disciplina.getId(), professor.getId())) {
-            throw new ConflictException("Este professor já está associado a esta turma e disciplina.");
-        }
-        if (lecionamentoRepository.existsByProfessorIdAndDisciplinaIdNot(professor.getId(), disciplina.getId())) {
-            throw new ConflictException("Este professor já leciona outra disciplina. Cada professor está associado a uma única disciplina.");
+        if (lecionamentoRepository.existsByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId())) {
+            throw new ConflictException("Esta disciplina já tem professor nesta turma.");
         }
 
         Lecionamento entity = lecionamentoRepository.save(new Lecionamento(turma, disciplina, professor));
