@@ -1,34 +1,44 @@
 package com.pfc.notus.boletim.service;
 
+import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
-import com.pfc.notus.boletim.domain.SituacaoBoletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
+import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
 import com.pfc.notus.boletim.repository.BoletimRepository;
-import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.disciplina.domain.Disciplina;
+import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
-import com.pfc.notus.notificacao.event.BoletimFechadoEvent;
+import com.pfc.notus.nota.domain.Nota;
+import com.pfc.notus.nota.repository.NotaRepository;
+import com.pfc.notus.notificacao.event.NotaFinalLancadaEvent;
+import com.pfc.notus.notificacao.service.NotificacaoService;
+import com.pfc.notus.user.domain.Professor;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.StudentRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.pfc.notus.user.repository.UserRepository;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,11 +46,28 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class BoletimServiceUnitTest {
 
+    private static final String PROFESSOR = "pedro.professor@gmail.com";
+
     @Mock
     private BoletimRepository boletimRepository;
 
     @Mock
+    private NotaRepository notaRepository;
+
+    @Mock
     private StudentRepository studentRepository;
+
+    @Mock
+    private DisiciplinaRepository disciplinaRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private StudentAccessGuardService studentAccessGuardService;
+
+    @Mock
+    private NotificacaoService notificacaoService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -54,133 +81,162 @@ class BoletimServiceUnitTest {
         return aluno;
     }
 
-    private Boletim criarBoletim(Long id, SituacaoBoletim situacao) {
-        Boletim boletim = new Boletim("1º Bimestre", 7.5f);
+    private Disciplina criarDisciplina(Long id, String titulo) {
+        Disciplina disciplina = new Disciplina(titulo, titulo);
+        ReflectionTestUtils.setField(disciplina, "id", id);
+        return disciplina;
+    }
+
+    private Professor criarProfessor() {
+        Professor professor = new Professor("Pedro Professor", PROFESSOR);
+        ReflectionTestUtils.setField(professor, "id", 2L);
+        return professor;
+    }
+
+    private Nota criarNota(float valor, Bimestre bimestre, Student aluno, Disciplina disciplina) {
+        Nota nota = new Nota("Prova", valor, bimestre);
+        nota.setStudent(aluno);
+        nota.setDisciplina(disciplina);
+        return nota;
+    }
+
+    private Boletim criarNotaFinal(Long id, float valor, Bimestre bimestre, Student aluno, Disciplina disciplina) {
+        Boletim boletim = new Boletim(aluno, disciplina, bimestre);
         ReflectionTestUtils.setField(boletim, "id", id);
-        boletim.setStudent(criarAluno(10L));
-        boletim.setSituacao(situacao);
-        if (situacao == SituacaoBoletim.FECHADO) {
-            boletim.setFechadoEm(LocalDateTime.of(2026, 6, 30, 18, 0));
-        }
+        boletim.setNotaFinal(valor);
+        boletim.setLancadoEm(LocalDateTime.of(2026, 4, 30, 18, 0));
         return boletim;
     }
 
     @Test
-    void deveFecharBoletimAbertoRegistrarDataEPublicarEventoDeNotificacao() {
-        // Arrange
-        Boletim boletim = criarBoletim(1L, SituacaoBoletim.ABERTO);
-        when(boletimRepository.findById(1L)).thenReturn(Optional.of(boletim));
-        when(boletimRepository.save(boletim)).thenReturn(boletim);
-        LocalDateTime antes = LocalDateTime.now().minusSeconds(1);
-
-        // Act
-        BoletimDTO resultado = boletimService.fechar(1L);
-
-        // Assert
-        assertEquals(SituacaoBoletim.FECHADO, resultado.situacao());
-        assertNotNull(resultado.fechadoEm());
-        assertTrue(!resultado.fechadoEm().isBefore(antes), "a data de fechamento deve ser a do momento do fechamento");
-        assertEquals(0, resultado.fechadoEm().getNano(), "a data de fechamento é gravada sem frações de segundo");
-        ArgumentCaptor<BoletimFechadoEvent> evento = ArgumentCaptor.forClass(BoletimFechadoEvent.class);
-        verify(eventPublisher).publishEvent(evento.capture());
-        assertEquals(1L, evento.getValue().boletimId());
-    }
-
-    @Test
-    void deveLancarConflitoSemSalvarNemNotificarQuandoBoletimJaEstaFechado() {
-        // Arrange
-        Boletim boletim = criarBoletim(1L, SituacaoBoletim.FECHADO);
-        when(boletimRepository.findById(1L)).thenReturn(Optional.of(boletim));
-
-        // Act
-        ConflictException excecao = assertThrows(ConflictException.class, () -> boletimService.fechar(1L));
-
-        // Assert
-        assertEquals("Boletim já está fechado", excecao.getMessage());
-        verify(boletimRepository, never()).save(any());
-        verify(eventPublisher, never()).publishEvent(any());
-    }
-
-    @Test
-    void deveLancarExcecaoQuandoBoletimAFecharNaoExiste() {
-        // Arrange
-        when(boletimRepository.findById(99L)).thenReturn(Optional.empty());
-
-        // Act
-        ResourceNotFoundException excecao = assertThrows(ResourceNotFoundException.class,
-                () -> boletimService.fechar(99L));
-
-        // Assert
-        assertEquals("Boletim não encontrado com o id: 99", excecao.getMessage());
-        verify(eventPublisher, never()).publishEvent(any());
-    }
-
-    @Test
-    void deveReabrirBoletimFechadoLimparDataDeFechamentoSemNotificar() {
-        // Arrange
-        Boletim boletim = criarBoletim(1L, SituacaoBoletim.FECHADO);
-        when(boletimRepository.findById(1L)).thenReturn(Optional.of(boletim));
-        when(boletimRepository.save(boletim)).thenReturn(boletim);
-
-        // Act
-        BoletimDTO resultado = boletimService.reabrir(1L);
-
-        // Assert
-        assertEquals(SituacaoBoletim.ABERTO, resultado.situacao());
-        assertNull(resultado.fechadoEm());
-        assertEquals(7.5f, resultado.finalAverage(), "reabrir não pode mexer na média já calculada");
-        verify(eventPublisher, never()).publishEvent(any());
-    }
-
-    @Test
-    void deveLancarConflitoAoReabrirBoletimQueJaEstaAberto() {
-        // Arrange
-        Boletim boletim = criarBoletim(1L, SituacaoBoletim.ABERTO);
-        when(boletimRepository.findById(1L)).thenReturn(Optional.of(boletim));
-
-        // Act
-        ConflictException excecao = assertThrows(ConflictException.class, () -> boletimService.reabrir(1L));
-
-        // Assert
-        assertEquals("Boletim já está aberto", excecao.getMessage());
-        verify(boletimRepository, never()).save(any());
-    }
-
-    @Test
-    void deveCriarBoletimAbertoComMediaZeroMesmoQueOPedidoInformeOutraMedia() {
-        // Arrange
+    void deveMontarOBoletimComMediaSugeridaENotaFinalPorDisciplinaEBimestre() {
         Student aluno = criarAluno(10L);
-        BoletimDTO pedido = new BoletimDTO(null, "2º Bimestre", 9.9f, "EM ANDAMENTO", 10L, SituacaoBoletim.FECHADO, null);
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        Disciplina portugues = criarDisciplina(6L, "Português");
+        when(notaRepository.findByStudentIdOrderByIdAsc(10L)).thenReturn(List.of(
+                criarNota(8f, Bimestre.PRIMEIRO, aluno, matematica),
+                criarNota(9f, Bimestre.PRIMEIRO, aluno, matematica),
+                criarNota(6f, Bimestre.SEGUNDO, aluno, matematica),
+                criarNota(7f, Bimestre.PRIMEIRO, aluno, portugues)));
+        when(boletimRepository.findByStudentId(10L))
+                .thenReturn(List.of(criarNotaFinal(1L, 9.5f, Bimestre.PRIMEIRO, aluno, matematica)));
+
+        List<BoletimDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
+
+        assertEquals(3, resultado.size());
+        assertEquals("Matemática", resultado.get(0).disciplinaTitle());
+        assertEquals(Bimestre.PRIMEIRO, resultado.get(0).bimestre());
+        assertEquals(8.5f, resultado.get(0).mediaSugerida());
+        assertEquals(9.5f, resultado.get(0).notaFinal());
+        assertEquals(1L, resultado.get(0).id());
+        assertEquals(Bimestre.SEGUNDO, resultado.get(1).bimestre());
+        assertEquals(6f, resultado.get(1).mediaSugerida());
+        assertNull(resultado.get(1).notaFinal());
+        assertNull(resultado.get(1).id());
+        assertEquals("Português", resultado.get(2).disciplinaTitle());
+        assertEquals(7f, resultado.get(2).mediaSugerida());
+        verify(studentAccessGuardService).assertCanView(10L, PROFESSOR);
+    }
+
+    @Test
+    void deveLancarANotaFinalComAMediaSugeridaEAvisarOResponsavel() {
+        Student aluno = criarAluno(10L);
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.empty());
         when(boletimRepository.save(any(Boletim.class))).thenAnswer(invocacao -> {
             Boletim salvo = invocacao.getArgument(0);
-            ReflectionTestUtils.setField(salvo, "id", 7L);
+            ReflectionTestUtils.setField(salvo, "id", 50L);
             return salvo;
         });
+        when(notaRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO))
+                .thenReturn(List.of(criarNota(7f, Bimestre.PRIMEIRO, aluno, matematica), criarNota(8f, Bimestre.PRIMEIRO, aluno, matematica)));
 
-        // Act
-        BoletimDTO resultado = boletimService.save(pedido);
+        BoletimDTO resultado = boletimService.lancarNotaFinal(
+                new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 8.5f), PROFESSOR);
 
-        // Assert
-        assertEquals(7L, resultado.id());
-        assertEquals(0f, resultado.finalAverage(), "a média começa em zero e só muda quando notas são lançadas");
-        assertEquals(SituacaoBoletim.ABERTO, resultado.situacao(), "todo boletim novo nasce aberto");
-        assertNull(resultado.fechadoEm());
-        assertEquals(10L, resultado.studentId());
+        assertEquals(50L, resultado.id());
+        assertEquals(8.5f, resultado.notaFinal());
+        assertEquals(7.5f, resultado.mediaSugerida());
+        assertNotNull(resultado.lancadoEm());
+        verify(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
+        verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L));
     }
 
     @Test
-    void deveLancarExcecaoSemSalvarQuandoAlunoDoBoletimNaoExiste() {
-        // Arrange
-        BoletimDTO pedido = new BoletimDTO(null, "2º Bimestre", 0f, "EM ANDAMENTO", 99L, null, null);
-        when(studentRepository.findById(99L)).thenReturn(Optional.empty());
+    void deveAtualizarANotaFinalQuandoJaFoiLancadaNoBimestre() {
+        Student aluno = criarAluno(10L);
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        Boletim existente = criarNotaFinal(50L, 6f, Bimestre.PRIMEIRO, aluno, matematica);
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.of(existente));
+        when(boletimRepository.save(existente)).thenReturn(existente);
 
-        // Act
-        EntityNotFoundException excecao = assertThrows(EntityNotFoundException.class,
-                () -> boletimService.save(pedido));
+        BoletimDTO resultado = boletimService.lancarNotaFinal(
+                new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 7f), PROFESSOR);
 
-        // Assert
-        assertEquals("Aluno não encontrado com o id: 99", excecao.getMessage());
+        assertEquals(50L, resultado.id());
+        assertEquals(7f, resultado.notaFinal());
+        assertNull(resultado.mediaSugerida());
+    }
+
+    @Test
+    void deveRecusarNotaFinalForaDoIntervalo() {
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 10.5f), PROFESSOR));
+
+        assertEquals("A nota final deve estar entre 0 e 10.", excecao.getMessage());
+        verify(studentRepository, never()).findById(anyLong());
         verify(boletimRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRecusarNotaFinalSemBimestre() {
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, null, 8f), PROFESSOR));
+
+        assertEquals("Informe o bimestre da nota final.", excecao.getMessage());
+        verify(boletimRepository, never()).save(any());
+    }
+
+    @Test
+    void deveBloquearNotaFinalQuandoProfessorNaoLecionaADisciplina() {
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(criarAluno(10L)));
+        doThrow(new AccessDeniedException("Sem permissão para lançar dados desta disciplina para este aluno."))
+                .when(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
+
+        AccessDeniedException excecao = assertThrows(AccessDeniedException.class,
+                () -> boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 8f), PROFESSOR));
+
+        assertEquals("Sem permissão para lançar dados desta disciplina para este aluno.", excecao.getMessage());
+        verify(boletimRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void deveRemoverANotaFinalECancelarOAvisoAindaNaoEnviado() {
+        Boletim boletim = criarNotaFinal(50L, 8f, Bimestre.PRIMEIRO, criarAluno(10L), criarDisciplina(5L, "Matemática"));
+        when(boletimRepository.findById(50L)).thenReturn(Optional.of(boletim));
+
+        boletimService.removerNotaFinal(50L, PROFESSOR);
+
+        verify(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
+        verify(boletimRepository).delete(boletim);
+        verify(notificacaoService).cancelarPorReferencia(NotificacaoService.REF_BOLETIM, 50L, "Nota final removida antes do envio");
+    }
+
+    @Test
+    void deveLancarExcecaoAoRemoverNotaFinalInexistente() {
+        when(boletimRepository.findById(99L)).thenReturn(Optional.empty());
+
+        ResourceNotFoundException excecao = assertThrows(ResourceNotFoundException.class,
+                () -> boletimService.removerNotaFinal(99L, PROFESSOR));
+
+        assertEquals("Nota final não encontrada com o id: 99", excecao.getMessage());
+        verify(boletimRepository, never()).delete(any());
     }
 }

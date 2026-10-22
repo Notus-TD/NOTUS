@@ -69,7 +69,6 @@ public class NotificacaoService {
     @Autowired
     private StudentRepository studentRepository;
 
-    /** Chamado pelo NotificacaoListener depois do commit da falta, numa transação própria. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notificarFalta(Long faltaId, int totalFaltasNaDisciplina) {
         FaltaDomain falta = faltaRepository.findById(faltaId).orElse(null);
@@ -92,30 +91,28 @@ public class NotificacaoService {
         criar(TipoNotificacao.FALTA, responsavel, aluno, REF_FALTA, falta.getId(), chave, variaveis);
     }
 
-    /** Chamado pelo NotificacaoListener depois do commit do fechamento, numa transação própria. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void notificarBoletimFechado(Long boletimId) {
+    public void notificarNotaFinal(Long boletimId) {
         Boletim boletim = boletimRepository.findById(boletimId).orElse(null);
         if (boletim == null) {
-            log.warn("Boletim {} não encontrado ao criar a notificação", boletimId);
+            log.warn("Nota final {} não encontrada ao criar a notificação", boletimId);
             return;
         }
         Student aluno = boletim.getStudent();
         Responsible responsavel = aluno.getResponsible();
         if (!elegivel(responsavel, aluno)) return;
 
-        String chave = "BOLETIM:%d:%s".formatted(boletim.getId(), boletim.getFechadoEm());
-        float media = boletim.getFinalAverage() == null ? 0f : boletim.getFinalAverage();
-        List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.BOLETIM_FECHADO,
+        String chave = "NOTA_FINAL:%d:%s".formatted(boletim.getId(), boletim.getLancadoEm());
+        List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.NOTA_FINAL,
                 primeiroNome(responsavel.getName()),
                 primeiroNome(aluno.getFullName()),
-                boletim.getPeriod(),
-                String.format(PT_BR, "%.1f", media));
+                boletim.getDisciplina().getTitle(),
+                boletim.getBimestre().getDescricao(),
+                String.format(PT_BR, "%.1f", boletim.getNotaFinal()));
 
-        criar(TipoNotificacao.BOLETIM_FECHADO, responsavel, aluno, REF_BOLETIM, boletim.getId(), chave, variaveis);
+        criar(TipoNotificacao.NOTA_FINAL, responsavel, aluno, REF_BOLETIM, boletim.getId(), chave, variaveis);
     }
 
-    /** Chamado pelo NotificacaoListener depois do commit da atividade, numa transação própria. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notificarAtividadePublicada(Long atividadeId) {
         Atividade atividade = atividadeRepository.findById(atividadeId).orElse(null);
@@ -207,13 +204,11 @@ public class NotificacaoService {
     public String motivoBloqueio(Responsible responsavel, Student aluno) {
         if (responsavel == null) return "Aluno sem responsável cadastrado";
         if (!responsavel.isAtivo()) return "Responsável inativo ou anonimizado";
-        // O aceite dos Termos e da Política no primeiro acesso é a autorização para receber os avisos.
         if (responsavel.getTermsAcceptedAt() == null) return "Responsável ainda não aceitou os termos";
         if (aluno != null && aluno.getStatusMatricula() != StatusMatricula.ATIVA) return "Matrícula do aluno não está ativa";
         return null;
     }
 
-    /** A mensagem passa pela Meta: só o primeiro nome, que basta para o responsável identificar o aluno (minimização, LGPD). */
     private static String primeiroNome(String nomeCompleto) {
         if (nomeCompleto == null || nomeCompleto.isBlank()) return nomeCompleto;
         return nomeCompleto.trim().split("\\s+")[0];

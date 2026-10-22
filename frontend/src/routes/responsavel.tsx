@@ -55,7 +55,7 @@ const secoes: SecaoPainel<SecaoId>[] = [
   {
     id: "notas",
     label: "Boletim completo",
-    descricao: "Notas por matéria e período",
+    descricao: "Nota final por matéria e bimestre",
     icon: BarChart3,
     termos: "boletim nota notas prova avaliacao media periodo",
   },
