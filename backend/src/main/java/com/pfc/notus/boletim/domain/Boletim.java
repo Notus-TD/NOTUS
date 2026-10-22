@@ -1,73 +1,57 @@
 package com.pfc.notus.boletim.domain;
 
-import com.pfc.notus.nota.domain.Nota;
+import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.domain.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
-@Table(name ="tb_boletim")
+@Table(name = "tb_boletim",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "disciplina_id", "bimestre"}))
 @NoArgsConstructor
 public class Boletim {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Getter
     private Long id;
-    @Getter @Setter
-    private String period;
-    @Getter @Setter
-    private Float finalAverage;
-    @Getter @Setter
-    private String status;
 
     @Enumerated(EnumType.STRING)
-    @ColumnDefault("'ABERTO'")
+    @Column(nullable = false)
     @Getter @Setter
-    private SituacaoBoletim situacao = SituacaoBoletim.ABERTO;
+    private Bimestre bimestre;
 
+    @Column(nullable = false)
     @Getter @Setter
-    private LocalDateTime fechadoEm;
+    private Float notaFinal;
+
+    @Column(nullable = false)
+    @Getter @Setter
+    private LocalDateTime lancadoEm;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     @Getter @Setter
     private Student student;
 
-    @OneToMany(mappedBy = "boletim", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Getter
-    private List<Nota> notas = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "disciplina_id", nullable = false)
+    @Getter @Setter
+    private Disciplina disciplina;
 
-    public Boletim(String period, Float finalAverage){
-        this.period = period;
-        this.finalAverage = finalAverage;
-        this.status = "Status";
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lancado_por_id", nullable = false)
+    @Getter @Setter
+    private User lancadoPor;
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public Float getFinalAverage() {
-        return finalAverage;
-    }
-
-    public void setFinalAverage(Float finalAverage) {
-        this.finalAverage = finalAverage;
+    public Boletim(Student student, Disciplina disciplina, Bimestre bimestre) {
+        this.student = student;
+        this.disciplina = disciplina;
+        this.bimestre = bimestre;
     }
 }

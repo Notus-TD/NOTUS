@@ -1,25 +1,22 @@
 package com.pfc.notus.nota.service;
 
-import com.pfc.notus.boletim.domain.Boletim;
-import com.pfc.notus.boletim.domain.SituacaoBoletim;
-import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
-import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.RegraNegocioException;
+import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
+import com.pfc.notus.nota.dto.NotaRequestDTO;
+import com.pfc.notus.nota.mapper.NotaMapper;
 import com.pfc.notus.nota.repository.NotaRepository;
+import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class NotaService {
@@ -31,7 +28,7 @@ public class NotaService {
     private NotaRepository notaRepository;
 
     @Autowired
-    private BoletimRepository boletimRepository;
+    private StudentRepository studentRepository;
 
     @Autowired
     private DisiciplinaRepository disciplinaRepository;
@@ -39,169 +36,78 @@ public class NotaService {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
-    @Transactional
-    public List<NotaDTO> getAllNota(){return toDTOs(notaRepository.findAll());}
-
-    @Transactional
+    @Transactional(readOnly = true)
     public NotaDTO getById(Long id, String requesterEmail) {
-        Nota entity = notaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
-        studentAccessGuardService.assertCanView(entity.getBoletim().getStudent().getId(), requesterEmail);
-        return toDTO(entity);
+        Nota entity = buscarNota(id);
+        studentAccessGuardService.assertCanView(entity.getStudent().getId(), requesterEmail);
+        return NotaMapper.toDto(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<NotaDTO> getByStudent(Long studentId, String requesterEmail) {
+        studentAccessGuardService.assertCanView(studentId, requesterEmail);
+        return notaRepository.findByStudentIdOrderByIdAsc(studentId).stream()
+                .map(NotaMapper::toDto)
+                .toList();
     }
 
     @Transactional
-    public List<NotaDTO> getByBoletim(Long boletimId, String requesterEmail) {
-        Boletim boletim = boletimRepository.findById(boletimId)
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
-        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return toDTOs(notaRepository.findByBoletimId(boletimId));
+    public NotaDTO save(NotaRequestDTO dto, String requesterEmail) {
+        validarAvaliacao(dto);
+        Student student = buscarAluno(dto.studentId());
+        studentAccessGuardService.assertCanTeach(student.getId(), dto.disciplinaId(), requesterEmail);
+        Disciplina disciplina = buscarDisciplina(dto.disciplinaId());
+
+        Nota entity = notaRepository.save(NotaMapper.toEntity(dto, student, disciplina));
+        return NotaMapper.toDto(entity);
     }
 
     @Transactional
-    public List<NotaDTO> getByBoletimAndPeriod(Long boletimId, String period, String requesterEmail) {
-        Boletim boletim = boletimRepository.findById(boletimId)
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
-        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return toDTOs(notaRepository.findByBoletimIdAndPeriod(boletimId, period));
-    }
-
-    @Transactional
-    public List<NotaDTO> getByDisciplina(Long disciplinaId) {
-        return toDTOs(notaRepository.findByDisciplinaId(disciplinaId));
-    }
-
-    @Transactional
-    public List<NotaDTO> getByDisciplinaAndPeriod(Long disciplinaId, String period) {
-        return toDTOs(notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period));
-    }
-
-    @Transactional
-    public Page<NotaDTO> getByBoletimPaged(Long boletimId, String requesterEmail, Pageable pageable) {
-        Boletim boletim = boletimRepository.findById(boletimId)
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
-        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return notaRepository.findByBoletimId(boletimId, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public Page<NotaDTO> getByBoletimAndPeriodPaged(Long boletimId, String period, String requesterEmail, Pageable pageable) {
-        Boletim boletim = boletimRepository.findById(boletimId)
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
-        studentAccessGuardService.assertCanView(boletim.getStudent().getId(), requesterEmail);
-        return notaRepository.findByBoletimIdAndPeriod(boletimId, period, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public Page<NotaDTO> getByDisciplinaPaged(Long disciplinaId, Pageable pageable) {
-        return notaRepository.findByDisciplinaId(disciplinaId, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public Page<NotaDTO> getByDisciplinaAndPeriodPaged(Long disciplinaId, String period, Pageable pageable) {
-        return notaRepository.findByDisciplinaIdAndPeriod(disciplinaId, period, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public NotaDTO save(NotaDTO dto, String requesterEmail) {
-        validarValorDaNota(dto.rate());
-        Boletim boletim = boletimRepository.findById(dto.boletimId())
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + dto.boletimId()));
-        studentAccessGuardService.assertCanTeach(boletim.getStudent().getId(), dto.disciplinaId(), requesterEmail);
-        garantirBoletimAberto(boletim);
-        Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
-                .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
-        Nota entity = new Nota();
-        entity.setRate(dto.rate());
-        entity.setPeriod(dto.period());
-        entity.setBoletim(boletim);
-        entity.setDisciplina(disciplina);
-
-        entity = notaRepository.save(entity);
-        recalcularMedia(boletim.getId());
-        return toDTO(entity);
-    }
-
-    @Transactional
-    public NotaDTO update(Long id, NotaDTO dto, String requesterEmail) {
-        validarValorDaNota(dto.rate());
-        Nota entity = notaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
-        // precisa poder lançar tanto na nota atual quanto no destino da alteração
-        studentAccessGuardService.assertCanTeach(entity.getBoletim().getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
-        Long boletimAntigoId = entity.getBoletim().getId();
-        Boletim boletim = boletimRepository.findById(dto.boletimId())
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + dto.boletimId()));
-        studentAccessGuardService.assertCanTeach(boletim.getStudent().getId(), dto.disciplinaId(), requesterEmail);
-        // nem o boletim de origem nem o de destino podem estar fechados
-        garantirBoletimAberto(entity.getBoletim());
-        garantirBoletimAberto(boletim);
-        Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
-                .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
-
-        entity.setRate(dto.rate());
-        entity.setPeriod(dto.period());
-        entity.setBoletim(boletim);
-        entity.setDisciplina(disciplina);
-
-        entity = notaRepository.save(entity);
-        recalcularMedia(boletim.getId());
-        if (!boletimAntigoId.equals(boletim.getId())) {
-            recalcularMedia(boletimAntigoId);
+    public NotaDTO update(Long id, NotaRequestDTO dto, String requesterEmail) {
+        validarAvaliacao(dto);
+        Nota entity = buscarNota(id);
+        studentAccessGuardService.assertCanTeach(entity.getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
+        if (!entity.getStudent().getId().equals(dto.studentId()) || !entity.getDisciplina().getId().equals(dto.disciplinaId())) {
+            throw new RegraNegocioException("Não é possível trocar o aluno ou a disciplina de uma nota.");
         }
-        return toDTO(entity);
+
+        entity.setDescricao(dto.descricao().trim());
+        entity.setRate(dto.rate());
+        entity.setBimestre(dto.bimestre());
+        return NotaMapper.toDto(notaRepository.save(entity));
     }
 
     @Transactional
     public void delete(Long id, String requesterEmail) {
-        Nota entity = notaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Nota não encontrada com o id: " + id));
-        studentAccessGuardService.assertCanTeach(entity.getBoletim().getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
-        garantirBoletimAberto(entity.getBoletim());
-        Long boletimId = entity.getBoletim().getId();
-        notaRepository.deleteById(id);
-        recalcularMedia(boletimId);
+        Nota entity = buscarNota(id);
+        studentAccessGuardService.assertCanTeach(entity.getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
+        notaRepository.delete(entity);
     }
 
-    private void validarValorDaNota(Float rate) {
-        if (rate == null || rate.isNaN() || rate < NOTA_MINIMA || rate > NOTA_MAXIMA) {
+    private void validarAvaliacao(NotaRequestDTO dto) {
+        if (dto.descricao() == null || dto.descricao().isBlank()) {
+            throw new RegraNegocioException("Informe a descrição da avaliação.");
+        }
+        if (dto.rate() == null || dto.rate().isNaN() || dto.rate() < NOTA_MINIMA || dto.rate() > NOTA_MAXIMA) {
             throw new RegraNegocioException("A nota deve estar entre 0 e 10.");
         }
-    }
-
-    private void garantirBoletimAberto(Boletim boletim) {
-        if (boletim.getSituacao() == SituacaoBoletim.FECHADO) {
-            throw new ConflictException("Boletim fechado: reabra o boletim para alterar as notas.");
+        if (dto.bimestre() == null) {
+            throw new RegraNegocioException("Informe o bimestre da avaliação.");
         }
     }
 
-    /**
-     * A média do boletim é a média das médias de cada matéria (não a média
-     * bruta de todas as notas juntas), para que uma matéria com mais notas
-     * lançadas não pese mais que as outras.
-     */
-    private void recalcularMedia(Long boletimId) {
-        Boletim boletim = boletimRepository.findById(boletimId)
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId));
-        List<Nota> notas = notaRepository.findByBoletimId(boletimId);
-
-        List<Double> mediasPorDisciplina = notas.stream()
-                .collect(Collectors.groupingBy(n -> n.getDisciplina().getId(), Collectors.averagingDouble(Nota::getRate)))
-                .values()
-                .stream()
-                .collect(Collectors.toList());
-
-        float media = (float) mediasPorDisciplina.stream().mapToDouble(Double::doubleValue).average().orElse(0);
-        boletim.setFinalAverage(media);
-        boletimRepository.save(boletim);
+    private Nota buscarNota(Long id) {
+        return notaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Nota não encontrada com o id: " + id));
     }
 
-    private List<NotaDTO> toDTOs(List<Nota> notas) {
-        return notas.stream().map(this::toDTO).toList();
+    private Student buscarAluno(Long id) {
+        return studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + id));
     }
 
-    private NotaDTO toDTO(Nota entity) {
-        return new NotaDTO(entity.getId(), entity.getRate(), entity.getPeriod(), entity.getBoletim().getId(), entity.getDisciplina().getId(),
-                entity.getDisciplina().getTitle());
+    private Disciplina buscarDisciplina(Long id) {
+        return disciplinaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + id));
     }
 }

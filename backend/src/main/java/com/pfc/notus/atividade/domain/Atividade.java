@@ -1,6 +1,7 @@
 package com.pfc.notus.atividade.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.turma.domain.Turma;
 import jakarta.persistence.*;
@@ -24,15 +25,15 @@ public class Atividade {
     private String title;
     @Getter @Setter
     private String content;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Getter @Setter
-    private String status;
+    private Bimestre bimestre;
     @Getter @Setter
     private LocalDate prazo;
     @Getter @Setter
     private LocalDateTime publicadaEm;
 
-    // as respostas da API usam AtividadeDTO; sem @JsonIgnore a disciplina serializaria
-    // a lista de atividades, que serializaria a disciplina de novo, sem fim
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn( name = "disciplina_id", nullable = false)
@@ -48,6 +49,5 @@ public class Atividade {
     public Atividade(String title, String content) {
         this.title = title;
         this.content = content;
-        this.status = "Status";
     }
 }

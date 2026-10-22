@@ -344,7 +344,7 @@ function Notas() {
   return (
     <Secao
       titulo="Boletim"
-      descricao="Notas lançadas pelos professores, por matéria e por período."
+      descricao="Nota final lançada pelo professor em cada matéria, por bimestre."
     >
       {studentId ? (
         <div className="space-y-3">

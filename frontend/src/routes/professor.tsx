@@ -19,6 +19,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ApiError,
@@ -26,19 +33,26 @@ import {
   deleteAtividade,
   deleteFalta,
   getAtividadesDaTurma,
+  getEntregasDaAtividade,
   getFaltasByStudent,
   getMeuPerfil,
   getMinhasTurmas,
   getStudentsByTurma,
+  marcarEntrega,
   publicarAtividade,
   registrarAula,
   type AtividadeDTO,
+  type Bimestre,
   type FaltaDTO,
+  type StatusEntrega,
   type StudentMinDTO,
   type TurmaComDisciplinasDTO,
 } from "@/lib/api";
+import { BIMESTRES, bimestreAtual, nomeBimestre } from "@/lib/bimestres";
 import { normalizar } from "@/lib/busca";
 import { formatarData, hojeLocal } from "@/lib/datas";
+import { ORDEM_STATUS_ENTREGA, STATUS_ENTREGA } from "@/lib/entregas";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/professor")({
   head: () => ({
@@ -100,6 +114,7 @@ function PainelProfessor() {
   const [secao, setSecao] = useState<SecaoId>("chamada");
   const [minhasTurmas, setMinhasTurmas] = useState<TurmaComDisciplinasDTO[] | null>(null);
   const [turmaId, setTurmaId] = useState<number | null>(null);
+  const [disciplinaId, setDisciplinaId] = useState<number | null>(null);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
   const [nomeProfessor, setNomeProfessor] = useState<string | null>(null);
 
@@ -125,9 +140,10 @@ function PainelProfessor() {
   }, []);
 
   const turmaAtual = minhasTurmas?.find((t) => t.turmaId === turmaId) ?? null;
-  // Cada professor leciona uma única disciplina (regra do LecionamentoService),
-  // então a disciplina vem da turma escolhida e não é mais selecionada na tela.
-  const disciplina: DisciplinaRef | null = turmaAtual?.disciplinas[0] ?? null;
+  const disciplina: DisciplinaRef | null =
+    turmaAtual?.disciplinas.find((d) => d.id === disciplinaId) ??
+    turmaAtual?.disciplinas[0] ??
+    null;
 
   const termo = normalizar(busca.trim());
   const turmasFiltradas = (minhasTurmas ?? []).filter(
@@ -227,10 +243,26 @@ function PainelProfessor() {
             Nenhuma disciplina associada a você nesta turma. Procure a secretaria da escola.
           </p>
         )}
+        {turmaAtual && disciplina && turmaAtual.disciplinas.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Disciplina">
+            <span className="text-base font-semibold text-foreground">Disciplina:</span>
+            {turmaAtual.disciplinas.map((d) => (
+              <Button
+                key={d.id}
+                variant={d.id === disciplina.id ? "default" : "outline"}
+                aria-pressed={d.id === disciplina.id}
+                className="min-h-11 text-base"
+                onClick={() => setDisciplinaId(d.id)}
+              >
+                {d.title}
+              </Button>
+            ))}
+          </div>
+        )}
 
         {turmaAtual && disciplina && secao === "chamada" && (
           <Chamada
-            key={turmaAtual.turmaId}
+            key={`${turmaAtual.turmaId}-${disciplina.id}`}
             turmaId={turmaAtual.turmaId}
             turmaName={turmaAtual.turmaName}
             disciplina={disciplina}
@@ -238,7 +270,7 @@ function PainelProfessor() {
         )}
         {turmaAtual && disciplina && secao === "notas" && (
           <NotasDaTurma
-            key={turmaAtual.turmaId}
+            key={`${turmaAtual.turmaId}-${disciplina.id}`}
             turmaId={turmaAtual.turmaId}
             turmaName={turmaAtual.turmaName}
             disciplina={disciplina}
@@ -246,7 +278,7 @@ function PainelProfessor() {
         )}
         {turmaAtual && disciplina && secao === "atividades" && (
           <Atividades
-            key={turmaAtual.turmaId}
+            key={`${turmaAtual.turmaId}-${disciplina.id}`}
             turmaId={turmaAtual.turmaId}
             turmaName={turmaAtual.turmaName}
             disciplina={disciplina}
@@ -269,7 +301,6 @@ function Chamada({
   const hoje = hojeLocal();
   const [data, setData] = useState(hoje);
   const [alunos, setAlunos] = useState<StudentMinDTO[] | null>(null);
-  // Faltas já gravadas no dia escolhido, por aluno: base para marcar e para corrigir a chamada.
   const [faltasDoDia, setFaltasDoDia] = useState<Record<number, FaltaDTO[]> | null>(null);
   const [faltou, setFaltou] = useState<Record<number, boolean>>({});
   const [salvando, setSalvando] = useState(false);
@@ -565,8 +596,8 @@ function NotasDaTurma({
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Clique em uma nota para ver, editar ou lançar avaliações. A média geral de cada
-              período é a média das médias das matérias.
+              Clique em um bimestre para lançar as avaliações e a nota final. O valor tracejado é a
+              média sugerida das avaliações.
             </p>
             <BoletimMatriz
               studentId={selecionado.userId}
@@ -596,14 +627,15 @@ function Atividades({
   const [titulo, setTitulo] = useState("");
   const [corpo, setCorpo] = useState("");
   const [prazo, setPrazo] = useState("");
+  const [bimestre, setBimestre] = useState<Bimestre>(bimestreAtual());
   const [publicando, setPublicando] = useState(false);
+  const [entregasAbertas, setEntregasAbertas] = useState<number | null>(null);
 
   useEffect(() => {
     let ativo = true;
     getAtividadesDaTurma(turmaId)
       .then((lista) => {
         if (!ativo) return;
-        // mais recentes primeiro
         setAtividades([...lista].sort((a, b) => b.publicadaEm.localeCompare(a.publicadaEm)));
       })
       .catch(
@@ -627,11 +659,18 @@ function Atividades({
     }
     setPublicando(true);
     try {
-      await publicarAtividade({ title: titulo.trim(), content: corpo.trim(), prazo, turmaId });
+      await publicarAtividade({
+        title: titulo.trim(),
+        content: corpo.trim(),
+        bimestre,
+        prazo,
+        turmaId,
+        disciplinaId: disciplina.id,
+      });
       setTitulo("");
       setCorpo("");
       setPrazo("");
-      toast.success(`Atividade publicada para o ${turmaName}.`);
+      toast.success(`Atividade de ${disciplina.title} publicada para o ${turmaName}.`);
       setVersao((v) => v + 1);
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Erro ao publicar a atividade.");
@@ -639,6 +678,8 @@ function Atividades({
       setPublicando(false);
     }
   }
+
+  const doProfessor = atividades?.filter((a) => a.disciplinaId === disciplina.id) ?? null;
 
   async function excluir(atividade: AtividadeDTO) {
     try {
@@ -687,18 +728,37 @@ function Atividades({
                 className="text-lg"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="prazo" className="block text-lg font-semibold text-foreground">
-                Prazo de entrega
-              </label>
-              <Input
-                id="prazo"
-                type="date"
-                value={prazo}
-                min={hoje}
-                onChange={(e) => setPrazo(e.target.value)}
-                className="h-12 w-48 text-lg"
-              />
+            <div className="flex flex-wrap gap-4">
+              <div className="space-y-2">
+                <label htmlFor="bimestre" className="block text-lg font-semibold text-foreground">
+                  Bimestre
+                </label>
+                <Select value={bimestre} onValueChange={(v) => setBimestre(v as Bimestre)}>
+                  <SelectTrigger id="bimestre" className="h-12 w-48 text-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BIMESTRES.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="prazo" className="block text-lg font-semibold text-foreground">
+                  Prazo de entrega
+                </label>
+                <Input
+                  id="prazo"
+                  type="date"
+                  value={prazo}
+                  min={hoje}
+                  onChange={(e) => setPrazo(e.target.value)}
+                  className="h-12 w-48 text-lg"
+                />
+              </div>
             </div>
             <Button onClick={publicar} disabled={publicando} className="min-h-12 px-6 text-lg">
               {publicando ? "Publicando..." : "Publicar para a turma"}
@@ -712,60 +772,162 @@ function Atividades({
           {!erro && atividades === null && (
             <p className="text-base text-muted-foreground">Carregando atividades…</p>
           )}
-          {atividades?.length === 0 && (
+          {doProfessor?.length === 0 && (
             <p className="text-base text-muted-foreground">
-              Nenhuma atividade publicada para esta turma ainda.
+              Nenhuma atividade de {disciplina.title} publicada para esta turma ainda.
             </p>
           )}
           <div className="grid gap-4">
-            {atividades?.map((a) => (
+            {doProfessor?.map((a) => (
               <Card key={a.id}>
                 <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
                   <div>
                     <CardTitle className="text-xl">{a.title}</CardTitle>
                     <CardDescription className="text-base">
-                      {a.disciplinaTitle} · prazo {formatarData(a.prazo)}
+                      {nomeBimestre(a.bimestre)} · prazo {formatarData(a.prazo)}
                       {a.prazo < hoje && " (encerrado)"}
                     </CardDescription>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`Excluir ${a.title}`}
-                        title="Excluir"
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir esta atividade?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          "{a.title}" deixa de aparecer para os alunos do {turmaName}. Atividades
-                          que já têm entregas não podem ser excluídas.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => excluir(a)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="outline"
+                      className="min-h-9 text-sm"
+                      aria-expanded={entregasAbertas === a.id}
+                      onClick={() => setEntregasAbertas(entregasAbertas === a.id ? null : a.id)}
+                    >
+                      {entregasAbertas === a.id ? "Fechar entregas" : "Marcar entregas"}
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Excluir ${a.title}`}
+                          title="Excluir"
                         >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir esta atividade?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            "{a.title}" deixa de aparecer para os alunos do {turmaName}. Atividades
+                            que já têm entregas não podem ser excluídas.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => excluir(a)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </CardHeader>
-                <CardContent className="text-base text-muted-foreground">{a.content}</CardContent>
+                <CardContent className="space-y-4 text-base text-muted-foreground">
+                  <p>{a.content}</p>
+                  {entregasAbertas === a.id && (
+                    <EntregasDaAtividade atividadeId={a.id} turmaId={turmaId} />
+                  )}
+                </CardContent>
               </Card>
             ))}
           </div>
         </div>
       </div>
     </Secao>
+  );
+}
+
+function EntregasDaAtividade({ atividadeId, turmaId }: { atividadeId: number; turmaId: number }) {
+  const [alunos, setAlunos] = useState<StudentMinDTO[] | null>(null);
+  const [status, setStatus] = useState<Record<number, StatusEntrega>>({});
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvandoId, setSalvandoId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    Promise.all([alunosAtivosDaTurma(turmaId), getEntregasDaAtividade(atividadeId)])
+      .then(([lista, entregas]) => {
+        if (!ativo) return;
+        setAlunos(lista);
+        setStatus(
+          Object.fromEntries(entregas.map((e) => [e.studentId, e.status])) as Record<
+            number,
+            StatusEntrega
+          >,
+        );
+      })
+      .catch(
+        (e) =>
+          ativo && setErro(e instanceof ApiError ? e.message : "Erro ao carregar as entregas."),
+      );
+    return () => {
+      ativo = false;
+    };
+  }, [atividadeId, turmaId]);
+
+  async function marcar(studentId: number, novo: StatusEntrega) {
+    setSalvandoId(studentId);
+    try {
+      await marcarEntrega({ atividadeId, studentId, status: novo });
+      setStatus((atual) => ({ ...atual, [studentId]: novo }));
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao marcar a entrega.");
+    } finally {
+      setSalvandoId(null);
+    }
+  }
+
+  const marcados = (alunos ?? []).filter((a) => status[a.userId] !== undefined).length;
+
+  return (
+    <div className="space-y-3 border-t border-border pt-4">
+      {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
+      {!erro && alunos === null && <p className="text-base">Carregando alunos…</p>}
+      {alunos?.length === 0 && <p className="text-base">Nenhum aluno ativo nesta turma.</p>}
+      {alunos && alunos.length > 0 && (
+        <>
+          <p className="text-sm">
+            {marcados} de {alunos.length} aluno(s) marcados.
+          </p>
+          <ul className="divide-y divide-border">
+            {alunos.map((a) => (
+              <li key={a.userId} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                <span className="text-base text-foreground">{a.studentName}</span>
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="group"
+                  aria-label={`Entrega de ${a.studentName}`}
+                >
+                  {ORDEM_STATUS_ENTREGA.map((s) => {
+                    const selecionado = status[a.userId] === s;
+                    return (
+                      <Button
+                        key={s}
+                        size="sm"
+                        variant="outline"
+                        className={cn("min-h-9 text-sm", selecionado && STATUS_ENTREGA[s].classe)}
+                        aria-pressed={selecionado}
+                        disabled={salvandoId === a.userId}
+                        onClick={() => marcar(a.userId, s)}
+                      >
+                        {STATUS_ENTREGA[s].label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }

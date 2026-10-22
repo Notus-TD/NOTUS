@@ -1,184 +1,151 @@
 package com.pfc.notus.boletim.service;
 
-
+import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
-import com.pfc.notus.boletim.domain.SituacaoBoletim;
-import com.pfc.notus.boletim.dto.BoletimComNotasDTO;
 import com.pfc.notus.boletim.dto.BoletimDTO;
+import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
+import com.pfc.notus.boletim.mapper.BoletimMapper;
 import com.pfc.notus.boletim.repository.BoletimRepository;
-import com.pfc.notus.nota.dto.NotaDTO;
-import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.disciplina.domain.Disciplina;
+import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
-import com.pfc.notus.notificacao.event.BoletimFechadoEvent;
+import com.pfc.notus.nota.domain.Nota;
+import com.pfc.notus.nota.repository.NotaRepository;
+import com.pfc.notus.notificacao.event.NotaFinalLancadaEvent;
+import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.StudentRepository;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+import com.pfc.notus.user.repository.UserRepository;
+import com.pfc.notus.user.service.StudentAccessGuardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class BoletimService {
+
+    private static final float NOTA_MINIMA = 0f;
+    private static final float NOTA_MAXIMA = 10f;
 
     @Autowired
     private BoletimRepository boletimRepository;
 
     @Autowired
+    private NotaRepository notaRepository;
+
+    @Autowired
     private StudentRepository studentRepository;
+
+    @Autowired
+    private DisiciplinaRepository disciplinaRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private StudentAccessGuardService studentAccessGuardService;
+
+    @Autowired
+    private NotificacaoService notificacaoService;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    @Transactional
-    public List<BoletimDTO> getAllBoletim() {
-        return toDTOs(boletimRepository.findAll());
-    }
+    @Transactional(readOnly = true)
+    public List<BoletimDTO> getByStudent(Long studentId, String requesterEmail) {
+        studentAccessGuardService.assertCanView(studentId, requesterEmail);
 
-    @Transactional
-    public List<BoletimDTO> getByStudent(Long studentId) {
-        return toDTOs(boletimRepository.findByStudentId(studentId));
-    }
+        List<Nota> notas = notaRepository.findByStudentIdOrderByIdAsc(studentId);
+        List<Boletim> boletins = boletimRepository.findByStudentId(studentId);
 
-    @Transactional
-    public List<BoletimDTO> getByStudentAndPeriod(Long studentId, String period) {
-        return toDTOs(boletimRepository.findByStudentIdAndPeriod(studentId, period));
-    }
+        Map<Long, Disciplina> disciplinas = new HashMap<>();
+        notas.forEach(n -> disciplinas.putIfAbsent(n.getDisciplina().getId(), n.getDisciplina()));
+        boletins.forEach(b -> disciplinas.putIfAbsent(b.getDisciplina().getId(), b.getDisciplina()));
 
-    @Transactional
-    public List<BoletimDTO> getByPeriod(String period) {
-        return toDTOs(boletimRepository.findByPeriod(period));
-    }
+        Map<Celula, Double> medias = notas.stream()
+                .collect(Collectors.groupingBy(n -> new Celula(n.getDisciplina().getId(), n.getBimestre()),
+                        Collectors.averagingDouble(Nota::getRate)));
+        Map<Celula, Boletim> notasFinais = boletins.stream()
+                .collect(Collectors.toMap(b -> new Celula(b.getDisciplina().getId(), b.getBimestre()), Function.identity()));
 
-    @Transactional
-    public Page<BoletimDTO> getByStudentPaged(Long studentId, Pageable pageable) {
-        return boletimRepository.findByStudentId(studentId, pageable).map(this::toDTO);
-    }
+        Set<Celula> celulas = new HashSet<>(medias.keySet());
+        celulas.addAll(notasFinais.keySet());
 
-    @Transactional
-    public Page<BoletimDTO> getByStudentAndPeriodPaged(Long studentId, String period, Pageable pageable) {
-        return boletimRepository.findByStudentIdAndPeriod(studentId, period, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public Page<BoletimDTO> getByPeriodPaged(String period, Pageable pageable) {
-        return boletimRepository.findByPeriod(period, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public List<BoletimDTO> getByStatus(String status) {
-        return toDTOs(boletimRepository.findByStatus(status));
-    }
-
-    @Transactional
-    public Page<BoletimDTO> getByStatusPaged(String status, Pageable pageable) {
-        return boletimRepository.findByStatus(status, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public List<BoletimDTO> getByStudentAndStatus(Long studentId, String status) {
-        return toDTOs(boletimRepository.findByStudentIdAndStatus(studentId, status));
-    }
-
-    @Transactional
-    public Page<BoletimDTO> getByStudentAndStatusPaged(Long studentId, String status, Pageable pageable) {
-        return boletimRepository.findByStudentIdAndStatus(studentId, status, pageable).map(this::toDTO);
-    }
-
-    @Transactional
-    public BoletimDTO getById(Long id) {
-        Boletim entity = boletimRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
-        return toDTO(entity);
-    }
-
-    @Transactional
-    public BoletimComNotasDTO getByIdComNotas(Long id) {
-        Boletim entity = boletimRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
-        return toDTOComNotas(entity);
-    }
-
-    @Transactional
-    public Long getStudentId(Long boletimId) {
-        return boletimRepository.findById(boletimId)
-                .orElseThrow(() -> new EntityNotFoundException("Boletim não encontrado com o id: " + boletimId))
-                .getStudent().getId();
-    }
-
-    @Transactional
-    public BoletimDTO save(BoletimDTO dto) {
-        Student student = studentRepository.findById(dto.studentId())
-                .orElseThrow(() -> new EntityNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
-
-        Boletim entity = new Boletim();
-        entity.setPeriod(dto.period());
-        entity.setFinalAverage(0f);
-        entity.setStatus(dto.status());
-        entity.setSituacao(SituacaoBoletim.ABERTO);
-        entity.setStudent(student);
-
-        entity = boletimRepository.save(entity);
-        return toDTO(entity);
-    }
-
-    @Transactional
-    public BoletimDTO fechar(Long id) {
-        Boletim entity = boletimRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
-        if (entity.getSituacao() == SituacaoBoletim.FECHADO) {
-            throw new ConflictException("Boletim já está fechado");
-        }
-        entity.setSituacao(SituacaoBoletim.FECHADO);
-        entity.setFechadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        entity = boletimRepository.save(entity);
-
-        // A notificação é criada só depois do commit (NotificacaoListener): um erro nela não desfaz o fechamento.
-        eventPublisher.publishEvent(new BoletimFechadoEvent(entity.getId()));
-        return toDTO(entity);
-    }
-
-    @Transactional
-    public BoletimDTO reabrir(Long id) {
-        Boletim entity = boletimRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Boletim não encontrado com o id: " + id));
-        if (entity.getSituacao() != SituacaoBoletim.FECHADO) {
-            throw new ConflictException("Boletim já está aberto");
-        }
-        entity.setSituacao(SituacaoBoletim.ABERTO);
-        entity.setFechadoEm(null);
-        return toDTO(boletimRepository.save(entity));
-    }
-
-    @Transactional
-    public void delete(Long id) {
-        if (!boletimRepository.existsById(id)) {
-            throw  new EntityNotFoundException("Boletim não encontrado com o id: " + id);
-        }
-        boletimRepository.deleteById(id);
-    }
-
-    private List<BoletimDTO> toDTOs(List<Boletim> boletins) {
-        return boletins.stream().map(this::toDTO).toList();
-    }
-
-    private BoletimDTO toDTO(Boletim entity) {
-        return new BoletimDTO(entity.getId(), entity.getPeriod(), entity.getFinalAverage(), entity.getStatus(), entity.getStudent().getId(),
-                entity.getSituacao(), entity.getFechadoEm());
-    }
-
-    private BoletimComNotasDTO toDTOComNotas(Boletim entity) {
-        var notas = entity.getNotas().stream()
-                .map(n -> new NotaDTO(n.getId(), n.getRate(), n.getPeriod(), n.getBoletim().getId(), n.getDisciplina().getId()))
+        return celulas.stream()
+                .sorted(Comparator.comparing((Celula c) -> disciplinas.get(c.disciplinaId()).getTitle())
+                        .thenComparing(Celula::bimestre))
+                .map(c -> montarLinha(studentId, disciplinas.get(c.disciplinaId()), c.bimestre(),
+                        medias.get(c), notasFinais.get(c)))
                 .toList();
-        return new BoletimComNotasDTO(entity.getId(), entity.getPeriod(), entity.getFinalAverage(), entity.getStatus(),
-                entity.getStudent().getId(), entity.getSituacao(), entity.getFechadoEm(), notas);
+    }
+
+    @Transactional
+    public BoletimDTO lancarNotaFinal(NotaFinalRequestDTO dto, String requesterEmail) {
+        if (dto.notaFinal() == null || dto.notaFinal().isNaN() || dto.notaFinal() < NOTA_MINIMA || dto.notaFinal() > NOTA_MAXIMA) {
+            throw new RegraNegocioException("A nota final deve estar entre 0 e 10.");
+        }
+        if (dto.bimestre() == null) {
+            throw new RegraNegocioException("Informe o bimestre da nota final.");
+        }
+        Student student = studentRepository.findById(dto.studentId())
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
+        studentAccessGuardService.assertCanTeach(student.getId(), dto.disciplinaId(), requesterEmail);
+        Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
+        User lancadoPor = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + requesterEmail));
+
+        Boletim entity = boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(student.getId(), disciplina.getId(), dto.bimestre())
+                .orElseGet(() -> new Boletim(student, disciplina, dto.bimestre()));
+        entity.setNotaFinal(dto.notaFinal());
+        entity.setLancadoPor(lancadoPor);
+        entity.setLancadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        entity = boletimRepository.save(entity);
+
+        eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId()));
+        return BoletimMapper.toDto(entity, mediaSugerida(student.getId(), disciplina.getId(), dto.bimestre()));
+    }
+
+    @Transactional
+    public void removerNotaFinal(Long id, String requesterEmail) {
+        Boletim entity = boletimRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Nota final não encontrada com o id: " + id));
+        studentAccessGuardService.assertCanTeach(entity.getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
+
+        boletimRepository.delete(entity);
+        notificacaoService.cancelarPorReferencia(NotificacaoService.REF_BOLETIM, id, "Nota final removida antes do envio");
+    }
+
+    private Float mediaSugerida(Long studentId, Long disciplinaId, Bimestre bimestre) {
+        OptionalDouble media = notaRepository.findByStudentIdAndDisciplinaIdAndBimestre(studentId, disciplinaId, bimestre).stream()
+                .mapToDouble(Nota::getRate)
+                .average();
+        return media.isPresent() ? (float) media.getAsDouble() : null;
+    }
+
+    private BoletimDTO montarLinha(Long studentId, Disciplina disciplina, Bimestre bimestre, Double media, Boletim notaFinal) {
+        Float mediaSugerida = media == null ? null : media.floatValue();
+        if (notaFinal == null) {
+            return BoletimMapper.toDtoSemNotaFinal(studentId, disciplina, bimestre, mediaSugerida);
+        }
+        return BoletimMapper.toDto(notaFinal, mediaSugerida);
+    }
+
+    private record Celula(Long disciplinaId, Bimestre bimestre) {
     }
 }

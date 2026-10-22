@@ -15,10 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * Regras de acesso a dados de alunos. Admin vê tudo; professor só enxerga alunos
- * das turmas em que leciona (tb_lecionamento); aluno e responsável só os próprios.
- */
 @Service
 public class StudentAccessGuardService {
 
@@ -72,7 +68,6 @@ public class StudentAccessGuardService {
         throw new AccessDeniedException("Sem permissão para ver esta turma.");
     }
 
-    /** Lançar nota/falta: professor precisa lecionar a disciplina na turma do aluno. */
     @Transactional(readOnly = true)
     public void assertCanTeach(Long studentId, Long disciplinaId, String requesterEmail) {
         User requester = findRequester(requesterEmail);
@@ -89,6 +84,18 @@ public class StudentAccessGuardService {
     }
 
     @Transactional(readOnly = true)
+    public void assertCanTeachTurma(Long turmaId, Long disciplinaId, String requesterEmail) {
+        User requester = findRequester(requesterEmail);
+
+        if (requester.hasRole("ROLE_ADMIN")) return;
+        if (requester.hasRole("ROLE_PROFESSOR")
+                && lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(requester.getId(), turmaId, disciplinaId)) {
+            return;
+        }
+        throw new AccessDeniedException("Sem permissão para esta disciplina nesta turma.");
+    }
+
+    @Transactional(readOnly = true)
     public void assertCanTeachDisciplina(Long disciplinaId, String requesterEmail) {
         User requester = findRequester(requesterEmail);
 
@@ -100,7 +107,6 @@ public class StudentAccessGuardService {
         throw new AccessDeniedException("Sem permissão para registrar aulas desta disciplina.");
     }
 
-    /** Ids das turmas em que o usuário (professor) leciona. */
     @Transactional(readOnly = true)
     public List<Long> turmaIdsDoProfessor(String requesterEmail) {
         User requester = findRequester(requesterEmail);

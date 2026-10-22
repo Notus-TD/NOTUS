@@ -4,6 +4,8 @@ import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
 import com.pfc.notus.entrega.domain.Entrega;
 import com.pfc.notus.entrega.dto.EntregaDTO;
+import com.pfc.notus.entrega.dto.EntregaRequestDTO;
+import com.pfc.notus.entrega.mapper.EntregaMapper;
 import com.pfc.notus.entrega.repository.EntregaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
@@ -18,10 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/**
- * Entregas são lançadas pelo professor. Ele só enxerga e mexe nas entregas das atividades
- * cuja turma e disciplina leciona, e o aluno precisa ser da turma da atividade.
- */
 @Service
 public class EntregaService {
 
@@ -43,7 +41,7 @@ public class EntregaService {
     @Transactional(readOnly = true)
     public List<EntregaDTO> getDoProfessor(String requesterEmail) {
         return entregaRepository.buscarDoProfessor(buscarUsuario(requesterEmail).getId(), null).stream()
-                .map(this::toDTO)
+                .map(EntregaMapper::toDto)
                 .toList();
     }
 
@@ -51,29 +49,36 @@ public class EntregaService {
     public List<EntregaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
         return entregaRepository.buscarDoProfessor(buscarUsuario(requesterEmail).getId(), studentId).stream()
-                .map(this::toDTO)
+                .map(EntregaMapper::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EntregaDTO> getByAtividade(Long atividadeId, String requesterEmail) {
+        Atividade atividade = buscarAtividade(atividadeId);
+        studentAccessGuardService.assertCanTeachTurma(atividade.getTurma().getId(), atividade.getDisciplina().getId(), requesterEmail);
+        return entregaRepository.findByAtividadeId(atividadeId).stream()
+                .map(EntregaMapper::toDto)
                 .toList();
     }
 
     @Transactional
-    public EntregaDTO save(EntregaDTO dto, String requesterEmail) {
-        Atividade atividade = atividadeRepository.findById(dto.atividadeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + dto.atividadeId()));
+    public EntregaDTO marcar(EntregaRequestDTO dto, String requesterEmail) {
+        if (dto.status() == null) {
+            throw new RegraNegocioException("Informe o status da entrega.");
+        }
+        Atividade atividade = buscarAtividade(dto.atividadeId());
         Student student = studentRepository.findById(dto.studentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
-
         if (student.getTurma() == null || !student.getTurma().getId().equals(atividade.getTurma().getId())) {
             throw new RegraNegocioException("O aluno não pertence à turma desta atividade.");
         }
-        // professor precisa lecionar a disciplina da atividade na turma do aluno (que é a turma da atividade)
         studentAccessGuardService.assertCanTeach(student.getId(), atividade.getDisciplina().getId(), requesterEmail);
 
-        Entrega entity = new Entrega(dto.content(), dto.submittedAt(), dto.grade(), dto.status());
-        entity.setAtividade(atividade);
-        entity.setStudent(student);
-
-        entity = entregaRepository.save(entity);
-        return toDTO(entity);
+        Entrega entity = entregaRepository.findByAtividadeIdAndStudentId(atividade.getId(), student.getId())
+                .orElseGet(() -> new Entrega(atividade, student));
+        entity.setStatus(dto.status());
+        return EntregaMapper.toDto(entregaRepository.save(entity));
     }
 
     @Transactional
@@ -84,20 +89,13 @@ public class EntregaService {
         entregaRepository.delete(entrega);
     }
 
+    private Atividade buscarAtividade(Long id) {
+        return atividadeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + id));
+    }
+
     private User buscarUsuario(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + email));
-    }
-
-    private EntregaDTO toDTO(Entrega entity) {
-        return new EntregaDTO(
-                entity.getId(),
-                entity.getContent(),
-                entity.getSubmittedAt(),
-                entity.getGrade(),
-                entity.getStatus(),
-                entity.getAtividade().getId(),
-                entity.getStudent().getId()
-        );
     }
 }

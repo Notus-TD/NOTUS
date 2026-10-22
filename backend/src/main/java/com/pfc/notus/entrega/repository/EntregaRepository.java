@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EntregaRepository extends JpaRepository<Entrega, Long> {
@@ -14,9 +15,10 @@ public interface EntregaRepository extends JpaRepository<Entrega, Long> {
 
     List<Entrega> findByAtividadeId(Long atividadeId);
 
+    Optional<Entrega> findByAtividadeIdAndStudentId(Long atividadeId, Long studentId);
+
     boolean existsByAtividadeId(Long atividadeId);
 
-    /** Entregas das atividades cuja turma e disciplina o professor leciona (studentId opcional). */
     @Query("""
             SELECT e FROM Entrega e JOIN e.atividade a
             WHERE (:studentId IS NULL OR e.student.id = :studentId)

@@ -7,10 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 @Entity
-@Table(name = "tb_entrega")
+@Table(name = "tb_entrega",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"atividade_id", "student_id"}))
 @NoArgsConstructor
 public class Entrega {
 
@@ -19,16 +18,8 @@ public class Entrega {
     @Getter
     private Long id;
 
-    @Getter @Setter
-    private String content;
-
-    @Getter @Setter
-    private LocalDateTime submittedAt;
-
-    @Getter @Setter
-    private Float grade;
-
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Getter @Setter
     private StatusEntrega status;
 
@@ -42,12 +33,8 @@ public class Entrega {
     @Getter @Setter
     private Student student;
 
-
-
-    public Entrega(String content, LocalDateTime submittedAt, Float grade, StatusEntrega status) {
-        this.content = content;
-        this.submittedAt = submittedAt;
-        this.grade = grade;
-        this.status = status;
+    public Entrega(Atividade atividade, Student student) {
+        this.atividade = atividade;
+        this.student = student;
     }
 }

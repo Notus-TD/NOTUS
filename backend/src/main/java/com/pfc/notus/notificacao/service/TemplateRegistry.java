@@ -15,7 +15,6 @@ public class TemplateRegistry {
     private static final String RODAPE = "\n\nPara não receber mais estes avisos, fale com a secretaria."
             + "\nMensagem automática, não responda.";
 
-    // Texto de cada aviso; as variáveis {{n}} são preenchidas em renderizar().
     private static final Map<TipoNotificacao, Template> TEMPLATES = Map.of(
             TipoNotificacao.FALTA, new Template("falta_aluno", 5,
                     "Olá, {{1}}. Registramos uma falta de {{2}} em {{3}} no dia {{4}}.\n"
@@ -23,9 +22,9 @@ public class TemplateRegistry {
             TipoNotificacao.ATIVIDADE, new Template("nova_atividade", 5,
                     "Olá, {{1}}. Há uma nova atividade de {{3}} para {{2}}: \"{{4}}\".\n"
                             + "Prazo: {{5}}." + RODAPE),
-            TipoNotificacao.BOLETIM_FECHADO, new Template("boletim_fechado", 4,
-                    "Olá, {{1}}. O boletim de {{2}} do período {{3}} foi fechado.\n"
-                            + "Média final: {{4}}." + RODAPE)
+            TipoNotificacao.NOTA_FINAL, new Template("nota_final", 5,
+                    "Olá, {{1}}. A nota final de {{2}} em {{3}} no {{4}} foi lançada.\n"
+                            + "Nota final: {{5}}." + RODAPE)
     );
 
     public record Template(String nome, int quantidadeVariaveis, String texto) {
@@ -34,15 +33,13 @@ public class TemplateRegistry {
     private static final Map<String, String> ASSUNTOS = Map.of(
             "falta_aluno", "NOTUS: aviso de falta",
             "nova_atividade", "NOTUS: nova atividade",
-            "boletim_fechado", "NOTUS: boletim fechado"
+            "nota_final", "NOTUS: nota final lançada"
     );
 
-    /** Assunto do e-mail para o template. */
     public String assunto(String nomeTemplate) {
         return ASSUNTOS.getOrDefault(nomeTemplate, "NOTUS: aviso escolar");
     }
 
-    /** Monta o texto final do aviso com as variáveis. */
     public String renderizar(String nomeTemplate, List<String> variaveis) {
         Template template = TEMPLATES.values().stream()
                 .filter(t -> t.nome().equals(nomeTemplate))
