@@ -35,8 +35,6 @@ import java.util.stream.Collectors;
 @Service
 public class AtividadeService {
 
-    private static final String STATUS_ABERTA = "ABERTA";
-
     @Autowired
     private AtividadeRepository atividadeRepository;
 
@@ -84,7 +82,7 @@ public class AtividadeService {
             return List.of();
         }
         Set<Long> entregues = entregaRepository.findByStudentId(aluno.getId()).stream()
-                .filter(e -> e.getStatus() == StatusEntrega.ENTREGUE || e.getStatus() == StatusEntrega.AVALIADA)
+                .filter(e -> e.getStatus() == StatusEntrega.ENTREGUE || e.getStatus() == StatusEntrega.ATRASADA)
                 .map(e -> e.getAtividade().getId())
                 .collect(Collectors.toSet());
         return atividadeRepository.findByTurmaIdOrderByPrazoAsc(aluno.getTurma().getId()).stream()
@@ -97,6 +95,9 @@ public class AtividadeService {
         if (dto.prazo().isBefore(LocalDate.now())) {
             throw new RegraNegocioException("O prazo da atividade não pode ser uma data passada.");
         }
+        if (dto.bimestre() == null) {
+            throw new RegraNegocioException("Informe o bimestre da atividade.");
+        }
         User requester = buscarUsuario(requesterEmail);
         Turma turma = turmaRepository.findById(dto.turmaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + dto.turmaId()));
@@ -105,7 +106,7 @@ public class AtividadeService {
         Atividade entity = new Atividade();
         entity.setTitle(dto.title().trim());
         entity.setContent(dto.content().trim());
-        entity.setStatus(STATUS_ABERTA);
+        entity.setBimestre(dto.bimestre());
         entity.setPrazo(dto.prazo());
         entity.setPublicadaEm(LocalDateTime.now());
         entity.setTurma(turma);
@@ -175,7 +176,7 @@ public class AtividadeService {
                 entity.getId(),
                 entity.getTitle(),
                 entity.getContent(),
-                entity.getStatus(),
+                entity.getBimestre(),
                 entity.getPrazo(),
                 entity.getTurma().getId(),
                 entity.getDisciplina().getId(),

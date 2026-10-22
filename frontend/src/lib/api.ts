@@ -39,7 +39,6 @@ export async function solicitarRedefinicaoSenha(email: string): Promise<void> {
   } catch {
     throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
-  // Enquanto o backend não expõe /auth/esqueci-senha como rota pública, ela responde 401/403/404.
   if ([401, 403, 404, 501].includes(res.status)) {
     throw new ApiError(
       res.status,
@@ -274,50 +273,72 @@ export type TurmaDetalheDTO = {
   lecionamentos: LecionamentoDTO[];
 };
 export type DisciplinaDTO = { id: number; title: string; description?: string };
+export type Bimestre = "PRIMEIRO" | "SEGUNDO" | "TERCEIRO" | "QUARTO";
 export type AtividadeDTO = {
   id: number;
   title: string;
   content: string;
-  status: string;
-  /** aaaa-mm-dd */
+  bimestre: Bimestre;
   prazo: string;
   turmaId: number;
   disciplinaId: number;
   turmaName: string;
   disciplinaTitle: string;
   publicadaEm: string;
-  /** Só vem preenchido em /atividade/me (visão do aluno). */
   entregue: boolean | null;
 };
-/** O professor não manda a disciplina: o backend usa a que ele leciona na turma. */
 export type NovaAtividade = {
   title: string;
   content: string;
+  bimestre: Bimestre;
   prazo: string;
   turmaId: number;
   disciplinaId?: number;
 };
 
 export type BoletimDTO = {
-  id: number;
-  period: string;
-  finalAverage: number;
-  status: string;
+  id: number | null;
   studentId: number;
+  disciplinaId: number;
+  disciplinaTitle: string;
+  bimestre: Bimestre;
+  mediaSugerida: number | null;
+  notaFinal: number | null;
+  lancadoEm: string | null;
 };
-export type Boletim = BoletimDTO & {
-  situacao: "ABERTO" | "FECHADO";
-  fechadoEm: string | null;
+export type NotaFinalRequest = {
+  studentId: number;
+  disciplinaId: number;
+  bimestre: Bimestre;
+  notaFinal: number;
 };
 
 export type NotaDTO = {
   id: number;
+  descricao: string;
   rate: number;
-  period: string;
-  boletimId: number;
+  bimestre: Bimestre;
+  studentId: number;
   disciplinaId: number;
+  disciplinaTitle: string;
 };
-export type Nota = NotaDTO & { disciplinaTitle: string };
+export type NotaRequest = Omit<NotaDTO, "id" | "disciplinaTitle">;
+
+export type StatusEntrega = "ENTREGUE" | "ATRASADA" | "NAO_ENTREGUE";
+export type EntregaDTO = {
+  id: number;
+  status: StatusEntrega;
+  atividadeId: number;
+  atividadeTitle: string;
+  disciplinaId: number;
+  bimestre: Bimestre;
+  studentId: number;
+};
+export type EntregaRequest = {
+  atividadeId: number;
+  studentId: number;
+  status: StatusEntrega;
+};
 
 export type FrequenciaDTO = {
   studentId: number;
@@ -369,19 +390,24 @@ export const getMinhasAtividades = () => getJson<AtividadeDTO[]>("/atividade/me"
 export const publicarAtividade = (dto: NovaAtividade) =>
   sendJson<AtividadeDTO>("POST", "/atividade", dto);
 export const deleteAtividade = (id: number) => sendJson<void>("DELETE", `/atividade/${id}`);
-export const getBoletins = () => getJson<BoletimDTO[]>("/boletim");
-export const getBoletinsByStudent = (studentId: number) =>
-  getJson<Boletim[]>(`/boletim/student/${studentId}`);
-export const createBoletim = (dto: Omit<BoletimDTO, "id">) =>
-  sendJson<BoletimDTO>("POST", "/boletim", dto);
-export const deleteBoletim = (id: number) => sendJson<void>("DELETE", `/boletim/${id}`);
+export const getBoletimDoAluno = (studentId: number) =>
+  getJson<BoletimDTO[]>(`/boletim/student/${studentId}`);
+export const lancarNotaFinal = (dto: NotaFinalRequest) =>
+  sendJson<BoletimDTO>("PUT", "/boletim/nota-final", dto);
+export const removerNotaFinal = (id: number) => sendJson<void>("DELETE", `/boletim/${id}`);
 
-export const getNotasByBoletim = (boletimId: number) =>
-  getJson<Nota[]>(`/nota/boletim/${boletimId}`);
-export const createNota = (dto: Omit<NotaDTO, "id">) => sendJson<NotaDTO>("POST", "/nota", dto);
-export const updateNota = (id: number, dto: Omit<NotaDTO, "id">) =>
+export const getNotasDoAluno = (studentId: number) =>
+  getJson<NotaDTO[]>(`/nota/student/${studentId}`);
+export const createNota = (dto: NotaRequest) => sendJson<NotaDTO>("POST", "/nota", dto);
+export const updateNota = (id: number, dto: NotaRequest) =>
   sendJson<NotaDTO>("PUT", `/nota/${id}`, dto);
 export const deleteNota = (id: number) => sendJson<void>("DELETE", `/nota/${id}`);
+
+export const getEntregasDaAtividade = (atividadeId: number) =>
+  getJson<EntregaDTO[]>(`/entrega/atividade/${atividadeId}`);
+export const getEntregasDoAluno = (studentId: number) =>
+  getJson<EntregaDTO[]>(`/entrega/student/${studentId}`);
+export const marcarEntrega = (dto: EntregaRequest) => sendJson<EntregaDTO>("PUT", "/entrega", dto);
 
 export type DependenteDTO = { id: number; nome: string };
 export type MeuPerfilDTO = {

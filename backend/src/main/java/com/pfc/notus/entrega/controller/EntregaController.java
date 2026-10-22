@@ -1,6 +1,7 @@
 package com.pfc.notus.entrega.controller;
 
 import com.pfc.notus.entrega.dto.EntregaDTO;
+import com.pfc.notus.entrega.dto.EntregaRequestDTO;
 import com.pfc.notus.entrega.service.EntregaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,21 +20,24 @@ public class EntregaController {
     @Autowired
     private EntregaService entregaService;
 
-    /** Entregas das turmas e disciplinas em que o professor logado leciona. */
     @GetMapping
-    public List<EntregaDTO> getDoProfessor(Authentication authentication) {
-        return entregaService.getDoProfessor(authentication.getName());
+    public ResponseEntity<List<EntregaDTO>> getDoProfessor(Authentication authentication) {
+        return ResponseEntity.ok(entregaService.getDoProfessor(authentication.getName()));
     }
 
     @GetMapping("/student/{studentId}")
-    public List<EntregaDTO> getByStudent(@PathVariable Long studentId, Authentication authentication) {
-        return entregaService.getByStudent(studentId, authentication.getName());
+    public ResponseEntity<List<EntregaDTO>> getByStudent(@PathVariable Long studentId, Authentication authentication) {
+        return ResponseEntity.ok(entregaService.getByStudent(studentId, authentication.getName()));
     }
 
-    @PostMapping
-    public ResponseEntity<EntregaDTO> create(@RequestBody @Valid EntregaDTO dto, Authentication authentication) {
-        EntregaDTO created = entregaService.save(dto, authentication.getName());
-        return ResponseEntity.ok(created);
+    @GetMapping("/atividade/{atividadeId}")
+    public ResponseEntity<List<EntregaDTO>> getByAtividade(@PathVariable Long atividadeId, Authentication authentication) {
+        return ResponseEntity.ok(entregaService.getByAtividade(atividadeId, authentication.getName()));
+    }
+
+    @PutMapping
+    public ResponseEntity<EntregaDTO> marcar(@RequestBody @Valid EntregaRequestDTO dto, Authentication authentication) {
+        return ResponseEntity.ok(entregaService.marcar(dto, authentication.getName()));
     }
 
     @DeleteMapping("/{id}")

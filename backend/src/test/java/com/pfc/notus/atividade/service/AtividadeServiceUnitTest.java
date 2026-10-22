@@ -3,6 +3,7 @@ package com.pfc.notus.atividade.service;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
+import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.entrega.domain.Entrega;
@@ -106,6 +107,7 @@ class AtividadeServiceUnitTest {
     private Atividade criarAtividade(Long id, Turma turma, Disciplina disciplina) {
         Atividade atividade = new Atividade("Lista 1", "Exercícios da página 10");
         ReflectionTestUtils.setField(atividade, "id", id);
+        atividade.setBimestre(Bimestre.QUARTO);
         atividade.setPrazo(LocalDate.now().plusDays(7));
         atividade.setPublicadaEm(LocalDateTime.now());
         atividade.setTurma(turma);
@@ -114,7 +116,7 @@ class AtividadeServiceUnitTest {
     }
 
     private AtividadeDTO pedido(LocalDate prazo, Long turmaId, Long disciplinaId) {
-        return new AtividadeDTO(null, "  Lista 1  ", "Exercícios da página 10", null, prazo, turmaId,
+        return new AtividadeDTO(null, "  Lista 1  ", "Exercícios da página 10", Bimestre.QUARTO, prazo, turmaId,
                 disciplinaId, null, null, null, null);
     }
 
@@ -137,7 +139,7 @@ class AtividadeServiceUnitTest {
 
         assertEquals(100L, resultado.id());
         assertEquals("Lista 1", resultado.title());
-        assertEquals("ABERTA", resultado.status());
+        assertEquals(Bimestre.QUARTO, resultado.bimestre());
         assertEquals(5L, resultado.disciplinaId());
         assertEquals("Matemática", resultado.disciplinaTitle());
         assertEquals("9º Ano A", resultado.turmaName());
@@ -227,6 +229,19 @@ class AtividadeServiceUnitTest {
     }
 
     @Test
+    void deveRecusarAtividadeSemBimestre() {
+        AtividadeDTO semBimestre = new AtividadeDTO(null, "Lista 1", "Exercícios da página 10", null,
+                LocalDate.now().plusDays(3), 1L, null, null, null, null, null);
+
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> atividadeService.publicar(semBimestre, PROFESSOR));
+
+        assertEquals("Informe o bimestre da atividade.", excecao.getMessage());
+        verify(userRepository, never()).findByEmail(anyString());
+        verify(atividadeRepository, never()).save(any());
+    }
+
+    @Test
     void deveExigirADisciplinaQuandoAdminPublica() {
         User admin = comIdEPapel(new User(ADMIN), 4L, "ROLE_ADMIN");
         when(userRepository.findByEmail(ADMIN)).thenReturn(Optional.of(admin));
@@ -248,13 +263,13 @@ class AtividadeServiceUnitTest {
         Disciplina matematica = criarDisciplina(5L, "Matemática");
         Atividade entregue = criarAtividade(1L, turma, matematica);
         Atividade pendente = criarAtividade(2L, turma, matematica);
-        Entrega entrega = new Entrega("feito", LocalDateTime.now(), null, StatusEntrega.ENTREGUE);
-        entrega.setAtividade(entregue);
-        Entrega rascunho = new Entrega("", null, null, StatusEntrega.PENDENTE);
-        rascunho.setAtividade(pendente);
+        Entrega entrega = new Entrega(entregue, aluno);
+        entrega.setStatus(StatusEntrega.ENTREGUE);
+        Entrega naoEntregue = new Entrega(pendente, aluno);
+        naoEntregue.setStatus(StatusEntrega.NAO_ENTREGUE);
 
         when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
-        when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(entrega, rascunho));
+        when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(entrega, naoEntregue));
         when(atividadeRepository.findByTurmaIdOrderByPrazoAsc(1L)).thenReturn(List.of(entregue, pendente));
 
         List<AtividadeDTO> resultado = atividadeService.getMinhas(ALUNO);
