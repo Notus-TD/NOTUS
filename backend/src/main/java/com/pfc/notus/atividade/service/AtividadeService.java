@@ -77,7 +77,6 @@ public class AtividadeService {
                 .toList();
     }
 
-    /** Atividades da turma do aluno logado, marcando as que ele já entregou. */
     @Transactional
     public List<AtividadeDTO> getMinhas(String requesterEmail) {
         User requester = buscarUsuario(requesterEmail);
@@ -135,10 +134,6 @@ public class AtividadeService {
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_ATIVIDADE, id, "Atividade excluída antes do envio");
     }
 
-    /**
-     * Admin informa a disciplina. Professor não escolhe: como cada professor leciona uma única
-     * disciplina (regra do LecionamentoService), ela vem do lecionamento dele na turma.
-     */
     private Disciplina resolverDisciplina(User requester, Long turmaId, Long disciplinaId) {
         if (requester.hasRole("ROLE_ADMIN")) {
             if (disciplinaId == null) {
@@ -148,14 +143,24 @@ public class AtividadeService {
                     .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + disciplinaId));
         }
         if (requester.hasRole("ROLE_PROFESSOR")) {
-            Lecionamento lecionamento = lecionamentoRepository.findByProfessorId(requester.getId()).stream()
+            List<Disciplina> disciplinasNaTurma = lecionamentoRepository.findByProfessorId(requester.getId()).stream()
                     .filter(l -> l.getTurma().getId().equals(turmaId))
-                    .findFirst()
-                    .orElseThrow(() -> new AccessDeniedException("Você não leciona nesta turma."));
-            if (disciplinaId != null && !disciplinaId.equals(lecionamento.getDisciplina().getId())) {
-                throw new AccessDeniedException("Você só pode publicar atividades da disciplina que leciona.");
+                    .map(Lecionamento::getDisciplina)
+                    .toList();
+
+            if (disciplinasNaTurma.isEmpty()) {
+                throw new AccessDeniedException("Você não leciona nesta turma.");
             }
-            return lecionamento.getDisciplina();
+            if (disciplinaId == null && disciplinasNaTurma.size() > 1) {
+                throw new RegraNegocioException("Informe a disciplina da atividade.");
+            }
+            if (disciplinaId == null) {
+                return disciplinasNaTurma.getFirst();
+            }
+            return disciplinasNaTurma.stream()
+                    .filter(d -> d.getId().equals(disciplinaId))
+                    .findFirst()
+                    .orElseThrow(() -> new AccessDeniedException("Você só pode publicar atividades das disciplinas que leciona nesta turma."));
         }
         throw new AccessDeniedException("Sem permissão para publicar atividades.");
     }

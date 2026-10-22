@@ -120,7 +120,6 @@ class AtividadeServiceUnitTest {
 
     @Test
     void deveDeduzirADisciplinaPeloLecionamentoQuandoProfessorPublica() {
-        // Arrange
         Professor professor = criarProfessor();
         Turma turma = criarTurma(1L, "9º Ano A");
         Disciplina matematica = criarDisciplina(5L, "Matemática");
@@ -134,10 +133,8 @@ class AtividadeServiceUnitTest {
             return salva;
         });
 
-        // Act
         AtividadeDTO resultado = atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, null), PROFESSOR);
 
-        // Assert
         assertEquals(100L, resultado.id());
         assertEquals("Lista 1", resultado.title());
         assertEquals("ABERTA", resultado.status());
@@ -149,7 +146,6 @@ class AtividadeServiceUnitTest {
 
     @Test
     void deveRecusarPublicacaoQuandoProfessorNaoLecionaNaTurma() {
-        // Arrange
         Professor professor = criarProfessor();
         Turma outraTurma = criarTurma(2L, "9º Ano B");
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(professor));
@@ -157,11 +153,9 @@ class AtividadeServiceUnitTest {
         when(lecionamentoRepository.findByProfessorId(2L))
                 .thenReturn(List.of(new Lecionamento(outraTurma, criarDisciplina(5L, "Matemática"), professor)));
 
-        // Act
         AccessDeniedException excecao = assertThrows(AccessDeniedException.class,
                 () -> atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, null), PROFESSOR));
 
-        // Assert
         assertEquals("Você não leciona nesta turma.", excecao.getMessage());
         verify(atividadeRepository, never()).save(any());
         verify(eventPublisher, never()).publishEvent(any());
@@ -169,7 +163,6 @@ class AtividadeServiceUnitTest {
 
     @Test
     void deveRecusarQuandoProfessorTentaPublicarEmOutraDisciplina() {
-        // Arrange
         Professor professor = criarProfessor();
         Turma turma = criarTurma(1L, "9º Ano A");
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(professor));
@@ -177,19 +170,57 @@ class AtividadeServiceUnitTest {
         when(lecionamentoRepository.findByProfessorId(2L))
                 .thenReturn(List.of(new Lecionamento(turma, criarDisciplina(5L, "Matemática"), professor)));
 
-        // Act + Assert
-        assertThrows(AccessDeniedException.class,
+        AccessDeniedException excecao = assertThrows(AccessDeniedException.class,
                 () -> atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, 6L), PROFESSOR));
+
+        assertEquals("Você só pode publicar atividades das disciplinas que leciona nesta turma.", excecao.getMessage());
         verify(atividadeRepository, never()).save(any());
     }
 
     @Test
+    void deveExigirADisciplinaQuandoProfessorLecionaMaisDeUmaNaTurma() {
+        Professor professor = criarProfessor();
+        Turma turma = criarTurma(1L, "3º Ano A");
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(professor));
+        when(turmaRepository.findById(1L)).thenReturn(Optional.of(turma));
+        when(lecionamentoRepository.findByProfessorId(2L)).thenReturn(List.of(
+                new Lecionamento(turma, criarDisciplina(5L, "Matemática"), professor),
+                new Lecionamento(turma, criarDisciplina(6L, "Português"), professor)));
+
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, null), PROFESSOR));
+
+        assertEquals("Informe a disciplina da atividade.", excecao.getMessage());
+        verify(atividadeRepository, never()).save(any());
+    }
+
+    @Test
+    void devePublicarNaDisciplinaEscolhidaQuandoProfessorLecionaMaisDeUmaNaTurma() {
+        Professor professor = criarProfessor();
+        Turma turma = criarTurma(1L, "3º Ano A");
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(professor));
+        when(turmaRepository.findById(1L)).thenReturn(Optional.of(turma));
+        when(lecionamentoRepository.findByProfessorId(2L)).thenReturn(List.of(
+                new Lecionamento(turma, criarDisciplina(5L, "Matemática"), professor),
+                new Lecionamento(turma, criarDisciplina(6L, "Português"), professor)));
+        when(atividadeRepository.save(any(Atividade.class))).thenAnswer(invocacao -> {
+            Atividade salva = invocacao.getArgument(0);
+            ReflectionTestUtils.setField(salva, "id", 101L);
+            return salva;
+        });
+
+        AtividadeDTO resultado = atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, 6L), PROFESSOR);
+
+        assertEquals(6L, resultado.disciplinaId());
+        assertEquals("Português", resultado.disciplinaTitle());
+        verify(eventPublisher).publishEvent(new AtividadePublicadaEvent(101L));
+    }
+
+    @Test
     void deveRecusarAtividadeComPrazoNoPassado() {
-        // Act
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
                 () -> atividadeService.publicar(pedido(LocalDate.now().minusDays(1), 1L, null), PROFESSOR));
 
-        // Assert
         assertEquals("O prazo da atividade não pode ser uma data passada.", excecao.getMessage());
         verify(userRepository, never()).findByEmail(anyString());
         verify(atividadeRepository, never()).save(any());
@@ -197,23 +228,19 @@ class AtividadeServiceUnitTest {
 
     @Test
     void deveExigirADisciplinaQuandoAdminPublica() {
-        // Arrange
         User admin = comIdEPapel(new User(ADMIN), 4L, "ROLE_ADMIN");
         when(userRepository.findByEmail(ADMIN)).thenReturn(Optional.of(admin));
         when(turmaRepository.findById(1L)).thenReturn(Optional.of(criarTurma(1L, "9º Ano A")));
 
-        // Act
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
                 () -> atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, null), ADMIN));
 
-        // Assert
         assertEquals("Informe a disciplina da atividade.", excecao.getMessage());
         verify(atividadeRepository, never()).save(any());
     }
 
     @Test
     void deveMarcarComoEntregueSoAsAtividadesQueOAlunoEntregou() {
-        // Arrange
         Turma turma = criarTurma(1L, "9º Ano A");
         Student aluno = new Student("Ana Aluna", ALUNO, 20260001L, LocalDate.of(2012, 5, 10), null);
         aluno.setTurma(turma);
@@ -230,10 +257,8 @@ class AtividadeServiceUnitTest {
         when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(entrega, rascunho));
         when(atividadeRepository.findByTurmaIdOrderByPrazoAsc(1L)).thenReturn(List.of(entregue, pendente));
 
-        // Act
         List<AtividadeDTO> resultado = atividadeService.getMinhas(ALUNO);
 
-        // Assert
         assertEquals(2, resultado.size());
         assertEquals(true, resultado.get(0).entregue());
         assertEquals(false, resultado.get(1).entregue());
@@ -241,7 +266,6 @@ class AtividadeServiceUnitTest {
 
     @Test
     void deveRecusarExclusaoQuandoAtividadeJaTemEntregas() {
-        // Arrange
         Professor professor = criarProfessor();
         Atividade atividade = criarAtividade(1L, criarTurma(1L, "9º Ano A"), criarDisciplina(5L, "Matemática"));
         when(atividadeRepository.findById(1L)).thenReturn(Optional.of(atividade));
@@ -249,18 +273,15 @@ class AtividadeServiceUnitTest {
         when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(2L, 1L, 5L)).thenReturn(true);
         when(entregaRepository.existsByAtividadeId(1L)).thenReturn(true);
 
-        // Act
         ConflictException excecao = assertThrows(ConflictException.class,
                 () -> atividadeService.delete(1L, PROFESSOR));
 
-        // Assert
         assertEquals("A atividade já tem entregas e não pode ser excluída.", excecao.getMessage());
         verify(atividadeRepository, never()).delete(any());
     }
 
     @Test
     void deveExcluirAtividadeECancelarOsAvisosAindaNaoEnviados() {
-        // Arrange
         Professor professor = criarProfessor();
         Atividade atividade = criarAtividade(1L, criarTurma(1L, "9º Ano A"), criarDisciplina(5L, "Matemática"));
         when(atividadeRepository.findById(1L)).thenReturn(Optional.of(atividade));
@@ -268,10 +289,8 @@ class AtividadeServiceUnitTest {
         when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(2L, 1L, 5L)).thenReturn(true);
         when(entregaRepository.existsByAtividadeId(1L)).thenReturn(false);
 
-        // Act
         atividadeService.delete(1L, PROFESSOR);
 
-        // Assert
         verify(atividadeRepository).delete(atividade);
         verify(notificacaoService).cancelarPorReferencia(NotificacaoService.REF_ATIVIDADE, 1L,
                 "Atividade excluída antes do envio");
