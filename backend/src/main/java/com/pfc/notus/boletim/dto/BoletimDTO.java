@@ -10,8 +10,9 @@ public record BoletimDTO(
         Long disciplinaId,
         String disciplinaTitle,
         Bimestre bimestre,
-        Float mediaSugerida,
+        Float mediaCalculada,
         Float notaFinal,
+        Float nota,
         LocalDateTime lancadoEm
 ) {
 }

@@ -44,6 +44,9 @@ public class User implements UserDetails {
     @Getter @Setter
     private boolean ativo = true;
 
+    @Getter @Setter
+    private LocalDateTime anonimizadoEm;
+
     @ManyToMany
     @JoinTable(name = "tb_user_role",
             joinColumns = @JoinColumn(name = "user_id"),

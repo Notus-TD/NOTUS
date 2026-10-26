@@ -1,6 +1,7 @@
 package com.pfc.notus.boletim.controller;
 
 import com.pfc.notus.boletim.dto.BoletimDTO;
+import com.pfc.notus.boletim.dto.BoletimDisciplinaDTO;
 import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
 import com.pfc.notus.boletim.service.BoletimService;
 import jakarta.validation.Valid;
@@ -20,7 +21,7 @@ public class BoletimController {
     private BoletimService boletimService;
 
     @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<BoletimDTO>> getByStudent(@PathVariable Long studentId, Authentication authentication) {
+    public ResponseEntity<List<BoletimDisciplinaDTO>> getByStudent(@PathVariable Long studentId, Authentication authentication) {
         return ResponseEntity.ok(boletimService.getByStudent(studentId, authentication.getName()));
     }
 

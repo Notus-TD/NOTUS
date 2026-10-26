@@ -51,6 +51,14 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
     int cancelarPorAluno(StatusNotificacao pendente, StatusNotificacao cancelada,
                          Long studentId, String motivo);
 
+    @Modifying
+    @Query("UPDATE Notificacao n SET n.variaveis = NULL WHERE n.student.id = :studentId")
+    int apagarVariaveisDoAluno(Long studentId);
+
+    @Modifying
+    @Query("UPDATE Notificacao n SET n.variaveis = NULL WHERE n.responsavel.id = :responsavelId")
+    int apagarVariaveisDoResponsavel(Long responsavelId);
+
     @Query("""
             SELECT n FROM Notificacao n JOIN FETCH n.responsavel r LEFT JOIN FETCH n.student s
             WHERE (:tipo IS NULL OR n.tipo = :tipo)

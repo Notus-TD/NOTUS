@@ -176,6 +176,18 @@ public class NotificacaoService {
         }
     }
 
+    @Transactional
+    public void apagarDadosDoAluno(Long studentId) {
+        int apagadas = notificacaoRepository.apagarVariaveisDoAluno(studentId);
+        log.info(AuditMarker.AUDIT, "Dados pessoais apagados das notificações | aluno {} | {}", studentId, apagadas);
+    }
+
+    @Transactional
+    public void apagarDadosDoResponsavel(Long responsavelId) {
+        int apagadas = notificacaoRepository.apagarVariaveisDoResponsavel(responsavelId);
+        log.info(AuditMarker.AUDIT, "Dados pessoais apagados das notificações | responsável {} | {}", responsavelId, apagadas);
+    }
+
     @Transactional(readOnly = true)
     public List<NotificacaoDTO> listar(TipoNotificacao tipo, StatusNotificacao status, Long responsavelId,
                                        LocalDate de, LocalDate ate) {

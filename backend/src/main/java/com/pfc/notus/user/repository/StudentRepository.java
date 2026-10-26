@@ -1,6 +1,7 @@
 package com.pfc.notus.user.repository;
 
 import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.domain.enums.StatusMatricula;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,4 +22,6 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByTurmaId(Long turmaId, Sort sort);
 
     List<Student> findByTurmaIdIn(Collection<Long> turmaIds);
+
+    boolean existsByResponsibleIdAndStatusMatricula(Long responsibleId, StatusMatricula statusMatricula);
 }

@@ -302,9 +302,18 @@ export type BoletimDTO = {
   disciplinaId: number;
   disciplinaTitle: string;
   bimestre: Bimestre;
-  mediaSugerida: number | null;
+  mediaCalculada: number | null;
   notaFinal: number | null;
+  nota: number;
   lancadoEm: string | null;
+};
+export type BoletimDisciplinaDTO = {
+  disciplinaId: number;
+  disciplinaTitle: string;
+  bimestres: BoletimDTO[];
+  mediaPrimeiroSemestre: number | null;
+  mediaSegundoSemestre: number | null;
+  mediaAnual: number | null;
 };
 export type NotaFinalRequest = {
   studentId: number;
@@ -391,7 +400,7 @@ export const publicarAtividade = (dto: NovaAtividade) =>
   sendJson<AtividadeDTO>("POST", "/atividade", dto);
 export const deleteAtividade = (id: number) => sendJson<void>("DELETE", `/atividade/${id}`);
 export const getBoletimDoAluno = (studentId: number) =>
-  getJson<BoletimDTO[]>(`/boletim/student/${studentId}`);
+  getJson<BoletimDisciplinaDTO[]>(`/boletim/student/${studentId}`);
 export const lancarNotaFinal = (dto: NotaFinalRequest) =>
   sendJson<BoletimDTO>("PUT", "/boletim/nota-final", dto);
 export const removerNotaFinal = (id: number) => sendJson<void>("DELETE", `/boletim/${id}`);
@@ -422,8 +431,17 @@ export const getMeuPerfil = () => getJson<MeuPerfilDTO>("/auth/me");
 export const completeOnboarding = (newPassword: string, acceptTerms: boolean) =>
   sendJson<void>("POST", "/users/me/onboarding", { newPassword, acceptTerms });
 
-export const anonymizeUser = (userId: number) =>
-  sendJson<void>("PUT", `/users/me/anonymize/${userId}`);
+export type PerfilUsuario = "ALUNO" | "RESPONSAVEL";
+export type UsuarioDTO = {
+  id: number;
+  perfil: PerfilUsuario;
+  nome: string | null;
+  matricula: number | null;
+  anonimizado: boolean;
+};
+export const getUsuarios = () => getJson<UsuarioDTO[]>("/users");
+export const anonymizeUser = (userId: number, confirmacao: string) =>
+  sendJson<void>("PUT", `/users/me/anonymize/${userId}`, { confirmacao });
 
 export const getMinhasFaltas = () => getJson<FaltaDTO[]>("/falta/me");
 export const getMinhaFrequencia = () => getJson<FrequenciaDTO[]>("/falta/me/frequencia");

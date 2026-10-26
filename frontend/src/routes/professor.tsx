@@ -596,8 +596,8 @@ function NotasDaTurma({
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Clique em um bimestre para lançar as avaliações e a nota final. O valor tracejado é a
-              média sugerida das avaliações.
+              Clique em um bimestre para lançar as avaliações. Sem nota final, o bimestre mostra a
+              média das avaliações. A nota final, se você lançar, substitui essa média.
             </p>
             <BoletimMatriz
               studentId={selecionado.userId}

@@ -42,12 +42,13 @@ import {
   removerNotaFinal,
   updateNota,
   type Bimestre,
+  type BoletimDisciplinaDTO,
   type BoletimDTO,
   type DisciplinaDTO,
   type EntregaDTO,
   type NotaDTO,
 } from "@/lib/api";
-import { BIMESTRES, nomeBimestre } from "@/lib/bimestres";
+import { nomeBimestre } from "@/lib/bimestres";
 import { formatarData } from "@/lib/datas";
 import { STATUS_ENTREGA } from "@/lib/entregas";
 import { cn, media } from "@/lib/utils";
@@ -55,10 +56,24 @@ import { cn, media } from "@/lib/utils";
 type EstadoMatriz =
   | { estado: "carregando" }
   | { estado: "erro"; mensagem: string; status: number }
-  | { estado: "ok"; linhas: BoletimDTO[]; notas: NotaDTO[]; entregas: EntregaDTO[] };
+  | { estado: "ok"; boletim: BoletimDisciplinaDTO[]; notas: NotaDTO[]; entregas: EntregaDTO[] };
 
 type DisciplinaRef = { id: number; title: string };
 type CelulaSelecionada = { disciplina: DisciplinaRef; bimestre: Bimestre };
+type CampoMedia = "mediaPrimeiroSemestre" | "mediaSegundoSemestre" | "mediaAnual";
+type Coluna =
+  | { tipo: "bimestre"; bimestre: Bimestre; label: string }
+  | { tipo: "media"; campo: CampoMedia; label: string };
+
+const COLUNAS: Coluna[] = [
+  { tipo: "bimestre", bimestre: "PRIMEIRO", label: nomeBimestre("PRIMEIRO") },
+  { tipo: "bimestre", bimestre: "SEGUNDO", label: nomeBimestre("SEGUNDO") },
+  { tipo: "media", campo: "mediaPrimeiroSemestre", label: "1º semestre" },
+  { tipo: "bimestre", bimestre: "TERCEIRO", label: nomeBimestre("TERCEIRO") },
+  { tipo: "bimestre", bimestre: "QUARTO", label: nomeBimestre("QUARTO") },
+  { tipo: "media", campo: "mediaSegundoSemestre", label: "2º semestre" },
+  { tipo: "media", campo: "mediaAnual", label: "Média anual" },
+];
 
 const NOTA_APROVACAO = 7;
 const NOTA_ATENCAO = 6;
@@ -81,7 +96,7 @@ export function BoletimMatriz({
     setCarga((atual) => (atual.estado === "ok" ? atual : { estado: "carregando" }));
     (async () => {
       try {
-        const [linhas, notas, entregas] = await Promise.all([
+        const [boletim, notas, entregas] = await Promise.all([
           getBoletimDoAluno(studentId),
           editable ? getNotasDoAluno(studentId) : Promise.resolve<NotaDTO[]>([]),
           editable
@@ -89,7 +104,7 @@ export function BoletimMatriz({
             : Promise.resolve<EntregaDTO[]>([]),
         ]);
         if (!ativo) return;
-        setCarga({ estado: "ok", linhas, notas, entregas });
+        setCarga({ estado: "ok", boletim, notas, entregas });
       } catch (e) {
         if (!ativo) return;
         setCarga({
@@ -131,7 +146,8 @@ export function BoletimMatriz({
     );
   }
 
-  const { linhas, notas, entregas } = carga;
+  const { boletim, notas, entregas } = carga;
+  const linhas = boletim.flatMap((d) => d.bimestres);
 
   const disciplinas: DisciplinaRef[] = editable
     ? [...(disciplinasDisponiveis ?? [])].sort((a, b) => a.title.localeCompare(b.title, "pt-BR"))
@@ -164,7 +180,7 @@ export function BoletimMatriz({
 
   return (
     <div className="space-y-3">
-      <LegendaNotas editable={editable} />
+      <LegendaNotas />
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
@@ -174,53 +190,46 @@ export function BoletimMatriz({
                 <TableHead className="sticky left-0 z-10 bg-muted text-base font-semibold text-foreground">
                   Disciplina
                 </TableHead>
-                {BIMESTRES.map((b) => (
+                {COLUNAS.map((c) => (
                   <TableHead
-                    key={b.id}
-                    className="whitespace-nowrap text-center text-base font-semibold text-foreground"
+                    key={c.label}
+                    className={cn(
+                      "whitespace-nowrap text-center text-base font-semibold text-foreground",
+                      c.tipo === "media" && "bg-primary/5",
+                    )}
                   >
-                    {b.label}
+                    {c.label}
                   </TableHead>
                 ))}
-                <TableHead className="bg-primary/5 text-center text-base font-semibold text-foreground">
-                  Média final
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {disciplinas.map((d) => {
-                const celulas = BIMESTRES.map((b) => linhaDaCelula(d.id, b.id));
-                const mediaFinal = media(
-                  celulas
-                    .map((l) => l?.notaFinal ?? null)
-                    .filter((v): v is number => v !== null),
-                );
+                const medias = boletim.find((b) => b.disciplinaId === d.id) ?? null;
                 return (
                   <TableRow key={d.id} className="group">
                     <TableCell className="sticky left-0 z-10 bg-card text-base font-semibold text-foreground transition-colors group-hover:bg-muted/50">
                       {d.title}
                     </TableCell>
-                    {BIMESTRES.map((b, i) => (
-                      <TableCell key={b.id} className="text-center">
-                        <CelulaValor
-                          linha={celulas[i] ?? null}
-                          editable={editable}
-                          aoClicar={
-                            editable ? () => setCelula({ disciplina: d, bimestre: b.id }) : undefined
-                          }
-                        />
-                      </TableCell>
-                    ))}
-                    <TableCell className="bg-primary/5 text-center">
-                      <span
-                        className={cn(
-                          "text-lg font-bold tabular-nums",
-                          mediaFinal === null ? "text-muted-foreground" : corTexto(mediaFinal),
-                        )}
-                      >
-                        {formatarNota(mediaFinal)}
-                      </span>
-                    </TableCell>
+                    {COLUNAS.map((c) =>
+                      c.tipo === "bimestre" ? (
+                        <TableCell key={c.label} className="text-center">
+                          <CelulaValor
+                            linha={linhaDaCelula(d.id, c.bimestre)}
+                            editable={editable}
+                            aoClicar={
+                              editable
+                                ? () => setCelula({ disciplina: d, bimestre: c.bimestre })
+                                : undefined
+                            }
+                          />
+                        </TableCell>
+                      ) : (
+                        <TableCell key={c.label} className="bg-primary/5 text-center">
+                          <CelulaMedia valor={medias?.[c.campo] ?? null} />
+                        </TableCell>
+                      ),
+                    )}
                   </TableRow>
                 );
               })}
@@ -273,6 +282,25 @@ function corTexto(valor: number) {
   return "text-destructive";
 }
 
+function corBorda(valor: number) {
+  if (valor >= NOTA_APROVACAO) return "border-success text-success";
+  if (valor >= NOTA_ATENCAO) return "border-warning text-warning";
+  return "border-destructive text-destructive";
+}
+
+function CelulaMedia({ valor }: { valor: number | null }) {
+  return (
+    <span
+      className={cn(
+        "text-lg font-bold tabular-nums",
+        valor === null ? "text-muted-foreground" : corTexto(valor),
+      )}
+    >
+      {formatarNota(valor)}
+    </span>
+  );
+}
+
 function MatrizCarregando() {
   return (
     <Card aria-busy="true" aria-label="Carregando boletim">
@@ -291,7 +319,7 @@ function MatrizCarregando() {
   );
 }
 
-function LegendaNotas({ editable }: { editable: boolean }) {
+function LegendaNotas() {
   const itens = [
     { cor: "bg-success", texto: `Aprovado (≥ ${NOTA_APROVACAO})` },
     { cor: "bg-warning", texto: `Atenção (${NOTA_ATENCAO} a ${NOTA_APROVACAO})` },
@@ -308,9 +336,8 @@ function LegendaNotas({ editable }: { editable: boolean }) {
         ))}
       </ul>
       <p className="text-sm text-muted-foreground">
-        {editable
-          ? "Valor tracejado é a média sugerida das avaliações. A nota final é você quem lança."
-          : "Cada bimestre mostra a nota final lançada pelo professor."}
+        Fundo cheio: nota final lançada pelo professor. Só contorno: média das avaliações do
+        bimestre. As médias do semestre e a anual usam a nota de cada bimestre.
       </p>
     </div>
   );
@@ -321,27 +348,18 @@ const CLASSE_CELULA =
 
 function conteudoCelula(linha: BoletimDTO | null, editable: boolean) {
   const notaFinal = linha?.notaFinal ?? null;
-  const sugerida = linha?.mediaSugerida ?? null;
+  const nota = linha?.nota ?? null;
   if (notaFinal !== null) {
-    return <span className={cn(CLASSE_CELULA, corFundo(notaFinal))}>{formatarNota(notaFinal)}</span>;
-  }
-  if (sugerida !== null && editable) {
     return (
-      <span
-        className={cn(
-          CLASSE_CELULA,
-          "border border-dashed border-muted-foreground/50 text-muted-foreground",
-        )}
-        title="Média sugerida"
-      >
-        {formatarNota(sugerida)}
+      <span className={cn(CLASSE_CELULA, corFundo(notaFinal))} title="Nota final lançada pelo professor">
+        {formatarNota(notaFinal)}
       </span>
     );
   }
-  if (sugerida !== null) {
+  if (nota !== null) {
     return (
-      <span className={cn(CLASSE_CELULA, "bg-muted text-sm text-muted-foreground")}>
-        Em andamento
+      <span className={cn(CLASSE_CELULA, "border-2 bg-card", corBorda(nota))} title="Média das avaliações">
+        {formatarNota(nota)}
       </span>
     );
   }
@@ -406,7 +424,7 @@ function CelulaEditor({
   const [descricao, setDescricao] = useState("");
   const [rate, setRate] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const mediaSugerida = media(notas.map((n) => n.rate));
+  const mediaCalculada = media(notas.map((n) => n.rate));
 
   function editar(n: NotaDTO) {
     setEditandoId(n.id);
@@ -610,12 +628,12 @@ function CelulaEditor({
       <ResumoEntregas entregas={entregas} />
 
       <NotaFinalForm
-        key={`${linha?.notaFinal ?? ""}-${mediaSugerida ?? ""}`}
+        key={`${linha?.notaFinal ?? ""}-${mediaCalculada ?? ""}`}
         studentId={studentId}
         disciplina={disciplina}
         bimestre={bimestre}
         linha={linha}
-        mediaSugerida={mediaSugerida}
+        mediaCalculada={mediaCalculada}
         aoMudar={aoMudar}
       />
     </div>
@@ -656,18 +674,18 @@ function NotaFinalForm({
   disciplina,
   bimestre,
   linha,
-  mediaSugerida,
+  mediaCalculada,
   aoMudar,
 }: {
   studentId: number;
   disciplina: DisciplinaRef;
   bimestre: Bimestre;
   linha: BoletimDTO | null;
-  mediaSugerida: number | null;
+  mediaCalculada: number | null;
   aoMudar: () => void;
 }) {
   const notaFinal = linha?.notaFinal ?? null;
-  const inicial = notaFinal ?? mediaSugerida;
+  const inicial = notaFinal ?? mediaCalculada;
   const [valor, setValor] = useState(inicial === null ? "" : inicial.toFixed(1));
   const [salvando, setSalvando] = useState(false);
 
@@ -710,12 +728,13 @@ function NotaFinalForm({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h4 className="text-base font-semibold text-foreground">Nota final</h4>
         <p className="text-sm text-muted-foreground">
-          Média sugerida: <strong className="tabular-nums">{formatarNota(mediaSugerida)}</strong>
+          Média das avaliações:{" "}
+          <strong className="tabular-nums">{formatarNota(mediaCalculada)}</strong>
         </p>
       </div>
       <p className="text-sm text-muted-foreground">
-        Some os pontos das atividades ou um ponto extra, se quiser. Só a nota final aparece para o
-        aluno e o responsável.
+        Sem nota final, o boletim mostra a média das avaliações. Lance a nota final só se quiser
+        substituir essa média, por exemplo com os pontos das atividades ou um ponto extra.
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-28 space-y-1">
@@ -757,8 +776,8 @@ function NotaFinalForm({
               <AlertDialogHeader>
                 <AlertDialogTitle>Remover a nota final?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {disciplina.title} no {nomeBimestre(bimestre)} volta a aparecer como em andamento
-                  para o aluno e o responsável.
+                  {disciplina.title} no {nomeBimestre(bimestre)} volta a mostrar a média das
+                  avaliações para o aluno e o responsável.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

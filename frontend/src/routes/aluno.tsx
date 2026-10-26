@@ -344,7 +344,7 @@ function Notas() {
   return (
     <Secao
       titulo="Boletim"
-      descricao="Nota final lançada pelo professor em cada matéria, por bimestre."
+      descricao="Nota de cada matéria por bimestre, com a média do semestre e a média anual."
     >
       {studentId ? (
         <div className="space-y-3">
