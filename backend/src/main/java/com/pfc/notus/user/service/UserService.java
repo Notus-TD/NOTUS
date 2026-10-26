@@ -1,6 +1,8 @@
 package com.pfc.notus.user.service;
 
+import com.pfc.notus.config.AuditMarker;
 import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Responsible;
@@ -10,10 +12,15 @@ import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.dto.DependenteDTO;
 import com.pfc.notus.user.dto.MeuPerfilDTO;
+import com.pfc.notus.user.dto.UsuarioDTO;
 import com.pfc.notus.user.projection.UserDetailsProjection;
+import com.pfc.notus.user.repository.ResponsibleRepository;
 import com.pfc.notus.user.repository.RoleRepository;
+import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.util.AuthUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,13 +32,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Service
 public class UserService implements UserDetailsService {
 
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
+
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private ResponsibleRepository responsibleRepository;
+
+    @Autowired
+    private NotificacaoService notificacaoService;
 
     @Autowired
     private RoleRepository roleRepository;
@@ -41,9 +62,6 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private AuthUtil authUtil;
-
-    @Autowired
-    private NotificacaoService notificacaoService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -130,26 +148,64 @@ public class UserService implements UserDetailsService {
 
     }
 
+    @Transactional(readOnly = true)
+    public List<UsuarioDTO> listarUsuarios() {
+        return Stream.concat(
+                        studentRepository.findAll().stream()
+                                .map(s -> new UsuarioDTO(s.getId(), "ALUNO", s.getFullName(), s.getMatricula(), s.getAnonimizadoEm() != null)),
+                        responsibleRepository.findAll().stream()
+                                .map(r -> new UsuarioDTO(r.getId(), "RESPONSAVEL", r.getName(), null, r.getAnonimizadoEm() != null)))
+                .sorted(Comparator.comparing(UsuarioDTO::anonimizado)
+                        .thenComparing(UsuarioDTO::nome, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                        .thenComparing(UsuarioDTO::id))
+                .toList();
+    }
+
     @Transactional
-    public void anonimyzeUser(Long userId){
+    public void anonimyzeUser(Long userId, String confirmacao, String requesterEmail) {
+        if (confirmacao == null || confirmacao.isBlank()) {
+            throw new RegraNegocioException("Digite a matrícula do aluno ou o registro do responsável para confirmar.");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + userId));
+        if (user.getAnonimizadoEm() != null) {
+            throw new ConflictException("Usuário já foi anonimizado.");
+        }
+        if (!(user instanceof Student) && !(user instanceof Responsible)) {
+            throw new RegraNegocioException("Só alunos e responsáveis podem ser anonimizados.");
+        }
+        if (user instanceof Student student && !String.valueOf(student.getMatricula()).equals(confirmacao.trim())) {
+            throw new RegraNegocioException("A matrícula digitada não confere com a do aluno.");
+        }
+        if (user instanceof Responsible && !String.valueOf(user.getId()).equals(confirmacao.trim())) {
+            throw new RegraNegocioException("O registro digitado não confere com o do responsável.");
+        }
+        if (user instanceof Responsible && studentRepository.existsByResponsibleIdAndStatusMatricula(user.getId(), StatusMatricula.ATIVA)) {
+            throw new ConflictException("Não é possível anonimizar: o responsável tem aluno com matrícula ativa.");
+        }
 
         if (user instanceof Student student) {
-            student.setEmail("****");
+            student.setFullName(null);
             student.setBirthDate(null);
-            student.setFullName("****");
-            student.setAtivo(false);
+            student.setResponsible(null);
+            student.setTurma(null);
             student.setStatusMatricula(StatusMatricula.FINALIZADA);
             notificacaoService.cancelarPendentesDoAluno(student.getId(), "Aluno anonimizado");
-        } else if (user instanceof Responsible responsible) {
-            responsible.setEmail("****");
-            responsible.setName("****");
-            responsible.setPhone("****");
-            responsible.setAtivo(false);
-            notificacaoService.cancelarPendentesDoResponsavel(responsible.getId(), "Responsável anonimizado");
+            notificacaoService.apagarDadosDoAluno(student.getId());
         }
+        if (user instanceof Responsible responsible) {
+            responsible.setName(null);
+            responsible.setPhone(null);
+            notificacaoService.cancelarPendentesDoResponsavel(responsible.getId(), "Responsável anonimizado");
+            notificacaoService.apagarDadosDoResponsavel(responsible.getId());
+        }
+        user.setEmail(null);
+        user.setPassword(null);
+        user.setTermsAcceptedAt(null);
+        user.setAtivo(false);
+        user.setAnonimizadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         userRepository.save(user);
+        log.info(AuditMarker.AUDIT, "Usuário {} anonimizado por {}", user.getId(), requesterEmail);
     }
 
     private Long gerarProximoId() {

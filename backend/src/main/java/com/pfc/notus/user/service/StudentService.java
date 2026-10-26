@@ -47,6 +47,7 @@ public class StudentService {
     @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudents() {
         return studentRepository.findAll().stream()
+                .filter(s -> s.getAnonimizadoEm() == null)
                 .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
                 .toList();
     }

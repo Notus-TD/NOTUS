@@ -3,6 +3,7 @@ package com.pfc.notus.boletim.service;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
+import com.pfc.notus.boletim.dto.BoletimDisciplinaDTO;
 import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
 import com.pfc.notus.boletim.mapper.BoletimMapper;
 import com.pfc.notus.boletim.repository.BoletimRepository;
@@ -26,14 +27,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
-import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -67,7 +68,7 @@ public class BoletimService {
     private ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
-    public List<BoletimDTO> getByStudent(Long studentId, String requesterEmail) {
+    public List<BoletimDisciplinaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
 
         List<Nota> notas = notaRepository.findByStudentIdOrderByIdAsc(studentId);
@@ -83,14 +84,9 @@ public class BoletimService {
         Map<Celula, Boletim> notasFinais = boletins.stream()
                 .collect(Collectors.toMap(b -> new Celula(b.getDisciplina().getId(), b.getBimestre()), Function.identity()));
 
-        Set<Celula> celulas = new HashSet<>(medias.keySet());
-        celulas.addAll(notasFinais.keySet());
-
-        return celulas.stream()
-                .sorted(Comparator.comparing((Celula c) -> disciplinas.get(c.disciplinaId()).getTitle())
-                        .thenComparing(Celula::bimestre))
-                .map(c -> montarLinha(studentId, disciplinas.get(c.disciplinaId()), c.bimestre(),
-                        medias.get(c), notasFinais.get(c)))
+        return disciplinas.values().stream()
+                .sorted(Comparator.comparing(Disciplina::getTitle))
+                .map(d -> montarDisciplina(studentId, d, medias, notasFinais))
                 .toList();
     }
 
@@ -118,7 +114,7 @@ public class BoletimService {
         entity = boletimRepository.save(entity);
 
         eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId()));
-        return BoletimMapper.toDto(entity, mediaSugerida(student.getId(), disciplina.getId(), dto.bimestre()));
+        return BoletimMapper.toDto(entity, mediaCalculada(student.getId(), disciplina.getId(), dto.bimestre()));
     }
 
     @Transactional
@@ -131,19 +127,40 @@ public class BoletimService {
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_BOLETIM, id, "Nota final removida antes do envio");
     }
 
-    private Float mediaSugerida(Long studentId, Long disciplinaId, Bimestre bimestre) {
+    private Float mediaCalculada(Long studentId, Long disciplinaId, Bimestre bimestre) {
         OptionalDouble media = notaRepository.findByStudentIdAndDisciplinaIdAndBimestre(studentId, disciplinaId, bimestre).stream()
                 .mapToDouble(Nota::getRate)
                 .average();
         return media.isPresent() ? (float) media.getAsDouble() : null;
     }
 
+    private BoletimDisciplinaDTO montarDisciplina(Long studentId, Disciplina disciplina,
+                                                  Map<Celula, Double> medias, Map<Celula, Boletim> notasFinais) {
+        List<BoletimDTO> bimestres = Arrays.stream(Bimestre.values())
+                .map(b -> new Celula(disciplina.getId(), b))
+                .filter(c -> medias.containsKey(c) || notasFinais.containsKey(c))
+                .map(c -> montarLinha(studentId, disciplina, c.bimestre(), medias.get(c), notasFinais.get(c)))
+                .toList();
+        return BoletimMapper.toDisciplinaDto(disciplina, bimestres,
+                mediaDasNotas(bimestres, b -> b.getSemestre() == 1),
+                mediaDasNotas(bimestres, b -> b.getSemestre() == 2),
+                mediaDasNotas(bimestres, b -> true));
+    }
+
+    private Float mediaDasNotas(List<BoletimDTO> bimestres, Predicate<Bimestre> filtro) {
+        OptionalDouble media = bimestres.stream()
+                .filter(b -> filtro.test(b.bimestre()))
+                .mapToDouble(BoletimDTO::nota)
+                .average();
+        return media.isPresent() ? (float) media.getAsDouble() : null;
+    }
+
     private BoletimDTO montarLinha(Long studentId, Disciplina disciplina, Bimestre bimestre, Double media, Boletim notaFinal) {
-        Float mediaSugerida = media == null ? null : media.floatValue();
+        Float mediaCalculada = media == null ? null : media.floatValue();
         if (notaFinal == null) {
-            return BoletimMapper.toDtoSemNotaFinal(studentId, disciplina, bimestre, mediaSugerida);
+            return BoletimMapper.toDtoSemNotaFinal(studentId, disciplina, bimestre, mediaCalculada);
         }
-        return BoletimMapper.toDto(notaFinal, mediaSugerida);
+        return BoletimMapper.toDto(notaFinal, mediaCalculada);
     }
 
     private record Celula(Long disciplinaId, Bimestre bimestre) {

@@ -56,12 +56,15 @@ import {
   getStudents,
   getTurma,
   getTurmas,
+  getUsuarios,
   removerAlunoTurma,
   updateTurma,
   type StudentMinDTO,
   type TurmaDetalheDTO,
   type TurmaDTO,
   type TurmaRequestDTO,
+  type PerfilUsuario,
+  type UsuarioDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { useCarga, MensagemErro, type Carga } from "@/hooks/use-carga";
@@ -132,7 +135,7 @@ const cabecalhos: Record<SecaoId, { titulo: string; subtitulo: string }> = {
   usuarios: {
     titulo: "Excluir usuários",
     subtitulo:
-      "Anonimize os dados pessoais de um aluno e do responsável para atender pedidos de exclusão (LGPD). Ação irreversível.",
+      "Anonimize os dados pessoais de alunos e responsáveis para atender pedidos de exclusão (LGPD). Ação irreversível.",
   },
   comunicados: {
     titulo: "Comunicados",
@@ -513,20 +516,28 @@ function fichaExemplo(aluno: StudentMinDTO) {
 function BotaoAnonimizar({
   userId,
   nome,
+  codigo,
+  rotuloCodigo,
   aoConcluir,
   compacto = false,
 }: {
   userId: number;
   nome: string;
+  codigo: string;
+  rotuloCodigo: string;
   aoConcluir?: () => void;
   compacto?: boolean;
 }) {
   const [anonimizando, setAnonimizando] = useState(false);
+  const [digitado, setDigitado] = useState("");
+  const campoId = useId();
+  const confere = digitado.trim() === codigo;
 
   async function confirmar() {
+    if (!confere) return;
     setAnonimizando(true);
     try {
-      await anonymizeUser(userId);
+      await anonymizeUser(userId, digitado.trim());
       toast.success(`Dados de ${nome} anonimizados.`);
       aoConcluir?.();
     } catch (err) {
@@ -539,7 +550,11 @@ function BotaoAnonimizar({
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog
+      onOpenChange={(aberto) => {
+        if (!aberto) setDigitado("");
+      }}
+    >
       <AlertDialogTrigger asChild>
         <Button
           variant="destructive"
@@ -554,14 +569,30 @@ function BotaoAnonimizar({
         <AlertDialogHeader>
           <AlertDialogTitle>Anonimizar {nome}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Nome, e-mail, data de nascimento e os dados do responsável serão apagados
-            permanentemente e a matrícula será encerrada. Isso não pode ser desfeito.
+            Nome, e-mail, senha e dados de contato serão apagados permanentemente. Ficam só o
+            registro e, no caso de aluno, a matrícula, ligados ao histórico escolar. Isso não pode
+            ser desfeito.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="space-y-2">
+          <label htmlFor={campoId} className="block text-sm font-medium text-foreground">
+            Para confirmar, digite {rotuloCodigo}:{" "}
+            <strong className="tabular-nums">{codigo}</strong>
+          </label>
+          <Input
+            id={campoId}
+            value={digitado}
+            onChange={(e) => setDigitado(e.target.value)}
+            inputMode="numeric"
+            autoComplete="off"
+            className="h-11 text-base"
+          />
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={confirmar}
+            disabled={!confere || anonimizando}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Sim, anonimizar
@@ -1037,37 +1068,65 @@ function DetalheTurma({
   );
 }
 
+const PERFIS: Record<PerfilUsuario, string> = {
+  ALUNO: "Aluno",
+  RESPONSAVEL: "Responsável",
+};
+
+function descricaoUsuario(u: UsuarioDTO) {
+  const matricula = u.matricula === null ? "" : ` · Matrícula nº ${u.matricula}`;
+  return `${PERFIS[u.perfil]}${matricula} · Registro nº ${u.id}`;
+}
+
 function ExcluirUsuarios() {
   const [versao, setVersao] = useState(0);
   const [busca, setBusca] = useState("");
-  const carga = useCarga<StudentMinDTO[]>(getStudents, versao);
+  const [perfil, setPerfil] = useState<PerfilUsuario | "TODOS">("TODOS");
+  const carga = useCarga<UsuarioDTO[]>(getUsuarios, versao);
 
   const termo = busca.trim().toLowerCase();
   const filtrados =
     carga.estado === "ok"
       ? carga.dados.filter(
-          (s) =>
-            !termo ||
-            s.studentName.toLowerCase().includes(termo) ||
-            String(s.matricula).includes(termo),
+          (u) =>
+            (perfil === "TODOS" || u.perfil === perfil) &&
+            (!termo ||
+              (u.nome ?? "").toLowerCase().includes(termo) ||
+              String(u.matricula ?? "").includes(termo) ||
+              String(u.id).includes(termo)),
         )
       : [];
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-md">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          type="search"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome ou matrícula…"
-          aria-label="Buscar usuário"
-          className="h-11 pl-10 text-base"
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-64 max-w-md flex-1">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome, matrícula ou registro…"
+            aria-label="Buscar usuário"
+            className="h-11 pl-10 text-base"
+          />
+        </div>
+        <Select value={perfil} onValueChange={(v) => setPerfil(v as PerfilUsuario | "TODOS")}>
+          <SelectTrigger className="h-11 w-48 text-base" aria-label="Filtrar por perfil">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODOS">Todos os perfis</SelectItem>
+            {(Object.keys(PERFIS) as PerfilUsuario[]).map((p) => (
+              <SelectItem key={p} value={p}>
+                {PERFIS[p]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
@@ -1080,30 +1139,35 @@ function ExcluirUsuarios() {
             <p className="text-base text-muted-foreground">
               {termo
                 ? `Nenhum usuário encontrado para "${busca.trim()}".`
-                : "Nenhum aluno cadastrado ainda."}
+                : "Nenhum usuário cadastrado ainda."}
             </p>
           )}
           {carga.estado === "ok" && filtrados.length > 0 && (
             <ul className="divide-y divide-border">
-              {filtrados.map((s) => (
-                <li
-                  key={s.userId}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
-                >
+              {filtrados.map((u) => (
+                <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
-                    <p className="truncate text-lg font-semibold text-foreground">
-                      {s.studentName}
+                    <p
+                      className={`truncate text-lg font-semibold ${u.anonimizado ? "text-muted-foreground" : "text-foreground"}`}
+                    >
+                      {u.anonimizado ? "Anonimizado" : (u.nome ?? "Sem nome")}
                     </p>
-                    <p className="text-base text-muted-foreground">
-                      Matrícula nº {s.matricula} · Registro nº {s.userId}
-                    </p>
+                    <p className="text-base text-muted-foreground">{descricaoUsuario(u)}</p>
                   </div>
-                  <BotaoAnonimizar
-                    userId={s.userId}
-                    nome={s.studentName}
-                    compacto
-                    aoConcluir={() => setVersao((v) => v + 1)}
-                  />
+                  {u.anonimizado ? (
+                    <Badge className="bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
+                      Anonimizado
+                    </Badge>
+                  ) : (
+                    <BotaoAnonimizar
+                      userId={u.id}
+                      nome={u.nome ?? `o registro nº ${u.id}`}
+                      codigo={String(u.matricula ?? u.id)}
+                      rotuloCodigo={u.matricula === null ? "o registro" : "a matrícula"}
+                      compacto
+                      aoConcluir={() => setVersao((v) => v + 1)}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -1153,20 +1217,25 @@ function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => voi
         </CardContent>
       </Card>
 
-      <p className="text-sm text-muted-foreground">
-        Dados do aluno cadastrados na escola.
-      </p>
+      <p className="text-sm text-muted-foreground">Dados do aluno cadastrados na escola.</p>
 
       <Card className="border-destructive/40">
         <CardHeader>
           <CardTitle className="text-xl text-destructive">Zona de risco</CardTitle>
           <CardDescription className="text-base">
-            Substitui os dados pessoais deste aluno e do responsável por "****" e encerra a
-            matrícula. Ação irreversível, usada para atender pedidos de exclusão de dados (LGPD).
+            Apaga nome, e-mail, nascimento e senha do aluno, encerra a matrícula e tira o vínculo
+            com a turma e o responsável. Ficam só o registro e a matrícula, ligados ao histórico
+            escolar. Ação irreversível, usada para atender pedidos de exclusão de dados (LGPD).
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <BotaoAnonimizar userId={aluno.userId} nome={aluno.studentName} aoConcluir={voltar} />
+          <BotaoAnonimizar
+            userId={aluno.userId}
+            nome={aluno.studentName}
+            codigo={String(aluno.matricula)}
+            rotuloCodigo="a matrícula"
+            aoConcluir={voltar}
+          />
         </CardContent>
       </Card>
     </div>

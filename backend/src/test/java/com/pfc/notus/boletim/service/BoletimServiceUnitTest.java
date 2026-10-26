@@ -3,6 +3,7 @@ package com.pfc.notus.boletim.service;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
+import com.pfc.notus.boletim.dto.BoletimDisciplinaDTO;
 import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
@@ -109,7 +110,7 @@ class BoletimServiceUnitTest {
     }
 
     @Test
-    void deveMontarOBoletimComMediaSugeridaENotaFinalPorDisciplinaEBimestre() {
+    void deveMontarOBoletimComNotaDoBimestreEMediasDeSemestreEAnual() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
         Disciplina portugues = criarDisciplina(6L, "Português");
@@ -117,29 +118,37 @@ class BoletimServiceUnitTest {
                 criarNota(8f, Bimestre.PRIMEIRO, aluno, matematica),
                 criarNota(9f, Bimestre.PRIMEIRO, aluno, matematica),
                 criarNota(6f, Bimestre.SEGUNDO, aluno, matematica),
+                criarNota(5f, Bimestre.TERCEIRO, aluno, matematica),
                 criarNota(7f, Bimestre.PRIMEIRO, aluno, portugues)));
         when(boletimRepository.findByStudentId(10L))
-                .thenReturn(List.of(criarNotaFinal(1L, 9.5f, Bimestre.PRIMEIRO, aluno, matematica)));
+                .thenReturn(List.of(criarNotaFinal(1L, 10f, Bimestre.PRIMEIRO, aluno, matematica)));
 
-        List<BoletimDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
+        List<BoletimDisciplinaDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
 
-        assertEquals(3, resultado.size());
-        assertEquals("Matemática", resultado.get(0).disciplinaTitle());
-        assertEquals(Bimestre.PRIMEIRO, resultado.get(0).bimestre());
-        assertEquals(8.5f, resultado.get(0).mediaSugerida());
-        assertEquals(9.5f, resultado.get(0).notaFinal());
-        assertEquals(1L, resultado.get(0).id());
-        assertEquals(Bimestre.SEGUNDO, resultado.get(1).bimestre());
-        assertEquals(6f, resultado.get(1).mediaSugerida());
-        assertNull(resultado.get(1).notaFinal());
-        assertNull(resultado.get(1).id());
-        assertEquals("Português", resultado.get(2).disciplinaTitle());
-        assertEquals(7f, resultado.get(2).mediaSugerida());
+        assertEquals(2, resultado.size());
+        BoletimDisciplinaDTO mat = resultado.get(0);
+        assertEquals("Matemática", mat.disciplinaTitle());
+        assertEquals(3, mat.bimestres().size());
+        assertEquals(1L, mat.bimestres().get(0).id());
+        assertEquals(8.5f, mat.bimestres().get(0).mediaCalculada());
+        assertEquals(10f, mat.bimestres().get(0).notaFinal());
+        assertEquals(10f, mat.bimestres().get(0).nota());
+        assertNull(mat.bimestres().get(1).id());
+        assertNull(mat.bimestres().get(1).notaFinal());
+        assertEquals(6f, mat.bimestres().get(1).nota());
+        assertEquals(8f, mat.mediaPrimeiroSemestre());
+        assertEquals(5f, mat.mediaSegundoSemestre());
+        assertEquals(7f, mat.mediaAnual());
+        BoletimDisciplinaDTO port = resultado.get(1);
+        assertEquals("Português", port.disciplinaTitle());
+        assertEquals(7f, port.mediaPrimeiroSemestre());
+        assertNull(port.mediaSegundoSemestre());
+        assertEquals(7f, port.mediaAnual());
         verify(studentAccessGuardService).assertCanView(10L, PROFESSOR);
     }
 
     @Test
-    void deveLancarANotaFinalComAMediaSugeridaEAvisarOResponsavel() {
+    void deveLancarANotaFinalComAMediaCalculadaEAvisarOResponsavel() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
@@ -159,7 +168,7 @@ class BoletimServiceUnitTest {
 
         assertEquals(50L, resultado.id());
         assertEquals(8.5f, resultado.notaFinal());
-        assertEquals(7.5f, resultado.mediaSugerida());
+        assertEquals(7.5f, resultado.mediaCalculada());
         assertNotNull(resultado.lancadoEm());
         verify(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
         verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L));
@@ -181,7 +190,7 @@ class BoletimServiceUnitTest {
 
         assertEquals(50L, resultado.id());
         assertEquals(7f, resultado.notaFinal());
-        assertNull(resultado.mediaSugerida());
+        assertNull(resultado.mediaCalculada());
     }
 
     @Test
