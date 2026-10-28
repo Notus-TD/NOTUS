@@ -3,6 +3,7 @@ package com.pfc.notus.entrega.service;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
 import com.pfc.notus.entrega.domain.Entrega;
+import com.pfc.notus.entrega.domain.StatusEntrega;
 import com.pfc.notus.entrega.dto.EntregaDTO;
 import com.pfc.notus.entrega.dto.EntregaRequestDTO;
 import com.pfc.notus.entrega.mapper.EntregaMapper;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class EntregaService {
@@ -78,7 +80,26 @@ public class EntregaService {
         Entrega entity = entregaRepository.findByAtividadeIdAndStudentId(atividade.getId(), student.getId())
                 .orElseGet(() -> new Entrega(atividade, student));
         entity.setStatus(dto.status());
+        entity.setPontosObtidos(pontosObtidos(atividade, dto));
         return EntregaMapper.toDto(entregaRepository.save(entity));
+    }
+
+    private Float pontosObtidos(Atividade atividade, EntregaRequestDTO dto) {
+        Float valor = atividade.getPontos();
+        if (dto.status() == StatusEntrega.NAO_ENTREGUE) {
+            return valor == null ? null : 0f;
+        }
+        Float obtidos = dto.pontosObtidos();
+        if (obtidos == null) {
+            return null;
+        }
+        if (valor == null) {
+            throw new RegraNegocioException("Esta atividade não vale pontos.");
+        }
+        if (obtidos.isNaN() || obtidos < 0 || obtidos > valor) {
+            throw new RegraNegocioException(String.format(Locale.of("pt", "BR"), "Os pontos obtidos devem estar entre 0 e %.1f.", valor));
+        }
+        return obtidos;
     }
 
     @Transactional

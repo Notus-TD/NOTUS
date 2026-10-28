@@ -126,6 +126,55 @@ class EntregaServiceUnitTest {
     }
 
     @Test
+    void deveSalvarOsPontosObtidosDentroDoValorDaAtividade() {
+        Turma turma = criarTurma(1L);
+        Atividade atividade = criarAtividade(turma);
+        atividade.setPontos(2f);
+        when(atividadeRepository.findById(1L)).thenReturn(Optional.of(atividade));
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(criarAluno(turma)));
+        when(entregaRepository.findByAtividadeIdAndStudentId(1L, 10L)).thenReturn(Optional.empty());
+        when(entregaRepository.save(any(Entrega.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
+
+        EntregaDTO resultado = entregaService.marcar(
+                new EntregaRequestDTO(1L, 10L, StatusEntrega.ATRASADA, 1.5f), PROFESSOR);
+
+        assertEquals(2f, resultado.pontos());
+        assertEquals(1.5f, resultado.pontosObtidos());
+    }
+
+    @Test
+    void deveZerarOsPontosQuandoAtividadeNaoFoiEntregue() {
+        Turma turma = criarTurma(1L);
+        Atividade atividade = criarAtividade(turma);
+        atividade.setPontos(2f);
+        when(atividadeRepository.findById(1L)).thenReturn(Optional.of(atividade));
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(criarAluno(turma)));
+        when(entregaRepository.findByAtividadeIdAndStudentId(1L, 10L)).thenReturn(Optional.empty());
+        when(entregaRepository.save(any(Entrega.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
+
+        EntregaDTO resultado = entregaService.marcar(
+                new EntregaRequestDTO(1L, 10L, StatusEntrega.NAO_ENTREGUE, 1.5f), PROFESSOR);
+
+        assertEquals(0f, resultado.pontosObtidos());
+    }
+
+    @Test
+    void deveRecusarPontosObtidosAcimaDoValorDaAtividade() {
+        Turma turma = criarTurma(1L);
+        Atividade atividade = criarAtividade(turma);
+        atividade.setPontos(1f);
+        when(atividadeRepository.findById(1L)).thenReturn(Optional.of(atividade));
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(criarAluno(turma)));
+        when(entregaRepository.findByAtividadeIdAndStudentId(1L, 10L)).thenReturn(Optional.empty());
+
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> entregaService.marcar(new EntregaRequestDTO(1L, 10L, StatusEntrega.ENTREGUE, 1.5f), PROFESSOR));
+
+        assertEquals("Os pontos obtidos devem estar entre 0 e 1,0.", excecao.getMessage());
+        verify(entregaRepository, never()).save(any());
+    }
+
+    @Test
     void deveRecusarEntregaSemStatus() {
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
                 () -> entregaService.marcar(new EntregaRequestDTO(1L, 10L, null), PROFESSOR));

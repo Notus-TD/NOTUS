@@ -23,6 +23,9 @@ public class Entrega {
     @Getter @Setter
     private StatusEntrega status;
 
+    @Getter @Setter
+    private Float pontosObtidos;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atividade_id", nullable = false)
     @Getter @Setter
