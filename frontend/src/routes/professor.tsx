@@ -885,7 +885,7 @@ function Atividades({
               </div>
               <div className="space-y-2">
                 <label htmlFor="pontos" className="block text-lg font-semibold text-foreground">
-                  Vale pontos <span className="font-normal text-muted-foreground">(opcional)</span>
+                  Vale pontos
                 </label>
                 <Input
                   id="pontos"
