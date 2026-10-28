@@ -13,7 +13,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class StudentService {
@@ -42,6 +44,25 @@ public class StudentService {
         student = (Student) userService.register(student, "ROLE_ALUNO");
 
         return new StudentRegistrationResponse(student.getId(), student.getFullName());
+    }
+
+    // Tudo ou nada: se um aluno falhar, nenhum do lote fica cadastrado.
+    @Transactional
+    public List<StudentRegistrationResponse> createStudents(ResponsibleRequest responsibleDto, List<StudentRequest> studentDtos) {
+        Set<Long> matriculas = new HashSet<>();
+        Set<String> emails = new HashSet<>();
+        for (StudentRequest dto : studentDtos) {
+            if (!matriculas.add(dto.matricula())) {
+                throw new ConflictException("Matrícula repetida no cadastro: " + dto.matricula());
+            }
+            if (!emails.add(dto.educationalEmail().trim().toLowerCase())) {
+                throw new ConflictException("E-mail repetido no cadastro: " + dto.educationalEmail());
+            }
+        }
+
+        return studentDtos.stream()
+                .map(dto -> createStudent(responsibleDto, dto))
+                .toList();
     }
 
     @Transactional(readOnly = true)

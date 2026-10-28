@@ -148,6 +148,11 @@ export type StudentRegistrationResponse = {
   studentName: string;
 };
 
+export type StudentBatchRegistrationRequest = {
+  responsible: ResponsibleRequest;
+  students: StudentRequest[];
+};
+
 type StandardError = {
   status: number;
   message: string;
@@ -176,6 +181,33 @@ export async function cadastrarAluno(
   let res: Response;
   try {
     res = await fetch(`${API_URL}/students`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
+  }
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as StandardError | null;
+    throw new ApiError(res.status, err?.message ?? `Erro ${res.status}`, err?.errors ?? []);
+  }
+
+  return res.json();
+}
+
+// Cadastra vários alunos do mesmo responsável numa única transação (tudo ou nada).
+export async function cadastrarAlunos(
+  body: StudentBatchRegistrationRequest,
+): Promise<StudentRegistrationResponse[]> {
+  const token = getToken();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/students/lote`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -263,8 +295,12 @@ export type LecionamentoDTO = {
   disciplinaId: number;
   disciplinaTitle: string;
   professorId: number;
+  professorName: string | null;
   professorEmail: string;
 };
+export type LecionamentoRequestDTO = { turmaId: number; disciplinaId: number; professorId: number };
+export type ProfessorDTO = { id: number; fullName: string; email: string };
+export type ProfessorRequest = { fullName: string; email: string };
 export type TurmaDetalheDTO = {
   id: number;
   name: string;
@@ -375,6 +411,15 @@ export const createTurma = (dto: TurmaRequestDTO) => sendJson<TurmaDTO>("POST", 
 export const updateTurma = (turmaId: number, dto: TurmaRequestDTO) =>
   sendJson<TurmaDTO>("PUT", `/turma/${turmaId}`, dto);
 export const deleteTurma = (turmaId: number) => sendJson<void>("DELETE", `/turma/${turmaId}`);
+
+export const getProfessores = () => getJson<ProfessorDTO[]>("/professores");
+export const cadastrarProfessor = (dto: ProfessorRequest) =>
+  sendJson<ProfessorDTO>("POST", "/professores", dto);
+
+export const getLecionamentos = () => getJson<LecionamentoDTO[]>("/lecionamento");
+export const createLecionamento = (dto: LecionamentoRequestDTO) =>
+  sendJson<LecionamentoDTO>("POST", "/lecionamento", dto);
+export const deleteLecionamento = (id: number) => sendJson<void>("DELETE", `/lecionamento/${id}`);
 
 export type TurmaAlunoResponseDTO = {
   turmaId: number;
