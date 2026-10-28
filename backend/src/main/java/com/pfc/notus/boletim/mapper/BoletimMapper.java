@@ -42,15 +42,12 @@ public class BoletimMapper {
     }
 
     public static BoletimDisciplinaDTO toDisciplinaDto(Disciplina disciplina, List<BoletimDTO> bimestres,
-                                                       Float mediaPrimeiroSemestre, Float mediaSegundoSemestre,
-                                                       Float mediaAnual) {
+                                                       Float mediaFinal) {
         return new BoletimDisciplinaDTO(
                 disciplina.getId(),
                 disciplina.getTitle(),
                 bimestres,
-                mediaPrimeiroSemestre,
-                mediaSegundoSemestre,
-                mediaAnual);
+                mediaFinal);
     }
 
     private static Float somarAtividades(Float nota, Float pontosAtividades) {
