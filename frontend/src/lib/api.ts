@@ -314,9 +314,7 @@ export type BoletimDisciplinaDTO = {
   disciplinaId: number;
   disciplinaTitle: string;
   bimestres: BoletimDTO[];
-  mediaPrimeiroSemestre: number | null;
-  mediaSegundoSemestre: number | null;
-  mediaAnual: number | null;
+  mediaFinal: number | null;
 };
 export type NotaFinalRequest = {
   studentId: number;

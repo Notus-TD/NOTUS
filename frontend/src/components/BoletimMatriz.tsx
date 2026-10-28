@@ -56,7 +56,7 @@ type EstadoMatriz =
 
 type DisciplinaRef = { id: number; title: string };
 type CelulaSelecionada = { disciplina: DisciplinaRef; bimestre: Bimestre };
-type CampoMedia = "mediaPrimeiroSemestre" | "mediaSegundoSemestre" | "mediaAnual";
+type CampoMedia = "mediaFinal";
 type Coluna =
   | { tipo: "bimestre"; bimestre: Bimestre; label: string }
   | { tipo: "media"; campo: CampoMedia; label: string };
@@ -64,11 +64,9 @@ type Coluna =
 const COLUNAS: Coluna[] = [
   { tipo: "bimestre", bimestre: "PRIMEIRO", label: nomeBimestre("PRIMEIRO") },
   { tipo: "bimestre", bimestre: "SEGUNDO", label: nomeBimestre("SEGUNDO") },
-  { tipo: "media", campo: "mediaPrimeiroSemestre", label: "1º semestre" },
   { tipo: "bimestre", bimestre: "TERCEIRO", label: nomeBimestre("TERCEIRO") },
   { tipo: "bimestre", bimestre: "QUARTO", label: nomeBimestre("QUARTO") },
-  { tipo: "media", campo: "mediaSegundoSemestre", label: "2º semestre" },
-  { tipo: "media", campo: "mediaAnual", label: "Média anual" },
+  { tipo: "media", campo: "mediaFinal", label: "Média final" },
 ];
 
 const NOTA_APROVACAO = 7;
@@ -530,8 +528,8 @@ function LegendaNotas() {
       </ul>
       <p className="text-sm text-muted-foreground">
         A nota do bimestre é a nota lançada pelo professor mais os pontos das atividades, limitada a
-        10. Só contorno: bimestre ainda sem nota lançada. As médias do semestre e a anual usam a
-        nota de cada bimestre.
+        10. Só contorno: bimestre ainda sem nota lançada. A média final é a média das notas dos
+        bimestres.
       </p>
     </div>
   );
