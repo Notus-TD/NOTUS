@@ -54,12 +54,12 @@ INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, 
 INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (1, 1, 2026000002);
 INSERT INTO tb_lecionamento (turma_id, disciplina_id, professor_id) VALUES (2, 1, 2026000002);
 
-INSERT INTO tb_atividade (title, content, bimestre, prazo, publicada_em, disciplina_id, turma_id) VALUES ('Lista de Exercícios 1', 'Resolver os exercícios das páginas 10 a 15. Vale 1 ponto na nota final.', 'QUARTO', '2026-10-30', '2026-10-13T10:00:00', 1, 1);
+INSERT INTO tb_atividade (title, content, bimestre, prazo, publicada_em, pontos, disciplina_id, turma_id) VALUES ('Lista de Exercícios 1', 'Resolver os exercícios das páginas 10 a 15. Vale 1 ponto na nota final.', 'QUARTO', '2026-10-30', '2026-10-13T10:00:00', 1.0, 1, 1);
 INSERT INTO tb_atividade (title, content, bimestre, prazo, publicada_em, disciplina_id, turma_id) VALUES ('Redação Dissertativa', 'Escrever uma redação sobre o tema sorteado em sala.', 'QUARTO', '2026-10-15', '2026-10-06T10:00:00', 2, 1);
-INSERT INTO tb_atividade (title, content, bimestre, prazo, publicada_em, disciplina_id, turma_id) VALUES ('Lista de Equações', 'Resolver as equações do 1º grau da página 42.', 'QUARTO', '2026-11-05', '2026-10-14T10:00:00', 1, 2);
+INSERT INTO tb_atividade (title, content, bimestre, prazo, publicada_em, pontos, disciplina_id, turma_id) VALUES ('Lista de Equações', 'Resolver as equações do 1º grau da página 42.', 'QUARTO', '2026-11-05', '2026-10-14T10:00:00', 2.0, 1, 2);
 
-INSERT INTO tb_entrega (status, atividade_id, student_id) VALUES ('ENTREGUE', 1, 2026000001);
-INSERT INTO tb_entrega (status, atividade_id, student_id) VALUES ('ATRASADA', 1, 2026000007);
+INSERT INTO tb_entrega (status, pontos_obtidos, atividade_id, student_id) VALUES ('ENTREGUE', 1.0, 1, 2026000001);
+INSERT INTO tb_entrega (status, pontos_obtidos, atividade_id, student_id) VALUES ('ATRASADA', 0.5, 1, 2026000007);
 
 INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id) VALUES ('Prova 1', 8.5, 'PRIMEIRO', 2026000001, 1);
 INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id) VALUES ('Trabalho em grupo', 9.0, 'PRIMEIRO', 2026000001, 1);
