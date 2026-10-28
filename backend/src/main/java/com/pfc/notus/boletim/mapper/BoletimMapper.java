@@ -10,7 +10,9 @@ import java.util.List;
 
 public class BoletimMapper {
 
-    public static BoletimDTO toDto(Boletim boletim, Float mediaCalculada) {
+    private static final float NOTA_MAXIMA = 10f;
+
+    public static BoletimDTO toDto(Boletim boletim, Float mediaCalculada, Float pontosAtividades) {
         return new BoletimDTO(
                 boletim.getId(),
                 boletim.getStudent().getId(),
@@ -19,11 +21,13 @@ public class BoletimMapper {
                 boletim.getBimestre(),
                 mediaCalculada,
                 boletim.getNotaFinal(),
-                boletim.getNotaFinal(),
-                boletim.getLancadoEm());
+                somarAtividades(boletim.getNotaFinal(), pontosAtividades),
+                boletim.getLancadoEm(),
+                pontosAtividades);
     }
 
-    public static BoletimDTO toDtoSemNotaFinal(Long studentId, Disciplina disciplina, Bimestre bimestre, Float mediaCalculada) {
+    public static BoletimDTO toDtoSemNotaFinal(Long studentId, Disciplina disciplina, Bimestre bimestre,
+                                               Float mediaCalculada, Float pontosAtividades) {
         return new BoletimDTO(
                 null,
                 studentId,
@@ -32,8 +36,9 @@ public class BoletimMapper {
                 bimestre,
                 mediaCalculada,
                 null,
-                mediaCalculada,
-                null);
+                somarAtividades(mediaCalculada, pontosAtividades),
+                null,
+                pontosAtividades);
     }
 
     public static BoletimDisciplinaDTO toDisciplinaDto(Disciplina disciplina, List<BoletimDTO> bimestres,
@@ -46,5 +51,13 @@ public class BoletimMapper {
                 mediaPrimeiroSemestre,
                 mediaSegundoSemestre,
                 mediaAnual);
+    }
+
+    private static Float somarAtividades(Float nota, Float pontosAtividades) {
+        if (nota == null && pontosAtividades == null) {
+            return null;
+        }
+        float total = (nota == null ? 0f : nota) + (pontosAtividades == null ? 0f : pontosAtividades);
+        return Math.min(total, NOTA_MAXIMA);
     }
 }

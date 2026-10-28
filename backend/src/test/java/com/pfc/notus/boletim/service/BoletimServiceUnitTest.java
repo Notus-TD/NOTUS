@@ -8,6 +8,10 @@ import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.atividade.domain.Atividade;
+import com.pfc.notus.entrega.domain.Entrega;
+import com.pfc.notus.entrega.domain.StatusEntrega;
+import com.pfc.notus.entrega.repository.EntregaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.nota.domain.Nota;
@@ -54,6 +58,9 @@ class BoletimServiceUnitTest {
 
     @Mock
     private NotaRepository notaRepository;
+
+    @Mock
+    private EntregaRepository entregaRepository;
 
     @Mock
     private StudentRepository studentRepository;
@@ -145,6 +152,46 @@ class BoletimServiceUnitTest {
         assertNull(port.mediaSegundoSemestre());
         assertEquals(7f, port.mediaAnual());
         verify(studentAccessGuardService).assertCanView(10L, PROFESSOR);
+    }
+
+    private Entrega criarEntrega(float pontosObtidos, Bimestre bimestre, Student aluno, Disciplina disciplina) {
+        Atividade atividade = new Atividade("Lista", "Exercícios");
+        atividade.setBimestre(bimestre);
+        atividade.setDisciplina(disciplina);
+        atividade.setPontos(2f);
+        Entrega entrega = new Entrega(atividade, aluno);
+        entrega.setStatus(StatusEntrega.ENTREGUE);
+        entrega.setPontosObtidos(pontosObtidos);
+        return entrega;
+    }
+
+    @Test
+    void deveSomarOsPontosDasAtividadesANotaDoBimestreLimitandoA10() {
+        Student aluno = criarAluno(10L);
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        when(notaRepository.findByStudentIdOrderByIdAsc(10L))
+                .thenReturn(List.of(criarNota(6f, Bimestre.SEGUNDO, aluno, matematica)));
+        when(boletimRepository.findByStudentId(10L))
+                .thenReturn(List.of(criarNotaFinal(1L, 8f, Bimestre.PRIMEIRO, aluno, matematica)));
+        Entrega semPontos = new Entrega(new Atividade("Recado", "Sem nota"), aluno);
+        when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(
+                criarEntrega(1.5f, Bimestre.PRIMEIRO, aluno, matematica),
+                criarEntrega(1f, Bimestre.PRIMEIRO, aluno, matematica),
+                criarEntrega(0.5f, Bimestre.SEGUNDO, aluno, matematica),
+                criarEntrega(2f, Bimestre.TERCEIRO, aluno, matematica),
+                semPontos));
+
+        List<BoletimDisciplinaDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
+
+        List<BoletimDTO> bimestres = resultado.get(0).bimestres();
+        assertEquals(3, bimestres.size());
+        assertEquals(8f, bimestres.get(0).notaFinal());
+        assertEquals(2.5f, bimestres.get(0).pontosAtividades());
+        assertEquals(10f, bimestres.get(0).nota());
+        assertEquals(0.5f, bimestres.get(1).pontosAtividades());
+        assertEquals(6.5f, bimestres.get(1).nota());
+        assertNull(bimestres.get(2).notaFinal());
+        assertEquals(2f, bimestres.get(2).nota());
     }
 
     @Test

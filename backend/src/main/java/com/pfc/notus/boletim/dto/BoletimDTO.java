@@ -13,6 +13,7 @@ public record BoletimDTO(
         Float mediaCalculada,
         Float notaFinal,
         Float nota,
-        LocalDateTime lancadoEm
+        LocalDateTime lancadoEm,
+        Float pontosAtividades
 ) {
 }
