@@ -14,12 +14,10 @@ const perfil: Record<Role, { label: string; icon: typeof GraduationCap }> = {
 
 export function AppShell({
   titulo,
-  subtitulo,
   role,
   children,
 }: {
   titulo: string;
-  subtitulo?: string;
   role?: Role;
   children: ReactNode;
 }) {
@@ -87,7 +85,6 @@ export function AppShell({
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {titulo}
           </h1>
-          {subtitulo && <p className="mt-2 max-w-2xl text-lg text-muted-foreground">{subtitulo}</p>}
         </div>
 
         <div className="mt-8 space-y-8">{children}</div>
