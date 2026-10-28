@@ -1,7 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BarChart3, ClipboardCheck, ClipboardList, Search, Trash2, Users } from "lucide-react";
+import {
+  BarChart3,
+  CalendarClock,
+  ClipboardCheck,
+  ClipboardList,
+  Home,
+  Search,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BoletimMatriz } from "@/components/BoletimMatriz";
 import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
@@ -74,9 +83,16 @@ export const Route = createFileRoute("/professor")({
   component: PainelProfessor,
 });
 
-type SecaoId = "chamada" | "notas" | "atividades";
+type SecaoId = "inicio" | "chamada" | "notas" | "atividades";
 
 const secoes: SecaoPainel<SecaoId>[] = [
+  {
+    id: "inicio",
+    label: "Início",
+    descricao: "Resumo das turmas e prazos",
+    icon: Home,
+    termos: "inicio home resumo painel turmas prazos",
+  },
   {
     id: "chamada",
     label: "Chamada",
@@ -111,7 +127,7 @@ async function alunosAtivosDaTurma(turmaId: number) {
 
 function PainelProfessor() {
   const [busca, setBusca] = useState("");
-  const [secao, setSecao] = useState<SecaoId>("chamada");
+  const [secao, setSecao] = useState<SecaoId>("inicio");
   const [minhasTurmas, setMinhasTurmas] = useState<TurmaComDisciplinasDTO[] | null>(null);
   const [turmaId, setTurmaId] = useState<number | null>(null);
   const [disciplinaId, setDisciplinaId] = useState<number | null>(null);
@@ -238,12 +254,22 @@ function PainelProfessor() {
             </CardContent>
           </Card>
         )}
-        {turmaAtual && !disciplina && (
+        {minhasTurmas && minhasTurmas.length > 0 && secao === "inicio" && (
+          <InicioProfessor
+            turmas={minhasTurmas}
+            nomeProfessor={nomeProfessor}
+            aoAbrir={(id, destino) => {
+              setTurmaId(id);
+              setSecao(destino);
+            }}
+          />
+        )}
+        {secao !== "inicio" && turmaAtual && !disciplina && (
           <p className="text-base font-semibold text-destructive">
             Nenhuma disciplina associada a você nesta turma. Procure a secretaria da escola.
           </p>
         )}
-        {turmaAtual && disciplina && turmaAtual.disciplinas.length > 1 && (
+        {secao !== "inicio" && turmaAtual && disciplina && turmaAtual.disciplinas.length > 1 && (
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Disciplina">
             <span className="text-base font-semibold text-foreground">Disciplina:</span>
             {turmaAtual.disciplinas.map((d) => (
@@ -286,6 +312,167 @@ function PainelProfessor() {
         )}
       </PainelLateral>
     </AppShell>
+  );
+}
+
+type ResumoTurma = { alunos: number; proximas: AtividadeDTO[] };
+
+function InicioProfessor({
+  turmas,
+  nomeProfessor,
+  aoAbrir,
+}: {
+  turmas: TurmaComDisciplinasDTO[];
+  nomeProfessor: string | null;
+  aoAbrir: (turmaId: number, secao: Exclude<SecaoId, "inicio">) => void;
+}) {
+  const hoje = hojeLocal();
+  const [resumos, setResumos] = useState<Record<number, ResumoTurma> | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    Promise.all(
+      turmas.map(async (t) => {
+        const ids = new Set(t.disciplinas.map((d) => d.id));
+        const [alunos, atividades] = await Promise.all([
+          alunosAtivosDaTurma(t.turmaId),
+          getAtividadesDaTurma(t.turmaId),
+        ]);
+        const proximas = atividades
+          .filter((a) => ids.has(a.disciplinaId) && a.prazo >= hoje)
+          .sort((a, b) => a.prazo.localeCompare(b.prazo));
+        return [t.turmaId, { alunos: alunos.length, proximas }] as const;
+      }),
+    )
+      .then((pares) => ativo && setResumos(Object.fromEntries(pares)))
+      .catch(
+        (e) =>
+          ativo &&
+          setErro(e instanceof ApiError ? e.message : "Erro ao carregar o resumo das turmas."),
+      );
+    return () => {
+      ativo = false;
+    };
+  }, [turmas, hoje]);
+
+  const prazos = turmas
+    .flatMap((t) => (resumos?.[t.turmaId]?.proximas ?? []).map((a) => ({ turma: t, atividade: a })))
+    .sort((a, b) => a.atividade.prazo.localeCompare(b.atividade.prazo))
+    .slice(0, 5);
+
+  return (
+    <Secao
+      titulo={nomeProfessor ? `Olá, Prof. ${nomeProfessor}` : "Início"}
+      descricao="Suas turmas e os próximos prazos de atividades."
+    >
+      <div className="space-y-6">
+        {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {turmas.map((t) => {
+            const resumo = resumos?.[t.turmaId];
+            return (
+              <Card key={t.turmaId}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Users className="size-5 text-primary" aria-hidden="true" />
+                    {t.turmaName}
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    {t.disciplinas.map((d) => d.title).join(", ")} · {t.schoolYear}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-6 text-base">
+                    <p>
+                      <span className="block text-2xl font-bold tabular-nums text-foreground">
+                        {resumo ? resumo.alunos : "…"}
+                      </span>
+                      <span className="text-muted-foreground">aluno(s) ativos</span>
+                    </p>
+                    <p>
+                      <span className="block text-2xl font-bold tabular-nums text-foreground">
+                        {resumo ? resumo.proximas.length : "…"}
+                      </span>
+                      <span className="text-muted-foreground">atividade(s) em aberto</span>
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      className="min-h-11 text-base"
+                      onClick={() => aoAbrir(t.turmaId, "chamada")}
+                    >
+                      <ClipboardCheck className="size-5" aria-hidden="true" />
+                      Chamada
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-h-11 text-base"
+                      onClick={() => aoAbrir(t.turmaId, "notas")}
+                    >
+                      <BarChart3 className="size-5" aria-hidden="true" />
+                      Notas
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-h-11 text-base"
+                      onClick={() => aoAbrir(t.turmaId, "atividades")}
+                    >
+                      <ClipboardList className="size-5" aria-hidden="true" />
+                      Atividades
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <CalendarClock className="size-5 text-primary" aria-hidden="true" />
+              Próximos prazos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!erro && resumos === null && (
+              <p className="text-base text-muted-foreground">Carregando…</p>
+            )}
+            {resumos && prazos.length === 0 && (
+              <p className="text-base text-muted-foreground">
+                Nenhuma atividade com prazo em aberto nas suas turmas.
+              </p>
+            )}
+            {prazos.length > 0 && (
+              <ul className="divide-y divide-border">
+                {prazos.map(({ turma, atividade }) => (
+                  <li key={atividade.id}>
+                    <button
+                      type="button"
+                      onClick={() => aoAbrir(turma.turmaId, "atividades")}
+                      className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg px-2 py-3 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-lg text-foreground">{atividade.title}</span>
+                        <span className="block text-sm text-muted-foreground">
+                          {turma.turmaName} · {atividade.disciplinaTitle}
+                        </span>
+                      </span>
+                      <span className="text-base font-semibold text-foreground">
+                        {atividade.prazo === hoje ? "Hoje" : formatarData(atividade.prazo)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </Secao>
   );
 }
 
