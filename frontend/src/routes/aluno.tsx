@@ -175,11 +175,7 @@ function PainelAluno() {
   ) : null;
 
   return (
-    <AppShell
-      role="ROLE_ALUNO"
-      titulo={`Olá, ${primeiroNome ?? "..."}!`}
-      subtitulo={`${aluno.turma} · Use a busca ao lado para encontrar o que precisa.`}
-    >
+    <AppShell role="ROLE_ALUNO" titulo={`Olá, ${primeiroNome ?? "..."}!`}>
       <PainelLateral
         secoes={secoesComContador}
         secaoAtiva={secao}
