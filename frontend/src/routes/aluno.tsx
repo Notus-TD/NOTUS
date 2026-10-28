@@ -344,7 +344,7 @@ function Notas() {
   return (
     <Secao
       titulo="Boletim"
-      descricao="Nota de cada matéria por bimestre, com a média do semestre e a média anual."
+      descricao="Nota de cada matéria nos quatro bimestres, com a média final."
     >
       {studentId ? (
         <div className="space-y-3">
@@ -518,10 +518,7 @@ function FaltasBackend() {
   }, []);
 
   return (
-    <Secao
-      titulo="Faltas registradas"
-      descricao="Suas faltas lançadas pelo professor."
-    >
+    <Secao titulo="Faltas registradas" descricao="Suas faltas lançadas pelo professor.">
       <Card>
         <CardContent className="space-y-4 p-6">
           <Button
