@@ -308,6 +308,7 @@ export type BoletimDTO = {
   notaFinal: number | null;
   nota: number;
   lancadoEm: string | null;
+  pontosAtividades: number | null;
 };
 export type BoletimDisciplinaDTO = {
   disciplinaId: number;

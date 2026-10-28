@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AlertCircle, ClipboardList, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, ClipboardList, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,30 +33,25 @@ import {
 } from "@/components/ui/table";
 import {
   ApiError,
-  createNota,
-  deleteNota,
   getBoletimDoAluno,
   getEntregasDoAluno,
-  getNotasDoAluno,
   lancarNotaFinal,
   removerNotaFinal,
-  updateNota,
   type Bimestre,
   type BoletimDisciplinaDTO,
   type BoletimDTO,
   type DisciplinaDTO,
   type EntregaDTO,
-  type NotaDTO,
 } from "@/lib/api";
 import { nomeBimestre } from "@/lib/bimestres";
 import { formatarData } from "@/lib/datas";
 import { STATUS_ENTREGA } from "@/lib/entregas";
-import { cn, media } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type EstadoMatriz =
   | { estado: "carregando" }
   | { estado: "erro"; mensagem: string; status: number }
-  | { estado: "ok"; boletim: BoletimDisciplinaDTO[]; notas: NotaDTO[]; entregas: EntregaDTO[] };
+  | { estado: "ok"; boletim: BoletimDisciplinaDTO[]; entregas: EntregaDTO[] };
 
 type DisciplinaRef = { id: number; title: string };
 type CelulaSelecionada = { disciplina: DisciplinaRef; bimestre: Bimestre };
@@ -96,15 +91,14 @@ export function BoletimMatriz({
     setCarga((atual) => (atual.estado === "ok" ? atual : { estado: "carregando" }));
     (async () => {
       try {
-        const [boletim, notas, entregas] = await Promise.all([
+        const [boletim, entregas] = await Promise.all([
           getBoletimDoAluno(studentId),
-          editable ? getNotasDoAluno(studentId) : Promise.resolve<NotaDTO[]>([]),
           editable
             ? getEntregasDoAluno(studentId).catch((): EntregaDTO[] => [])
             : Promise.resolve<EntregaDTO[]>([]),
         ]);
         if (!ativo) return;
-        setCarga({ estado: "ok", boletim, notas, entregas });
+        setCarga({ estado: "ok", boletim, entregas });
       } catch (e) {
         if (!ativo) return;
         setCarga({
@@ -146,7 +140,7 @@ export function BoletimMatriz({
     );
   }
 
-  const { boletim, notas, entregas } = carga;
+  const { boletim, entregas } = carga;
   const linhas = boletim.flatMap((d) => d.bimestres);
 
   const disciplinas: DisciplinaRef[] = editable
@@ -251,9 +245,6 @@ export function BoletimMatriz({
               disciplina={celula.disciplina}
               bimestre={celula.bimestre}
               linha={linhaDaCelula(celula.disciplina.id, celula.bimestre)}
-              notas={notas.filter(
-                (n) => n.disciplinaId === celula.disciplina.id && n.bimestre === celula.bimestre,
-              )}
               entregas={entregas.filter(
                 (e) => e.disciplinaId === celula.disciplina.id && e.bimestre === celula.bimestre,
               )}
@@ -336,8 +327,9 @@ function LegendaNotas() {
         ))}
       </ul>
       <p className="text-sm text-muted-foreground">
-        Fundo cheio: nota final lançada pelo professor. Só contorno: média das avaliações do
-        bimestre. As médias do semestre e a anual usam a nota de cada bimestre.
+        A nota do bimestre é a nota lançada pelo professor mais os pontos das atividades, limitada a
+        10. Só contorno: bimestre ainda sem nota lançada. As médias do semestre e a anual usam a
+        nota de cada bimestre.
       </p>
     </div>
   );
@@ -346,20 +338,34 @@ function LegendaNotas() {
 const CLASSE_CELULA =
   "inline-flex min-w-14 items-center justify-center rounded-lg px-3 py-1.5 text-base font-semibold tabular-nums";
 
+function detalheNota(linha: BoletimDTO) {
+  const base = linha.notaFinal ?? linha.mediaCalculada;
+  const partes = [];
+  if (base !== null) partes.push(`Nota do bimestre ${formatarNota(base)}`);
+  if (linha.pontosAtividades !== null)
+    partes.push(`atividades ${formatarNota(linha.pontosAtividades)}`);
+  return partes.join(" + ");
+}
+
 function conteudoCelula(linha: BoletimDTO | null, editable: boolean) {
-  const notaFinal = linha?.notaFinal ?? null;
   const nota = linha?.nota ?? null;
-  if (notaFinal !== null) {
+  if (linha && nota !== null) {
+    const pontos = linha.pontosAtividades;
     return (
-      <span className={cn(CLASSE_CELULA, corFundo(notaFinal))} title="Nota final lançada pelo professor">
-        {formatarNota(notaFinal)}
-      </span>
-    );
-  }
-  if (nota !== null) {
-    return (
-      <span className={cn(CLASSE_CELULA, "border-2 bg-card", corBorda(nota))} title="Média das avaliações">
-        {formatarNota(nota)}
+      <span className="inline-flex flex-col items-center gap-0.5" title={detalheNota(linha)}>
+        <span
+          className={cn(
+            CLASSE_CELULA,
+            linha.notaFinal !== null ? corFundo(nota) : cn("border-2 bg-card", corBorda(nota)),
+          )}
+        >
+          {formatarNota(nota)}
+        </span>
+        {pontos !== null && pontos > 0 && (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            +{formatarNota(pontos)} ativ.
+          </span>
+        )}
       </span>
     );
   }
@@ -395,7 +401,7 @@ function CelulaValor({
     <button
       type="button"
       onClick={aoClicar}
-      title="Avaliações e nota final"
+      title="Nota do bimestre e atividades"
       className="rounded-lg transition-all hover:scale-105 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       {conteudoCelula(linha, editable)}
@@ -408,7 +414,6 @@ function CelulaEditor({
   disciplina,
   bimestre,
   linha,
-  notas,
   entregas,
   aoMudar,
 }: {
@@ -416,76 +421,9 @@ function CelulaEditor({
   disciplina: DisciplinaRef;
   bimestre: Bimestre;
   linha: BoletimDTO | null;
-  notas: NotaDTO[];
   entregas: EntregaDTO[];
   aoMudar: () => void;
 }) {
-  const [editandoId, setEditandoId] = useState<number | null>(null);
-  const [descricao, setDescricao] = useState("");
-  const [rate, setRate] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  const mediaCalculada = media(notas.map((n) => n.rate));
-
-  function editar(n: NotaDTO) {
-    setEditandoId(n.id);
-    setDescricao(n.descricao);
-    setRate(String(n.rate));
-  }
-
-  function cancelar() {
-    setEditandoId(null);
-    setDescricao("");
-    setRate("");
-  }
-
-  async function salvar(e: FormEvent) {
-    e.preventDefault();
-    const valor = Number(rate.replace(",", "."));
-    if (!descricao.trim() || !rate.trim() || Number.isNaN(valor)) {
-      toast.error("Informe a avaliação e uma nota válida.");
-      return;
-    }
-    if (valor < 0 || valor > 10) {
-      toast.error("A nota deve estar entre 0 e 10.");
-      return;
-    }
-    setSalvando(true);
-    try {
-      const dto = {
-        descricao: descricao.trim(),
-        rate: valor,
-        bimestre,
-        studentId,
-        disciplinaId: disciplina.id,
-      };
-      if (editandoId) {
-        await updateNota(editandoId, dto);
-        toast.success("Avaliação atualizada.");
-      }
-      if (!editandoId) {
-        await createNota(dto);
-        toast.success("Avaliação lançada.");
-      }
-      cancelar();
-      aoMudar();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao salvar a avaliação.");
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function apagar(id: number) {
-    try {
-      await deleteNota(id);
-      toast.success("Avaliação removida.");
-      if (editandoId === id) cancelar();
-      aoMudar();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao remover a avaliação.");
-    }
-  }
-
   return (
     <div className="space-y-5">
       <DialogHeader>
@@ -493,149 +431,26 @@ function CelulaEditor({
         <DialogDescription>{nomeBimestre(bimestre)}</DialogDescription>
       </DialogHeader>
 
-      <section className="space-y-3">
-        <h4 className="text-base font-semibold text-foreground">Avaliações</h4>
-        {notas.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-base text-muted-foreground">
-            Nenhuma avaliação lançada ainda neste bimestre.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {notas.map((n) => (
-              <li
-                key={n.id}
-                className={cn(
-                  "flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 transition-colors",
-                  editandoId === n.id && "bg-primary/5",
-                )}
-              >
-                <span className="flex items-center gap-3 text-base text-foreground">
-                  <span
-                    className={cn(
-                      "inline-flex min-w-12 justify-center rounded-md px-2 py-1 text-sm font-semibold tabular-nums",
-                      corFundo(n.rate),
-                    )}
-                  >
-                    {formatarNota(n.rate)}
-                  </span>
-                  {n.descricao}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-9"
-                    onClick={() => editar(n)}
-                    aria-label={`Editar ${n.descricao}`}
-                    title="Editar"
-                  >
-                    <Pencil className="size-4" aria-hidden="true" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`Apagar ${n.descricao}`}
-                        title="Apagar"
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Apagar esta avaliação?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {n.descricao} ({formatarNota(n.rate)}) será removida de {disciplina.title}.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => apagar(n.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Apagar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <form onSubmit={salvar} className="space-y-3">
-          <p className="text-sm font-semibold text-foreground">
-            {editandoId ? "Editando avaliação" : "Lançar nova avaliação"}
-          </p>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-40 flex-1 space-y-1">
-              <label
-                htmlFor="celula-descricao"
-                className="block text-sm font-medium text-foreground"
-              >
-                Avaliação
-              </label>
-              <Input
-                id="celula-descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Ex.: Prova 1"
-                className="h-11 text-base"
-              />
-            </div>
-            <div className="w-24 space-y-1">
-              <label htmlFor="celula-nota" className="block text-sm font-medium text-foreground">
-                Nota
-              </label>
-              <Input
-                id="celula-nota"
-                type="number"
-                min={0}
-                max={10}
-                step={0.1}
-                inputMode="decimal"
-                value={rate}
-                onChange={(e) => setRate(e.target.value)}
-                placeholder="0 a 10"
-                className="h-11 text-base"
-              />
-            </div>
-            <div className="flex gap-2">
-              {editandoId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-11 text-base"
-                  onClick={cancelar}
-                >
-                  Cancelar
-                </Button>
-              )}
-              <Button type="submit" disabled={salvando} className="min-h-11 text-base">
-                {salvando ? "Salvando..." : editandoId ? "Salvar edição" : "Lançar avaliação"}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </section>
-
-      <ResumoEntregas entregas={entregas} />
-
-      <NotaFinalForm
-        key={`${linha?.notaFinal ?? ""}-${mediaCalculada ?? ""}`}
+      <NotaBimestreForm
+        key={`${linha?.notaFinal ?? ""}`}
         studentId={studentId}
         disciplina={disciplina}
         bimestre={bimestre}
         linha={linha}
-        mediaCalculada={mediaCalculada}
         aoMudar={aoMudar}
       />
+
+      <ResumoEntregas entregas={entregas} />
+
+      <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-border p-4">
+        <span className="text-base font-semibold text-foreground">Nota do bimestre no boletim</span>
+        <span className="text-sm text-muted-foreground">
+          {linha ? detalheNota(linha) || "—" : "—"} ={" "}
+          <strong className="text-lg tabular-nums text-foreground">
+            {formatarNota(linha?.nota ?? null)}
+          </strong>
+        </span>
+      </div>
     </div>
   );
 }
@@ -653,60 +468,73 @@ function ResumoEntregas({ entregas }: { entregas: EntregaDTO[] }) {
           {entregas.map((e) => (
             <li key={e.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
               <span className="text-foreground">{e.atividadeTitle}</span>
-              <span
-                className={cn(
-                  "rounded-md px-2 py-0.5 font-semibold",
-                  STATUS_ENTREGA[e.status].classe,
+              <span className="flex items-center gap-2">
+                {e.pontos !== null && (
+                  <span className="tabular-nums text-muted-foreground">
+                    {e.pontosObtidos === null ? "—" : formatarNota(e.pontosObtidos)} /{" "}
+                    {formatarNota(e.pontos)} pts
+                  </span>
                 )}
-              >
-                {STATUS_ENTREGA[e.status].label}
+                <span
+                  className={cn(
+                    "rounded-md px-2 py-0.5 font-semibold",
+                    STATUS_ENTREGA[e.status].classe,
+                  )}
+                >
+                  {STATUS_ENTREGA[e.status].label}
+                </span>
               </span>
             </li>
           ))}
         </ul>
       )}
+      <p className="text-xs text-muted-foreground">
+        Os pontos são lançados em Atividades → Marcar entregas.
+      </p>
     </section>
   );
 }
 
-function NotaFinalForm({
+function NotaBimestreForm({
   studentId,
   disciplina,
   bimestre,
   linha,
-  mediaCalculada,
   aoMudar,
 }: {
   studentId: number;
   disciplina: DisciplinaRef;
   bimestre: Bimestre;
   linha: BoletimDTO | null;
-  mediaCalculada: number | null;
   aoMudar: () => void;
 }) {
   const notaFinal = linha?.notaFinal ?? null;
-  const inicial = notaFinal ?? mediaCalculada;
-  const [valor, setValor] = useState(inicial === null ? "" : inicial.toFixed(1));
+  const [valor, setValor] = useState(notaFinal === null ? "" : notaFinal.toFixed(1));
   const [salvando, setSalvando] = useState(false);
 
   async function lancar(e: FormEvent) {
     e.preventDefault();
     const numero = Number(valor.replace(",", "."));
     if (!valor.trim() || Number.isNaN(numero)) {
-      toast.error("Informe uma nota final válida.");
+      toast.error("Informe uma nota válida.");
       return;
     }
     if (numero < 0 || numero > 10) {
-      toast.error("A nota final deve estar entre 0 e 10.");
+      toast.error("A nota do bimestre deve estar entre 0 e 10.");
       return;
     }
     setSalvando(true);
     try {
-      await lancarNotaFinal({ studentId, disciplinaId: disciplina.id, bimestre, notaFinal: numero });
-      toast.success("Nota final lançada. O responsável recebe o aviso por e-mail.");
+      await lancarNotaFinal({
+        studentId,
+        disciplinaId: disciplina.id,
+        bimestre,
+        notaFinal: numero,
+      });
+      toast.success("Nota do bimestre lançada. O responsável recebe o aviso por e-mail.");
       aoMudar();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao lançar a nota final.");
+      toast.error(err instanceof ApiError ? err.message : "Erro ao lançar a nota do bimestre.");
     } finally {
       setSalvando(false);
     }
@@ -716,33 +544,30 @@ function NotaFinalForm({
     if (!linha?.id) return;
     try {
       await removerNotaFinal(linha.id);
-      toast.success("Nota final removida.");
+      toast.success("Nota do bimestre removida.");
       aoMudar();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao remover a nota final.");
+      toast.error(err instanceof ApiError ? err.message : "Erro ao remover a nota do bimestre.");
     }
   }
 
   return (
-    <form onSubmit={lancar} className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 className="text-base font-semibold text-foreground">Nota final</h4>
-        <p className="text-sm text-muted-foreground">
-          Média das avaliações:{" "}
-          <strong className="tabular-nums">{formatarNota(mediaCalculada)}</strong>
-        </p>
-      </div>
+    <form
+      onSubmit={lancar}
+      className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4"
+    >
+      <h4 className="text-base font-semibold text-foreground">Nota do bimestre</h4>
       <p className="text-sm text-muted-foreground">
-        Sem nota final, o boletim mostra a média das avaliações. Lance a nota final só se quiser
-        substituir essa média, por exemplo com os pontos das atividades ou um ponto extra.
+        Digite a nota já calculada por você (provas, trabalhos e pesos). Os pontos das atividades
+        são somados a ela automaticamente, até o limite de 10.
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-28 space-y-1">
-          <label htmlFor="nota-final" className="block text-sm font-medium text-foreground">
-            Nota final
+          <label htmlFor="nota-bimestre" className="block text-sm font-medium text-foreground">
+            Nota
           </label>
           <Input
-            id="nota-final"
+            id="nota-bimestre"
             type="number"
             min={0}
             max={10}
@@ -755,11 +580,7 @@ function NotaFinalForm({
           />
         </div>
         <Button type="submit" disabled={salvando} className="min-h-11 text-base">
-          {salvando
-            ? "Lançando..."
-            : notaFinal !== null
-              ? "Atualizar nota final"
-              : "Lançar nota final"}
+          {salvando ? "Lançando..." : notaFinal !== null ? "Atualizar nota" : "Lançar nota"}
         </Button>
         {notaFinal !== null && (
           <AlertDialog>
@@ -774,10 +595,10 @@ function NotaFinalForm({
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Remover a nota final?</AlertDialogTitle>
+                <AlertDialogTitle>Remover a nota do bimestre?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {disciplina.title} no {nomeBimestre(bimestre)} volta a mostrar a média das
-                  avaliações para o aluno e o responsável.
+                  {disciplina.title} no {nomeBimestre(bimestre)} fica só com os pontos das
+                  atividades para o aluno e o responsável.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
