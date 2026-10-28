@@ -765,7 +765,7 @@ function ConfirmarAcao({
   children,
 }: {
   titulo: string;
-  descricao: string;
+  descricao?: string;
   textoConfirmar: string;
   onConfirmar: () => void;
   children: ReactNode;
@@ -773,10 +773,10 @@ function ConfirmarAcao({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent {...(descricao ? {} : { "aria-describedby": undefined })}>
         <AlertDialogHeader>
           <AlertDialogTitle>{titulo}</AlertDialogTitle>
-          <AlertDialogDescription>{descricao}</AlertDialogDescription>
+          {descricao && <AlertDialogDescription>{descricao}</AlertDialogDescription>}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
@@ -1094,7 +1094,6 @@ function DetalheTurma({
                         <BadgeStatus status={s.matriculaStatus} />
                         <ConfirmarAcao
                           titulo={`Remover ${s.studentName} da turma?`}
-                          descricao={`O aluno continua cadastrado, mas fica sem turma até ser associado a outra. Professores de ${turma.name} deixam de vê-lo.`}
                           textoConfirmar="Sim, remover"
                           onConfirmar={() => remover(s)}
                         >
