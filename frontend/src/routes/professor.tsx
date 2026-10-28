@@ -225,11 +225,7 @@ function PainelProfessor() {
   );
 
   return (
-    <AppShell
-      role="ROLE_PROFESSOR"
-      titulo="Diário de classe"
-      subtitulo={`${nomeProfessor ? `Prof. ${nomeProfessor} · ` : ""}Escolha a turma ao lado e registre a chamada, as notas e as atividades.`}
-    >
+    <AppShell role="ROLE_PROFESSOR" titulo="Diário de classe">
       <PainelLateral
         secoes={secoes}
         secaoAtiva={secao}
