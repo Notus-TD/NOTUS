@@ -98,6 +98,9 @@ public class AtividadeService {
         if (dto.bimestre() == null) {
             throw new RegraNegocioException("Informe o bimestre da atividade.");
         }
+        if (dto.pontos() != null && (dto.pontos().isNaN() || dto.pontos() <= 0 || dto.pontos() > 10)) {
+            throw new RegraNegocioException("Os pontos da atividade devem ser maiores que 0 e no máximo 10.");
+        }
         User requester = buscarUsuario(requesterEmail);
         Turma turma = turmaRepository.findById(dto.turmaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + dto.turmaId()));
@@ -108,6 +111,7 @@ public class AtividadeService {
         entity.setContent(dto.content().trim());
         entity.setBimestre(dto.bimestre());
         entity.setPrazo(dto.prazo());
+        entity.setPontos(dto.pontos());
         entity.setPublicadaEm(LocalDateTime.now());
         entity.setTurma(turma);
         entity.setDisciplina(disciplina);
@@ -183,7 +187,8 @@ public class AtividadeService {
                 entity.getTurma().getName(),
                 entity.getDisciplina().getTitle(),
                 entity.getPublicadaEm(),
-                entregue
+                entregue,
+                entity.getPontos()
         );
     }
 }
