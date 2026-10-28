@@ -10,6 +10,8 @@ public record EntregaDTO(
         String atividadeTitle,
         Long disciplinaId,
         Bimestre bimestre,
-        Long studentId
+        Long studentId,
+        Float pontos,
+        Float pontosObtidos
 ) {
 }

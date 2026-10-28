@@ -13,6 +13,8 @@ public class EntregaMapper {
                 entrega.getAtividade().getTitle(),
                 entrega.getAtividade().getDisciplina().getId(),
                 entrega.getAtividade().getBimestre(),
-                entrega.getStudent().getId());
+                entrega.getStudent().getId(),
+                entrega.getAtividade().getPontos(),
+                entrega.getPontosObtidos());
     }
 }
