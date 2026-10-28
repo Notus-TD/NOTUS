@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -170,15 +169,11 @@ public class BoletimService {
                 .filter(c -> medias.containsKey(c) || notasFinais.containsKey(c) || pontos.containsKey(c))
                 .map(c -> montarLinha(studentId, disciplina, c.bimestre(), medias.get(c), notasFinais.get(c), pontos.get(c)))
                 .toList();
-        return BoletimMapper.toDisciplinaDto(disciplina, bimestres,
-                mediaDasNotas(bimestres, b -> b.getSemestre() == 1),
-                mediaDasNotas(bimestres, b -> b.getSemestre() == 2),
-                mediaDasNotas(bimestres, b -> true));
+        return BoletimMapper.toDisciplinaDto(disciplina, bimestres, mediaFinal(bimestres));
     }
 
-    private Float mediaDasNotas(List<BoletimDTO> bimestres, Predicate<Bimestre> filtro) {
+    private Float mediaFinal(List<BoletimDTO> bimestres) {
         OptionalDouble media = bimestres.stream()
-                .filter(b -> filtro.test(b.bimestre()))
                 .mapToDouble(BoletimDTO::nota)
                 .average();
         return media.isPresent() ? (float) media.getAsDouble() : null;

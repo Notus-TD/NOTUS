@@ -117,7 +117,7 @@ class BoletimServiceUnitTest {
     }
 
     @Test
-    void deveMontarOBoletimComNotaDoBimestreEMediasDeSemestreEAnual() {
+    void deveMontarOBoletimComNotaDoBimestreEMediaFinal() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
         Disciplina portugues = criarDisciplina(6L, "Português");
@@ -143,14 +143,10 @@ class BoletimServiceUnitTest {
         assertNull(mat.bimestres().get(1).id());
         assertNull(mat.bimestres().get(1).notaFinal());
         assertEquals(6f, mat.bimestres().get(1).nota());
-        assertEquals(8f, mat.mediaPrimeiroSemestre());
-        assertEquals(5f, mat.mediaSegundoSemestre());
-        assertEquals(7f, mat.mediaAnual());
+        assertEquals(7f, mat.mediaFinal());
         BoletimDisciplinaDTO port = resultado.get(1);
         assertEquals("Português", port.disciplinaTitle());
-        assertEquals(7f, port.mediaPrimeiroSemestre());
-        assertNull(port.mediaSegundoSemestre());
-        assertEquals(7f, port.mediaAnual());
+        assertEquals(7f, port.mediaFinal());
         verify(studentAccessGuardService).assertCanView(10L, PROFESSOR);
     }
 
