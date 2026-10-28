@@ -315,6 +315,7 @@ export type BoletimDisciplinaDTO = {
   disciplinaTitle: string;
   bimestres: BoletimDTO[];
   mediaFinal: number | null;
+  mediaSala: number | null;
 };
 export type NotaFinalRequest = {
   studentId: number;
