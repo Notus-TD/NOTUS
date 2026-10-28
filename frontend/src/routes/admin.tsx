@@ -106,37 +106,31 @@ const itens: SecaoPainel<SecaoId>[] = [
     id: "dashboard",
     label: "Visão geral",
     icon: LayoutDashboard,
-    termos: "dashboard inicio resumo painel",
   },
   {
     id: "alunos",
     label: "Alunos",
     icon: Users,
-    termos: "alunos lista matricula cadastro novo responsavel criar buscar",
   },
   {
     id: "professores",
     label: "Professores",
     icon: BookOpen,
-    termos: "professor professores docente cadastro novo vincular disciplina lecionar turma",
   },
   {
     id: "turmas",
     label: "Turmas",
     icon: School,
-    termos: "turma turmas sala classe associar adicionar aluno enturmar",
   },
   {
     id: "usuarios",
     label: "Excluir usuários",
     icon: UserX,
-    termos: "excluir remover deletar anonimizar lgpd usuario dado pessoal privacidade",
   },
   {
     id: "comunicados",
     label: "Comunicados",
     icon: Megaphone,
-    termos: "comunicado aviso enviar mensagem recado",
   },
 ];
 
@@ -156,7 +150,6 @@ const titulosAlunos: Record<ModoAlunos["tipo"], string> = {
 };
 
 function PainelAdmin() {
-  const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("dashboard");
   const [modo, setModo] = useState<ModoAlunos>({ tipo: "lista" });
   const titulo = secao === "alunos" ? titulosAlunos[modo.tipo] : titulos[secao];
@@ -173,14 +166,7 @@ function PainelAdmin() {
 
   return (
     <AppShell role="ROLE_ADMIN" titulo="Administração">
-      <PainelLateral
-        secoes={itens}
-        secaoAtiva={secao}
-        aoSelecionarSecao={irPara}
-        busca={busca}
-        aoMudarBusca={setBusca}
-        placeholderBusca="Pesquisar... (ex.: turma, LGPD)"
-      >
+      <PainelLateral secoes={itens} secaoAtiva={secao} aoSelecionarSecao={irPara}>
         <Secao
           titulo={titulo}
           etiqueta={

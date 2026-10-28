@@ -28,7 +28,6 @@ import {
   type FrequenciaDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { normalizar } from "@/lib/busca";
 import { diasEntre, formatarData, hojeLocal } from "@/lib/datas";
 
 export const Route = createFileRoute("/aluno")({
@@ -65,43 +64,36 @@ const secoes: SecaoPainel<SecaoId>[] = [
     id: "hoje",
     label: "Aulas de hoje",
     icon: CalendarClock,
-    termos: "grade horario aula hoje dia",
   },
   {
     id: "atrasadas",
     label: "Atividades em atraso",
     icon: AlertTriangle,
-    termos: "atraso atrasada pendente vencida entrega",
   },
   {
     id: "atividades",
     label: "Todas as atividades",
     icon: ClipboardList,
-    termos: "atividade tarefa trabalho entregar lista",
   },
   {
     id: "notas",
     label: "Notas recentes",
     icon: BarChart3,
-    termos: "nota prova media avaliação boletim",
   },
   {
     id: "presenca",
     label: "Presença por disciplina",
     icon: UserX,
-    termos: "presenca falta frequencia",
   },
   {
     id: "semana",
     label: "Quadro semanal",
     icon: CalendarDays,
-    termos: "semana horario quadro grade",
   },
   {
     id: "faltas",
     label: "Faltas registradas",
     icon: UserX,
-    termos: "falta registro backend oficial",
   },
 ];
 
@@ -112,7 +104,6 @@ function diaDeHoje() {
 }
 
 function PainelAluno() {
-  const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("hoje");
   const [primeiroNome, setPrimeiroNome] = useState<string | null>(null);
 
@@ -153,14 +144,6 @@ function PainelAluno() {
     s.id === "atrasadas" ? { ...s, contador: atrasadas.length } : s,
   );
 
-  const atividadesEncontradas = useMemo(() => {
-    const q = normalizar(busca.trim());
-    if (q.length < 2) return [];
-    return atividades.filter((a) =>
-      normalizar(`${a.titulo} ${a.disciplina} ${a.descricao}`).includes(q),
-    );
-  }, [busca, atividades]);
-
   const avisoCarga = erroAtividades ? (
     <p className="mb-4 text-base font-semibold text-destructive">{erroAtividades}</p>
   ) : atividadesApi === null ? (
@@ -169,23 +152,7 @@ function PainelAluno() {
 
   return (
     <AppShell role="ROLE_ALUNO" titulo={`Olá, ${primeiroNome ?? "..."}!`}>
-      <PainelLateral
-        secoes={secoesComContador}
-        secaoAtiva={secao}
-        aoSelecionarSecao={setSecao}
-        busca={busca}
-        aoMudarBusca={setBusca}
-        placeholderBusca="Pesquisar... (ex.: atraso, notas)"
-      >
-        {atividadesEncontradas.length > 0 && (
-          <div>
-            <h2 className="mb-3 font-display text-xl font-bold text-foreground">
-              Atividades que combinam com "{busca}"
-            </h2>
-            <ListaAtividades itens={atividadesEncontradas} />
-          </div>
-        )}
-
+      <PainelLateral secoes={secoesComContador} secaoAtiva={secao} aoSelecionarSecao={setSecao}>
         {secao === "hoje" && <AulasDeHoje />}
         {secao === "atrasadas" && (
           <Secao titulo="Atividades em atraso">
