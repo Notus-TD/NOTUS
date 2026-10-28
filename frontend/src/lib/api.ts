@@ -344,11 +344,14 @@ export type EntregaDTO = {
   disciplinaId: number;
   bimestre: Bimestre;
   studentId: number;
+  pontos: number | null;
+  pontosObtidos: number | null;
 };
 export type EntregaRequest = {
   atividadeId: number;
   studentId: number;
   status: StatusEntrega;
+  pontosObtidos?: number | null;
 };
 
 export type FrequenciaDTO = {

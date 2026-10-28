@@ -1053,7 +1053,7 @@ function Atividades({
                 <CardContent className="space-y-4 text-base text-muted-foreground">
                   <p>{a.content}</p>
                   {entregasAbertas === a.id && (
-                    <EntregasDaAtividade atividadeId={a.id} turmaId={turmaId} />
+                    <EntregasDaAtividade atividadeId={a.id} turmaId={turmaId} pontos={a.pontos} />
                   )}
                 </CardContent>
               </Card>
@@ -1065,23 +1065,43 @@ function Atividades({
   );
 }
 
-function EntregasDaAtividade({ atividadeId, turmaId }: { atividadeId: number; turmaId: number }) {
+type EntregaAluno = { status: StatusEntrega; pontosObtidos: number | null };
+
+function formatarPontos(valor: number | null) {
+  return valor === null ? "" : valor.toFixed(1).replace(".", ",");
+}
+
+function EntregasDaAtividade({
+  atividadeId,
+  turmaId,
+  pontos,
+}: {
+  atividadeId: number;
+  turmaId: number;
+  pontos: number | null;
+}) {
   const [alunos, setAlunos] = useState<StudentMinDTO[] | null>(null);
-  const [status, setStatus] = useState<Record<number, StatusEntrega>>({});
+  const [entregas, setEntregas] = useState<Record<number, EntregaAluno>>({});
+  const [pontosDigitados, setPontosDigitados] = useState<Record<number, string>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [salvandoId, setSalvandoId] = useState<number | null>(null);
 
   useEffect(() => {
     let ativo = true;
     Promise.all([alunosAtivosDaTurma(turmaId), getEntregasDaAtividade(atividadeId)])
-      .then(([lista, entregas]) => {
+      .then(([lista, doServidor]) => {
         if (!ativo) return;
         setAlunos(lista);
-        setStatus(
-          Object.fromEntries(entregas.map((e) => [e.studentId, e.status])) as Record<
-            number,
-            StatusEntrega
-          >,
+        setEntregas(
+          Object.fromEntries(
+            doServidor.map((e) => [
+              e.studentId,
+              { status: e.status, pontosObtidos: e.pontosObtidos },
+            ]),
+          ),
+        );
+        setPontosDigitados(
+          Object.fromEntries(doServidor.map((e) => [e.studentId, formatarPontos(e.pontosObtidos)])),
         );
       })
       .catch(
@@ -1093,11 +1113,18 @@ function EntregasDaAtividade({ atividadeId, turmaId }: { atividadeId: number; tu
     };
   }, [atividadeId, turmaId]);
 
-  async function marcar(studentId: number, novo: StatusEntrega) {
+  async function salvar(studentId: number, status: StatusEntrega, pontosObtidos: number | null) {
     setSalvandoId(studentId);
     try {
-      await marcarEntrega({ atividadeId, studentId, status: novo });
-      setStatus((atual) => ({ ...atual, [studentId]: novo }));
+      const salva = await marcarEntrega({ atividadeId, studentId, status, pontosObtidos });
+      setEntregas((atual) => ({
+        ...atual,
+        [studentId]: { status: salva.status, pontosObtidos: salva.pontosObtidos },
+      }));
+      setPontosDigitados((atual) => ({
+        ...atual,
+        [studentId]: formatarPontos(salva.pontosObtidos),
+      }));
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : "Erro ao marcar a entrega.");
     } finally {
@@ -1105,7 +1132,27 @@ function EntregasDaAtividade({ atividadeId, turmaId }: { atividadeId: number; tu
     }
   }
 
-  const marcados = (alunos ?? []).filter((a) => status[a.userId] !== undefined).length;
+  function marcar(studentId: number, novo: StatusEntrega) {
+    const atual = entregas[studentId];
+    const mantemPontos = atual && atual.status !== "NAO_ENTREGUE" ? atual.pontosObtidos : null;
+    salvar(studentId, novo, mantemPontos);
+  }
+
+  function salvarPontos(studentId: number) {
+    const atual = entregas[studentId];
+    if (!atual || pontos === null) return;
+    const texto = (pontosDigitados[studentId] ?? "").trim();
+    if (texto === formatarPontos(atual.pontosObtidos)) return;
+    const valor = texto ? Number(texto.replace(",", ".")) : null;
+    if (valor !== null && (Number.isNaN(valor) || valor < 0 || valor > pontos)) {
+      toast.error(`Os pontos devem estar entre 0 e ${formatarPontos(pontos)}.`);
+      setPontosDigitados((d) => ({ ...d, [studentId]: formatarPontos(atual.pontosObtidos) }));
+      return;
+    }
+    salvar(studentId, atual.status, valor);
+  }
+
+  const marcados = (alunos ?? []).filter((a) => entregas[a.userId] !== undefined).length;
 
   return (
     <div className="space-y-3 border-t border-border pt-4">
@@ -1116,35 +1163,75 @@ function EntregasDaAtividade({ atividadeId, turmaId }: { atividadeId: number; tu
         <>
           <p className="text-sm">
             {marcados} de {alunos.length} aluno(s) marcados.
+            {pontos !== null &&
+              ` Marque a entrega e lance os pontos (0 a ${formatarPontos(pontos)}); "Não entregue" zera os pontos.`}
           </p>
           <ul className="divide-y divide-border">
-            {alunos.map((a) => (
-              <li key={a.userId} className="flex flex-wrap items-center justify-between gap-3 py-2">
-                <span className="text-base text-foreground">{a.studentName}</span>
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="group"
-                  aria-label={`Entrega de ${a.studentName}`}
+            {alunos.map((a) => {
+              const entrega = entregas[a.userId];
+              const semPontos = !entrega || entrega.status === "NAO_ENTREGUE";
+              return (
+                <li
+                  key={a.userId}
+                  className="flex flex-wrap items-center justify-between gap-3 py-2"
                 >
-                  {ORDEM_STATUS_ENTREGA.map((s) => {
-                    const selecionado = status[a.userId] === s;
-                    return (
-                      <Button
-                        key={s}
-                        size="sm"
-                        variant="outline"
-                        className={cn("min-h-9 text-sm", selecionado && STATUS_ENTREGA[s].classe)}
-                        aria-pressed={selecionado}
-                        disabled={salvandoId === a.userId}
-                        onClick={() => marcar(a.userId, s)}
-                      >
-                        {STATUS_ENTREGA[s].label}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </li>
-            ))}
+                  <span className="text-base text-foreground">{a.studentName}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div
+                      className="flex flex-wrap gap-2"
+                      role="group"
+                      aria-label={`Entrega de ${a.studentName}`}
+                    >
+                      {ORDEM_STATUS_ENTREGA.map((s) => {
+                        const selecionado = entrega?.status === s;
+                        return (
+                          <Button
+                            key={s}
+                            size="sm"
+                            variant="outline"
+                            className={cn(
+                              "min-h-9 text-sm",
+                              selecionado && STATUS_ENTREGA[s].classe,
+                            )}
+                            aria-pressed={selecionado}
+                            disabled={salvandoId === a.userId}
+                            onClick={() => marcar(a.userId, s)}
+                          >
+                            {STATUS_ENTREGA[s].label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    {pontos !== null && (
+                      <Input
+                        type="number"
+                        min={0}
+                        max={pontos}
+                        step={0.1}
+                        inputMode="decimal"
+                        aria-label={`Pontos de ${a.studentName}`}
+                        title={
+                          !entrega
+                            ? "Marque a entrega antes de lançar os pontos"
+                            : `Pontos obtidos (0 a ${formatarPontos(pontos)})`
+                        }
+                        placeholder="Pontos"
+                        value={pontosDigitados[a.userId] ?? ""}
+                        disabled={semPontos || salvandoId === a.userId}
+                        onChange={(e) =>
+                          setPontosDigitados((d) => ({ ...d, [a.userId]: e.target.value }))
+                        }
+                        onBlur={() => salvarPontos(a.userId)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") salvarPontos(a.userId);
+                        }}
+                        className="h-9 w-24 text-sm"
+                      />
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}
