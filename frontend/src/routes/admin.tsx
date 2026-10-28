@@ -171,11 +171,7 @@ function PainelAdmin() {
   }
 
   return (
-    <AppShell
-      role="ROLE_ADMIN"
-      titulo="Administração"
-      subtitulo="Turmas, alunos e comunicados da escola. Use a busca ao lado para encontrar o que precisa."
-    >
+    <AppShell role="ROLE_ADMIN" titulo="Administração">
       <PainelLateral
         secoes={itens}
         secaoAtiva={secao}
