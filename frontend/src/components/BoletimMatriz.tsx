@@ -56,7 +56,7 @@ type EstadoMatriz =
 
 type DisciplinaRef = { id: number; title: string };
 type CelulaSelecionada = { disciplina: DisciplinaRef; bimestre: Bimestre };
-type CampoMedia = "mediaFinal";
+type CampoMedia = "mediaFinal" | "mediaSala";
 type Coluna =
   | { tipo: "bimestre"; bimestre: Bimestre; label: string }
   | { tipo: "media"; campo: CampoMedia; label: string };
@@ -67,6 +67,12 @@ const COLUNAS: Coluna[] = [
   { tipo: "bimestre", bimestre: "TERCEIRO", label: nomeBimestre("TERCEIRO") },
   { tipo: "bimestre", bimestre: "QUARTO", label: nomeBimestre("QUARTO") },
   { tipo: "media", campo: "mediaFinal", label: "Média final" },
+];
+
+/** No boletim de um aluno também aparece a média da turma, para comparação. */
+const COLUNAS_ALUNO: Coluna[] = [
+  ...COLUNAS,
+  { tipo: "media", campo: "mediaSala", label: "Média da sala" },
 ];
 
 const NOTA_APROVACAO = 7;
@@ -183,7 +189,7 @@ export function BoletimMatriz({
                 <TableHead className="sticky left-0 z-10 bg-muted text-base font-semibold text-foreground">
                   Disciplina
                 </TableHead>
-                {COLUNAS.map((c) => (
+                {COLUNAS_ALUNO.map((c) => (
                   <TableHead
                     key={c.label}
                     className={cn(
@@ -204,7 +210,7 @@ export function BoletimMatriz({
                     <TableCell className="sticky left-0 z-10 bg-card text-base font-semibold text-foreground transition-colors group-hover:bg-muted/50">
                       {d.title}
                     </TableCell>
-                    {COLUNAS.map((c) =>
+                    {COLUNAS_ALUNO.map((c) =>
                       c.tipo === "bimestre" ? (
                         <TableCell key={c.label} className="text-center">
                           <CelulaValor
@@ -529,7 +535,7 @@ function LegendaNotas() {
       <p className="text-sm text-muted-foreground">
         A nota do bimestre é a nota lançada pelo professor mais os pontos das atividades, limitada a
         10. Só contorno: bimestre ainda sem nota lançada. A média final é a média das notas dos
-        bimestres.
+        bimestres, e a média da sala é a média final da turma na disciplina.
       </p>
     </div>
   );
