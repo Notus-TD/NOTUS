@@ -55,7 +55,7 @@ public class LecionamentoService {
         }
 
         Lecionamento entity = lecionamentoRepository.save(new Lecionamento(turma, disciplina, professor));
-        return toDTO(entity);
+        return LecionamentoDTO.of(entity);
     }
 
     @Transactional
@@ -68,7 +68,7 @@ public class LecionamentoService {
 
     @Transactional
     public List<LecionamentoDTO> getAll() {
-        return lecionamentoRepository.findAll().stream().map(this::toDTO).toList();
+        return lecionamentoRepository.findAll().stream().map(LecionamentoDTO::of).toList();
     }
 
     @Transactional
@@ -100,17 +100,5 @@ public class LecionamentoService {
                                 .toList()
                 ))
                 .toList();
-    }
-
-    private LecionamentoDTO toDTO(Lecionamento entity) {
-        return new LecionamentoDTO(
-                entity.getId(),
-                entity.getTurma().getId(),
-                entity.getTurma().getName(),
-                entity.getDisciplina().getId(),
-                entity.getDisciplina().getTitle(),
-                entity.getProfessor().getId(),
-                entity.getProfessor().getEmail()
-        );
     }
 }

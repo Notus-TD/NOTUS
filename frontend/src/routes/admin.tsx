@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
+  BookOpen,
   ChevronRight,
   EyeOff,
   GraduationCap,
+  Link2,
   LayoutDashboard,
   Megaphone,
   Pencil,
@@ -18,12 +20,14 @@ import {
   UserPlus,
   Users,
   UserX,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
 import { CadastroAlunoForm } from "@/components/CadastroAlunoForm";
+import { CadastroProfessorForm } from "@/components/CadastroProfessorForm";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,14 +56,22 @@ import {
   ApiError,
   anonymizeUser,
   associarAlunoTurma,
+  createLecionamento,
   createTurma,
+  deleteLecionamento,
   deleteTurma,
+  getDisciplinas,
+  getLecionamentos,
+  getProfessores,
   getStudents,
   getTurma,
   getTurmas,
   getUsuarios,
   removerAlunoTurma,
   updateTurma,
+  type DisciplinaDTO,
+  type LecionamentoDTO,
+  type ProfessorDTO,
   type StudentMinDTO,
   type TurmaDetalheDTO,
   type TurmaDTO,
@@ -84,7 +96,7 @@ export const Route = createFileRoute("/admin")({
   component: PainelAdmin,
 });
 
-type SecaoId = "dashboard" | "alunos" | "turmas" | "usuarios" | "comunicados";
+type SecaoId = "dashboard" | "alunos" | "professores" | "turmas" | "usuarios" | "comunicados";
 
 type ModoAlunos =
   { tipo: "lista" } | { tipo: "cadastro" } | { tipo: "ficha"; aluno: StudentMinDTO };
@@ -101,6 +113,12 @@ const itens: SecaoPainel<SecaoId>[] = [
     label: "Alunos",
     icon: Users,
     termos: "alunos lista matricula cadastro novo responsavel criar buscar",
+  },
+  {
+    id: "professores",
+    label: "Professores",
+    icon: BookOpen,
+    termos: "professor professores docente cadastro novo vincular disciplina lecionar turma",
   },
   {
     id: "turmas",
@@ -125,6 +143,7 @@ const itens: SecaoPainel<SecaoId>[] = [
 const titulos: Record<SecaoId, string> = {
   dashboard: "Visão geral",
   alunos: "Alunos",
+  professores: "Professores",
   turmas: "Turmas",
   usuarios: "Excluir usuários",
   comunicados: "Comunicados",
@@ -174,6 +193,7 @@ function PainelAdmin() {
         >
           {secao === "dashboard" && <Dashboard irPara={irPara} irParaAlunos={irParaAlunos} />}
           {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
+          {secao === "professores" && <Professores />}
           {secao === "turmas" && <Turmas />}
           {secao === "usuarios" && <ExcluirUsuarios />}
           {secao === "comunicados" && <Comunicados />}
@@ -573,6 +593,324 @@ function BotaoAnonimizar({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+const nomeProfessor = (l: LecionamentoDTO) => l.professorName ?? l.professorEmail;
+
+function Professores() {
+  const [versao, setVersao] = useState(0);
+  const [cadastrando, setCadastrando] = useState(false);
+  const [busca, setBusca] = useState("");
+  const professores = useCarga<ProfessorDTO[]>(getProfessores, versao);
+  const lecionamentos = useCarga<LecionamentoDTO[]>(getLecionamentos, versao);
+  const turmas = useCarga<TurmaDTO[]>(getTurmas, versao);
+  const disciplinas = useCarga<DisciplinaDTO[]>(getDisciplinas, versao);
+  const cargas = [professores, lecionamentos, turmas, disciplinas];
+  const carregando = cargas.some((c) => c.estado === "carregando");
+  const erro = cargas.find((c) => c.estado === "erro");
+  const atualizar = () => setVersao((v) => v + 1);
+
+  async function remover(l: LecionamentoDTO) {
+    try {
+      await deleteLecionamento(l.id);
+      toast.success(`${nomeProfessor(l)} não leciona mais ${l.disciplinaTitle} no ${l.turmaName}.`);
+      atualizar();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao remover o vínculo.");
+    }
+  }
+
+  const termo = normalizar(busca.trim());
+  const vinculosDe = (professorId: number) =>
+    lecionamentos.estado === "ok"
+      ? lecionamentos.dados
+          .filter((l) => l.professorId === professorId)
+          .sort(
+            (a, b) =>
+              a.turmaName.localeCompare(b.turmaName) ||
+              a.disciplinaTitle.localeCompare(b.disciplinaTitle),
+          )
+      : [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-64 flex-1">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome ou e-mail…"
+            aria-label="Buscar professor"
+            className="h-11 pl-10 text-base"
+          />
+        </div>
+        <Button
+          variant="outline"
+          className="min-h-11 text-base"
+          onClick={atualizar}
+          disabled={carregando}
+        >
+          <RefreshCw className={`size-5 ${carregando ? "animate-spin" : ""}`} aria-hidden="true" />
+          Atualizar
+        </Button>
+        <Button
+          className="min-h-11 text-base"
+          onClick={() => setCadastrando(true)}
+          disabled={cadastrando}
+        >
+          <UserPlus className="size-5" aria-hidden="true" />
+          Cadastrar professor
+        </Button>
+      </div>
+
+      {cadastrando && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Novo professor</CardTitle>
+            <CardDescription className="text-base">
+              O professor entra no portal com o e-mail e, no primeiro acesso, a senha igual ao
+              e-mail.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CadastroProfessorForm
+              onSucesso={() => {
+                setCadastrando(false);
+                atualizar();
+              }}
+              onCancelar={() => setCadastrando(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {erro?.estado === "erro" && <MensagemErro carga={erro} />}
+
+      {professores.estado === "ok" &&
+        lecionamentos.estado === "ok" &&
+        turmas.estado === "ok" &&
+        disciplinas.estado === "ok" && (
+          <VincularProfessor
+            professores={professores.dados}
+            turmas={turmas.dados}
+            disciplinas={disciplinas.dados}
+            lecionamentos={lecionamentos.dados}
+            onVinculado={atualizar}
+          />
+        )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Professores cadastrados</CardTitle>
+          <CardDescription className="text-base">
+            Turmas e disciplinas em que cada professor leciona.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {professores.estado === "carregando" && (
+            <p className="text-base text-muted-foreground">Carregando…</p>
+          )}
+          {professores.estado === "ok" &&
+            (() => {
+              const filtrados = professores.dados.filter(
+                (p) => !termo || normalizar(`${p.fullName} ${p.email}`).includes(termo),
+              );
+              if (filtrados.length === 0)
+                return (
+                  <p className="text-base text-muted-foreground">
+                    {termo
+                      ? `Nenhum professor encontrado para "${busca.trim()}".`
+                      : "Nenhum professor cadastrado ainda."}
+                  </p>
+                );
+              return (
+                <ul className="divide-y divide-border">
+                  {filtrados.map((p) => {
+                    const vinculos = vinculosDe(p.id);
+                    return (
+                      <li key={p.id} className="space-y-2 py-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-lg font-semibold text-foreground">
+                            {p.fullName}
+                          </p>
+                          <p className="truncate text-base text-muted-foreground">{p.email}</p>
+                        </div>
+                        {vinculos.length === 0 ? (
+                          <p className="text-base text-muted-foreground">
+                            Ainda não leciona em nenhuma turma.
+                          </p>
+                        ) : (
+                          <ul className="flex flex-wrap gap-2">
+                            {vinculos.map((l) => (
+                              <li
+                                key={l.id}
+                                className="flex items-center gap-1 rounded-full border border-border bg-muted py-1 pl-3 pr-1 text-sm font-medium text-foreground"
+                              >
+                                {l.turmaName} · {l.disciplinaTitle}
+                                <ConfirmarAcao
+                                  titulo={`Remover ${l.disciplinaTitle} do ${l.turmaName}?`}
+                                  descricao={`${p.fullName} deixa de lecionar essa disciplina nessa turma. As notas e faltas já lançadas continuam no sistema.`}
+                                  textoConfirmar="Remover vínculo"
+                                  onConfirmar={() => void remover(l)}
+                                >
+                                  <button
+                                    type="button"
+                                    aria-label={`Remover ${l.disciplinaTitle} do ${l.turmaName}`}
+                                    className="flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  >
+                                    <X className="size-4" aria-hidden="true" />
+                                  </button>
+                                </ConfirmarAcao>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })()}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function VincularProfessor({
+  professores,
+  turmas,
+  disciplinas,
+  lecionamentos,
+  onVinculado,
+}: {
+  professores: ProfessorDTO[];
+  turmas: TurmaDTO[];
+  disciplinas: DisciplinaDTO[];
+  lecionamentos: LecionamentoDTO[];
+  onVinculado: () => void;
+}) {
+  const [professorId, setProfessorId] = useState("");
+  const [turmaId, setTurmaId] = useState("");
+  const [disciplinaId, setDisciplinaId] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  // Cada disciplina tem um só professor por turma: as já ocupadas aparecem desabilitadas.
+  const ocupadas = new Map(
+    lecionamentos.filter((l) => String(l.turmaId) === turmaId).map((l) => [l.disciplinaId, l]),
+  );
+  const valido = professorId !== "" && turmaId !== "" && disciplinaId !== "";
+
+  async function vincular(e: FormEvent) {
+    e.preventDefault();
+    if (!valido) return;
+    setSalvando(true);
+    try {
+      const criado = await createLecionamento({
+        professorId: Number(professorId),
+        turmaId: Number(turmaId),
+        disciplinaId: Number(disciplinaId),
+      });
+      toast.success(
+        `${nomeProfessor(criado)} agora leciona ${criado.disciplinaTitle} no ${criado.turmaName}.`,
+      );
+      setDisciplinaId("");
+      onVinculado();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao vincular o professor.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">Vincular professor a uma turma</CardTitle>
+        <CardDescription className="text-base">
+          Escolha o professor, a turma e a disciplina que ele vai lecionar.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={vincular}
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end"
+        >
+          <div className="space-y-2">
+            <label className="block text-base font-semibold text-foreground">Professor</label>
+            <Select value={professorId} onValueChange={setProfessorId}>
+              <SelectTrigger className="h-11 text-base" aria-label="Professor">
+                <SelectValue placeholder="Selecione o professor" />
+              </SelectTrigger>
+              <SelectContent>
+                {professores.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    {p.fullName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-base font-semibold text-foreground">Turma</label>
+            <Select
+              value={turmaId}
+              onValueChange={(v) => {
+                setTurmaId(v);
+                setDisciplinaId("");
+              }}
+            >
+              <SelectTrigger className="h-11 text-base" aria-label="Turma">
+                <SelectValue placeholder="Selecione a turma" />
+              </SelectTrigger>
+              <SelectContent>
+                {turmas.map((t) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name} · {t.schoolYear}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-base font-semibold text-foreground">Disciplina</label>
+            <Select value={disciplinaId} onValueChange={setDisciplinaId} disabled={turmaId === ""}>
+              <SelectTrigger className="h-11 text-base" aria-label="Disciplina">
+                <SelectValue
+                  placeholder={
+                    turmaId === "" ? "Escolha a turma primeiro" : "Selecione a disciplina"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {disciplinas.map((d) => {
+                  const ocupada = ocupadas.get(d.id);
+                  return (
+                    <SelectItem key={d.id} value={String(d.id)} disabled={!!ocupada}>
+                      {ocupada ? `${d.title} · ${nomeProfessor(ocupada)}` : d.title}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="submit"
+            className="min-h-11 text-base sm:col-span-2 lg:col-span-1"
+            disabled={!valido || salvando}
+          >
+            <Link2 className="size-5" aria-hidden="true" />
+            {salvando ? "Vinculando..." : "Vincular"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1058,7 +1396,7 @@ function DetalheTurma({
                       <li key={l.id} className="py-3">
                         <p className="text-lg font-semibold text-foreground">{l.disciplinaTitle}</p>
                         <p className="truncate text-base text-muted-foreground">
-                          {l.professorEmail}
+                          {l.professorName ?? l.professorEmail}
                         </p>
                       </li>
                     ))}

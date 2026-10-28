@@ -1,5 +1,6 @@
 package com.pfc.notus.user.controller;
 
+import com.pfc.notus.user.dto.StudentBatchRegistrationRequest;
 import com.pfc.notus.user.dto.StudentMinDTO;
 import com.pfc.notus.user.dto.StudentRegistrationRequest;
 import com.pfc.notus.user.dto.StudentRegistrationResponse;
@@ -30,6 +31,13 @@ public class StudentController {
     @PostMapping
     public ResponseEntity<StudentRegistrationResponse> create(@RequestBody @Valid StudentRegistrationRequest dto) {
         StudentRegistrationResponse response = studentService.createStudent(dto.responsible(), dto.student());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PostMapping("/lote")
+    public ResponseEntity<List<StudentRegistrationResponse>> createBatch(@RequestBody @Valid StudentBatchRegistrationRequest dto) {
+        List<StudentRegistrationResponse> response = studentService.createStudents(dto.responsible(), dto.students());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

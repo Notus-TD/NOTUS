@@ -2,7 +2,6 @@ package com.pfc.notus.turma.service;
 
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
-import com.pfc.notus.lecionamento.domain.Lecionamento;
 import com.pfc.notus.lecionamento.dto.LecionamentoDTO;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.turma.dto.TurmaAlunoRequestDTO;
@@ -50,7 +49,7 @@ public class TurmaService {
                 .toList();
 
         List<LecionamentoDTO> lecionamentos = turma.getLecionamentos().stream()
-                .map(this::toLecionamentoDTO)
+                .map(LecionamentoDTO::of)
                 .toList();
 
         return new TurmaDetalheDTO(turma.getId(), turma.getName(), turma.getSchoolYear(), alunos, lecionamentos);
@@ -150,17 +149,5 @@ public class TurmaService {
 
     private TurmaDTO toDTO(Turma turma) {
         return new TurmaDTO(turma.getId(), turma.getName(), turma.getSchoolYear(), turma.getAlunos().size());
-    }
-
-    private LecionamentoDTO toLecionamentoDTO(Lecionamento lecionamento) {
-        return new LecionamentoDTO(
-                lecionamento.getId(),
-                lecionamento.getTurma().getId(),
-                lecionamento.getTurma().getName(),
-                lecionamento.getDisciplina().getId(),
-                lecionamento.getDisciplina().getTitle(),
-                lecionamento.getProfessor().getId(),
-                lecionamento.getProfessor().getEmail()
-        );
     }
 }
