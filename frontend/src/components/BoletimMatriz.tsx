@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { AlertCircle, ClipboardList, Plus } from "lucide-react";
+import { AlertCircle, ClipboardList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,6 +44,7 @@ import {
   type EntregaDTO,
 } from "@/lib/api";
 import { nomeBimestre } from "@/lib/bimestres";
+import { normalizar } from "@/lib/busca";
 import { formatarData } from "@/lib/datas";
 import { STATUS_ENTREGA } from "@/lib/entregas";
 import { cn } from "@/lib/utils";
@@ -250,6 +251,207 @@ export function BoletimMatriz({
               )}
               aoMudar={atualizar}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+type AlunoRef = { userId: number; studentName: string; matricula: number };
+type BoletimDoAluno =
+  | { estado: "carregando" }
+  | { estado: "erro"; mensagem: string }
+  | { estado: "ok"; disciplina: BoletimDisciplinaDTO | null };
+
+/** Notas de uma disciplina para todos os alunos da turma, uma linha por aluno. */
+export function BoletimTurma({
+  alunos,
+  disciplina,
+}: {
+  alunos: AlunoRef[];
+  disciplina: DisciplinaRef;
+}) {
+  const [boletins, setBoletins] = useState<Record<number, BoletimDoAluno>>({});
+  const [filtro, setFiltro] = useState("");
+  const [celula, setCelula] = useState<{ aluno: AlunoRef; bimestre: Bimestre } | null>(null);
+  const [entregas, setEntregas] = useState<EntregaDTO[] | null>(null);
+
+  const carregarAluno = useCallback(
+    async (studentId: number) => {
+      try {
+        const boletim = await getBoletimDoAluno(studentId);
+        const daDisciplina = boletim.find((b) => b.disciplinaId === disciplina.id) ?? null;
+        setBoletins((atual) => ({
+          ...atual,
+          [studentId]: { estado: "ok", disciplina: daDisciplina },
+        }));
+      } catch (e) {
+        setBoletins((atual) => ({
+          ...atual,
+          [studentId]: {
+            estado: "erro",
+            mensagem: e instanceof ApiError ? e.message : "Erro ao carregar o boletim.",
+          },
+        }));
+      }
+    },
+    [disciplina.id],
+  );
+
+  useEffect(() => {
+    setBoletins(Object.fromEntries(alunos.map((a) => [a.userId, { estado: "carregando" }])));
+    alunos.forEach((a) => void carregarAluno(a.userId));
+  }, [alunos, carregarAluno]);
+
+  function abrir(aluno: AlunoRef, bimestre: Bimestre) {
+    setCelula({ aluno, bimestre });
+    setEntregas(null);
+    getEntregasDoAluno(aluno.userId)
+      .then((lista) =>
+        setEntregas(
+          lista.filter((e) => e.disciplinaId === disciplina.id && e.bimestre === bimestre),
+        ),
+      )
+      .catch(() => setEntregas([]));
+  }
+
+  function linhaDe(studentId: number, bimestre: Bimestre) {
+    const boletim = boletins[studentId];
+    if (boletim?.estado !== "ok") return null;
+    return boletim.disciplina?.bimestres.find((b) => b.bimestre === bimestre) ?? null;
+  }
+
+  const termo = normalizar(filtro.trim());
+  const visiveis = alunos.filter(
+    (a) =>
+      !termo || normalizar(a.studentName).includes(termo) || String(a.matricula).includes(termo),
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+          placeholder="Filtrar por nome ou matrícula…"
+          aria-label="Filtrar alunos da turma"
+          className="h-12 pl-10 text-lg"
+        />
+      </div>
+
+      <LegendaNotas />
+
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="sticky left-0 z-10 bg-muted text-base font-semibold text-foreground">
+                  Aluno
+                </TableHead>
+                {COLUNAS.map((c) => (
+                  <TableHead
+                    key={c.label}
+                    className={cn(
+                      "whitespace-nowrap text-center text-base font-semibold text-foreground",
+                      c.tipo === "media" && "bg-primary/5",
+                    )}
+                  >
+                    {c.label}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visiveis.map((a) => {
+                const boletim = boletins[a.userId];
+                return (
+                  <TableRow key={a.userId} className="group">
+                    <TableCell className="sticky left-0 z-10 bg-card transition-colors group-hover:bg-muted/50">
+                      <span className="block whitespace-nowrap text-base font-semibold text-foreground">
+                        {a.studentName}
+                      </span>
+                      <span className="block text-sm text-muted-foreground">
+                        Matrícula {a.matricula}
+                      </span>
+                    </TableCell>
+                    {boletim?.estado === "erro" ? (
+                      <TableCell
+                        colSpan={COLUNAS.length}
+                        className="text-sm font-semibold text-destructive"
+                      >
+                        {boletim.mensagem}
+                      </TableCell>
+                    ) : boletim?.estado !== "ok" ? (
+                      <TableCell colSpan={COLUNAS.length}>
+                        <Skeleton className="h-9 w-full" />
+                      </TableCell>
+                    ) : (
+                      COLUNAS.map((c) =>
+                        c.tipo === "bimestre" ? (
+                          <TableCell key={c.label} className="text-center">
+                            <CelulaValor
+                              linha={linhaDe(a.userId, c.bimestre)}
+                              editable
+                              aoClicar={() => abrir(a, c.bimestre)}
+                            />
+                          </TableCell>
+                        ) : (
+                          <TableCell key={c.label} className="bg-primary/5 text-center">
+                            <CelulaMedia valor={boletim.disciplina?.[c.campo] ?? null} />
+                          </TableCell>
+                        ),
+                      )
+                    )}
+                  </TableRow>
+                );
+              })}
+              {visiveis.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={COLUNAS.length + 1}
+                    className="py-6 text-center text-base text-muted-foreground"
+                  >
+                    {alunos.length === 0
+                      ? "Nenhum aluno ativo nesta turma."
+                      : "Nenhum aluno encontrado."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={celula !== null}
+        onOpenChange={(open) => {
+          if (!open) setCelula(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+          {celula && (
+            <>
+              <p className="text-sm font-semibold text-primary">{celula.aluno.studentName}</p>
+              {entregas === null ? (
+                <p className="text-base text-muted-foreground">Carregando…</p>
+              ) : (
+                <CelulaEditor
+                  studentId={celula.aluno.userId}
+                  disciplina={disciplina}
+                  bimestre={celula.bimestre}
+                  linha={linhaDe(celula.aluno.userId, celula.bimestre)}
+                  entregas={entregas}
+                  aoMudar={() => void carregarAluno(celula.aluno.userId)}
+                />
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>

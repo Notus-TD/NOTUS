@@ -7,12 +7,11 @@ import {
   ClipboardCheck,
   ClipboardList,
   Home,
-  Search,
   Trash2,
   Users,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { BoletimMatriz } from "@/components/BoletimMatriz";
+import { BoletimTurma } from "@/components/BoletimMatriz";
 import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
 import {
   AlertDialog,
@@ -693,8 +692,6 @@ function NotasDaTurma({
 }) {
   const [alunos, setAlunos] = useState<StudentMinDTO[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState("");
-  const [selecionado, setSelecionado] = useState<StudentMinDTO | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -710,89 +707,18 @@ function NotasDaTurma({
     };
   }, [turmaId]);
 
-  const termo = normalizar(filtro.trim());
-  const filtrados = (alunos ?? []).filter(
-    (a) =>
-      !termo || normalizar(a.studentName).includes(termo) || String(a.matricula).includes(termo),
-  );
-
   return (
     <Secao titulo="Notas" descricao={`${turmaName} · ${disciplina.title}`}>
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Selecionar aluno</CardTitle>
-            <CardDescription className="text-base">
-              Escolha um aluno da turma para lançar ou editar as notas de {disciplina.title}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                type="search"
-                value={filtro}
-                onChange={(e) => setFiltro(e.target.value)}
-                placeholder="Filtrar por nome ou matrícula…"
-                aria-label="Filtrar alunos da turma"
-                className="h-12 pl-10 text-lg"
-              />
-            </div>
-
-            {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
-            {!erro && alunos === null && (
-              <p className="text-base text-muted-foreground">Carregando alunos…</p>
-            )}
-            {alunos && (
-              <ul className="max-h-72 divide-y divide-border overflow-y-auto">
-                {filtrados.map((a) => (
-                  <li key={a.userId}>
-                    <button
-                      type="button"
-                      onClick={() => setSelecionado(a)}
-                      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                        selecionado?.userId === a.userId ? "bg-primary/10" : "hover:bg-muted"
-                      }`}
-                    >
-                      <span className="text-lg text-foreground">{a.studentName}</span>
-                      <span className="text-base text-muted-foreground">
-                        Matrícula {a.matricula}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-                {filtrados.length === 0 && (
-                  <p className="py-3 text-base text-muted-foreground">Nenhum aluno encontrado.</p>
-                )}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {selecionado && (
-          <section key={selecionado.userId} className="space-y-3">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-display text-xl font-bold text-foreground">
-                Boletim de {selecionado.studentName}
-              </h3>
-              <span className="text-sm text-muted-foreground">
-                Matrícula {selecionado.matricula}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Clique em um bimestre para lançar a nota. Os pontos das atividades são somados a ela
-              automaticamente, até o limite de 10.
-            </p>
-            <BoletimMatriz
-              studentId={selecionado.userId}
-              editable
-              disciplinasDisponiveis={[disciplina]}
-            />
-          </section>
+      <div className="space-y-3">
+        <p className="text-base text-muted-foreground">
+          Todos os alunos da turma em {disciplina.title}. Clique em um bimestre para lançar a nota.
+          Os pontos das atividades são somados a ela automaticamente, até o limite de 10.
+        </p>
+        {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
+        {!erro && alunos === null && (
+          <p className="text-base text-muted-foreground">Carregando alunos…</p>
         )}
+        {alunos && <BoletimTurma alunos={alunos} disciplina={disciplina} />}
       </div>
     </Secao>
   );
