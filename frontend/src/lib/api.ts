@@ -286,6 +286,7 @@ export type AtividadeDTO = {
   disciplinaTitle: string;
   publicadaEm: string;
   entregue: boolean | null;
+  pontos: number | null;
 };
 export type NovaAtividade = {
   title: string;
@@ -294,6 +295,7 @@ export type NovaAtividade = {
   prazo: string;
   turmaId: number;
   disciplinaId?: number;
+  pontos?: number | null;
 };
 
 export type BoletimDTO = {
