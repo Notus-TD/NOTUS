@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
+  TableFooter,
   TableCell,
   TableHead,
   TableHeader,
@@ -47,7 +48,7 @@ import { nomeBimestre } from "@/lib/bimestres";
 import { normalizar } from "@/lib/busca";
 import { formatarData } from "@/lib/datas";
 import { STATUS_ENTREGA } from "@/lib/entregas";
-import { cn } from "@/lib/utils";
+import { cn, media } from "@/lib/utils";
 
 type EstadoMatriz =
   | { estado: "carregando" }
@@ -332,6 +333,19 @@ export function BoletimTurma({
       !termo || normalizar(a.studentName).includes(termo) || String(a.matricula).includes(termo),
   );
 
+  function mediaDaSala(coluna: Coluna) {
+    const valores = alunos.flatMap((a) => {
+      const boletim = boletins[a.userId];
+      if (boletim?.estado !== "ok") return [];
+      const valor =
+        coluna.tipo === "bimestre"
+          ? (linhaDe(a.userId, coluna.bimestre)?.nota ?? null)
+          : (boletim.disciplina?.[coluna.campo] ?? null);
+      return valor === null ? [] : [valor];
+    });
+    return media(valores);
+  }
+
   return (
     <div className="space-y-3">
       <div className="relative">
@@ -429,6 +443,28 @@ export function BoletimTurma({
                 </TableRow>
               )}
             </TableBody>
+            {alunos.length > 0 && (
+              <TableFooter>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="sticky left-0 z-10 bg-muted">
+                    <span className="block whitespace-nowrap text-base font-semibold text-foreground">
+                      Média da sala
+                    </span>
+                    <span className="block text-sm font-normal text-muted-foreground">
+                      {alunos.length} aluno(s)
+                    </span>
+                  </TableCell>
+                  {COLUNAS.map((c) => (
+                    <TableCell
+                      key={c.label}
+                      className={cn("text-center", c.tipo === "media" && "bg-primary/5")}
+                    >
+                      <CelulaMedia valor={mediaDaSala(c)} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </CardContent>
       </Card>
