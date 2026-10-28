@@ -592,22 +592,14 @@ function detalheNota(linha: BoletimDTO) {
 function conteudoCelula(linha: BoletimDTO | null, editable: boolean) {
   const nota = linha?.nota ?? null;
   if (linha && nota !== null) {
-    const pontos = linha.pontosAtividades;
     return (
-      <span className="inline-flex flex-col items-center gap-0.5" title={detalheNota(linha)}>
-        <span
-          className={cn(
-            CLASSE_CELULA,
-            linha.notaFinal !== null ? corFundo(nota) : cn("border-2 bg-card", corBorda(nota)),
-          )}
-        >
-          {formatarNota(nota)}
-        </span>
-        {pontos !== null && pontos > 0 && (
-          <span className="text-xs text-muted-foreground tabular-nums">
-            +{formatarNota(pontos)} ativ.
-          </span>
+      <span
+        className={cn(
+          CLASSE_CELULA,
+          linha.notaFinal !== null ? corFundo(nota) : cn("border-2 bg-card", corBorda(nota)),
         )}
+      >
+        {formatarNota(nota)}
       </span>
     );
   }
@@ -643,7 +635,7 @@ function CelulaValor({
     <button
       type="button"
       onClick={aoClicar}
-      title="Nota do bimestre e atividades"
+      title="Lançar nota do bimestre"
       className="rounded-lg transition-all hover:scale-105 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       {conteudoCelula(linha, editable)}
