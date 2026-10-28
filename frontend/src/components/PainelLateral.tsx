@@ -7,7 +7,6 @@ import { normalizar } from "@/lib/busca";
 export type SecaoPainel<Id extends string> = {
   id: Id;
   label: string;
-  descricao: string;
   icon: typeof Search;
   /** Palavras extras que a busca da sidebar também encontra. */
   termos: string;
@@ -18,7 +17,7 @@ export type SecaoPainel<Id extends string> = {
 function filtrarSecoes<Id extends string>(secoes: SecaoPainel<Id>[], busca: string) {
   const q = normalizar(busca.trim());
   if (!q) return secoes;
-  return secoes.filter((s) => normalizar(`${s.label} ${s.descricao} ${s.termos}`).includes(q));
+  return secoes.filter((s) => normalizar(`${s.label} ${s.termos}`).includes(q));
 }
 
 /**
@@ -106,14 +105,7 @@ export function PainelLateral<Id extends string>({
                     }`}
                   >
                     <s.icon className="size-5 shrink-0" aria-hidden="true" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-base font-semibold">{s.label}</span>
-                      <span
-                        className={`block truncate text-sm ${ativa ? "text-primary-foreground/80" : "text-muted-foreground"}`}
-                      >
-                        {s.descricao}
-                      </span>
-                    </span>
+                    <span className="min-w-0 flex-1 text-base font-semibold">{s.label}</span>
                     {s.contador !== undefined && s.contador > 0 && (
                       <span
                         className={`rounded-full px-2 py-0.5 text-sm font-bold ${
@@ -141,17 +133,20 @@ export function PainelLateral<Id extends string>({
 /** Cabeçalho padrão do conteúdo de uma seção do painel. */
 export function Secao({
   titulo,
-  descricao,
+  etiqueta,
   children,
 }: {
   titulo: string;
-  descricao?: string;
+  /** Informação curta ao lado do título (ex.: turma e disciplina). */
+  etiqueta?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div>
-      <h2 className="font-display text-2xl font-bold text-foreground">{titulo}</h2>
-      {descricao && <p className="mt-1 text-base text-muted-foreground">{descricao}</p>}
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="font-display text-2xl font-bold text-foreground">{titulo}</h2>
+        {etiqueta}
+      </div>
       <div className="mt-4">{children}</div>
     </div>
   );

@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -88,34 +89,38 @@ const secoes: SecaoPainel<SecaoId>[] = [
   {
     id: "inicio",
     label: "Início",
-    descricao: "Resumo das turmas e prazos",
     icon: Home,
     termos: "inicio home resumo painel turmas prazos",
   },
   {
     id: "chamada",
     label: "Chamada",
-    descricao: "Presença da turma por dia",
     icon: ClipboardCheck,
     termos: "chamada falta faltas presenca frequencia dia data aula",
   },
   {
     id: "notas",
     label: "Notas",
-    descricao: "Lançar e editar notas",
     icon: BarChart3,
     termos: "nota notas avaliacao prova lancar",
   },
   {
     id: "atividades",
     label: "Atividades",
-    descricao: "Publicar tarefas com prazo",
     icon: ClipboardList,
     termos: "atividade atividades tarefa trabalho prazo publicar recado aviso",
   },
 ];
 
 type DisciplinaRef = { id: number; title: string };
+
+function EtiquetaTurma({ turma, disciplina }: { turma: string; disciplina: string }) {
+  return (
+    <Badge variant="secondary" className="text-sm">
+      {turma} · {disciplina}
+    </Badge>
+  );
+}
 
 async function alunosAtivosDaTurma(turmaId: number) {
   const alunos = await getStudentsByTurma(turmaId, "nome");
@@ -357,10 +362,7 @@ function InicioProfessor({
     .slice(0, 5);
 
   return (
-    <Secao
-      titulo={nomeProfessor ? `Olá, Prof. ${nomeProfessor}` : "Início"}
-      descricao="Suas turmas e os próximos prazos de atividades."
-    >
+    <Secao titulo={nomeProfessor ? `Olá, Prof. ${nomeProfessor}` : "Início"}>
       <div className="space-y-6">
         {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
 
@@ -588,7 +590,10 @@ function Chamada({
   }
 
   return (
-    <Secao titulo="Chamada" descricao={`${turmaName} · ${disciplina.title}`}>
+    <Secao
+      titulo="Chamada"
+      etiqueta={<EtiquetaTurma turma={turmaName} disciplina={disciplina.title} />}
+    >
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-end justify-between gap-4 space-y-0">
           <div className="space-y-2">
@@ -604,13 +609,13 @@ function Chamada({
               className="h-12 w-48 text-lg"
             />
           </div>
-          <CardDescription className="max-w-sm text-base">
-            {faltasDoDia === null
-              ? "Carregando a chamada do dia…"
-              : totalJaRegistrado > 0
-                ? `${totalJaRegistrado} aluno(s) já com falta em ${formatarData(data)}. Ajuste e salve para corrigir.`
-                : `Marque "Faltou" nos alunos ausentes em ${formatarData(data)} e salve.`}
-          </CardDescription>
+          {(faltasDoDia === null || totalJaRegistrado > 0) && (
+            <CardDescription className="max-w-sm text-base">
+              {faltasDoDia === null
+                ? "Carregando a chamada do dia…"
+                : `${totalJaRegistrado} aluno(s) já com falta em ${formatarData(data)}. Ajuste e salve para corrigir.`}
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
@@ -704,12 +709,11 @@ function NotasDaTurma({
   }, [turmaId]);
 
   return (
-    <Secao titulo="Notas" descricao={`${turmaName} · ${disciplina.title}`}>
+    <Secao
+      titulo="Notas"
+      etiqueta={<EtiquetaTurma turma={turmaName} disciplina={disciplina.title} />}
+    >
       <div className="space-y-3">
-        <p className="text-base text-muted-foreground">
-          Todos os alunos da turma em {disciplina.title}. Clique em um bimestre para lançar a nota.
-          Os pontos das atividades são somados a ela automaticamente, até o limite de 10.
-        </p>
         {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
         {!erro && alunos === null && (
           <p className="text-base text-muted-foreground">Carregando alunos…</p>
@@ -812,15 +816,14 @@ function Atividades({
   }
 
   return (
-    <Secao titulo="Atividades" descricao={`${turmaName} · ${disciplina.title}`}>
+    <Secao
+      titulo="Atividades"
+      etiqueta={<EtiquetaTurma turma={turmaName} disciplina={disciplina.title} />}
+    >
       <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Nova atividade</CardTitle>
-            <CardDescription className="text-base">
-              A atividade aparece no painel dos alunos da turma, e os responsáveis recebem um aviso
-              por e-mail.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -897,9 +900,6 @@ function Atividades({
                 />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Os pontos que o aluno tirar na atividade somam na nota do bimestre (limitada a 10).
-            </p>
             <Button onClick={publicar} disabled={publicando} className="min-h-12 px-6 text-lg">
               {publicando ? "Publicando..." : "Publicar para a turma"}
             </Button>

@@ -48,28 +48,24 @@ const secoes: SecaoPainel<SecaoId>[] = [
   {
     id: "avisos",
     label: "Avisos",
-    descricao: "Comunicados da escola",
     icon: Bell,
     termos: "aviso avisos notificacao comunicado reuniao novo",
   },
   {
     id: "notas",
     label: "Boletim completo",
-    descricao: "Notas dos quatro bimestres e média final",
     icon: BarChart3,
     termos: "boletim nota notas prova avaliacao media periodo",
   },
   {
     id: "faltas",
     label: "Controle de faltas",
-    descricao: "Presença em cada disciplina",
     icon: UserX,
     termos: "falta faltas presenca frequencia limite",
   },
   {
     id: "conversa",
     label: "Falar com a escola",
-    descricao: "Mensagens com a coordenação",
     icon: MessageCircle,
     termos: "mensagem conversa coordenacao professor contato escrever",
   },
@@ -127,7 +123,17 @@ function PainelResponsavel() {
   );
 
   return (
-    <AppShell role="ROLE_RESPONSAVEL" titulo={`Boa tarde, ${perfil?.nome ?? "..."}`}>
+    <AppShell
+      role="ROLE_RESPONSAVEL"
+      titulo={`Boa tarde, ${perfil?.nome ?? "..."}`}
+      etiqueta={
+        perfil?.dependentes[0] && (
+          <Badge variant="secondary" className="text-sm">
+            Acompanhando: {perfil.dependentes[0].nome}
+          </Badge>
+        )
+      }
+    >
       <PainelLateral
         secoes={secoesComContador}
         secaoAtiva={secao}
@@ -184,7 +190,7 @@ function PainelResponsavel() {
         )}
 
         {secao === "faltas" && (
-          <Secao titulo="Controle de faltas" descricao="Faltas e presença em cada disciplina.">
+          <Secao titulo="Controle de faltas">
             <div className="mb-4 flex justify-end">
               <Button
                 onClick={buscarFrequencia}
@@ -242,7 +248,7 @@ function PainelResponsavel() {
         )}
 
         {secao === "conversa" && (
-          <Secao titulo="Falar com a escola" descricao="Mensagens com a coordenação.">
+          <Secao titulo="Falar com a escola">
             <Card>
               <CardContent className="space-y-5 p-6">
                 <ul className="space-y-4">

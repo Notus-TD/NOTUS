@@ -93,72 +93,54 @@ const itens: SecaoPainel<SecaoId>[] = [
   {
     id: "dashboard",
     label: "Visão geral",
-    descricao: "Turmas e matrículas",
     icon: LayoutDashboard,
     termos: "dashboard inicio resumo painel",
   },
   {
     id: "alunos",
     label: "Alunos",
-    descricao: "Lista e cadastro",
     icon: Users,
     termos: "alunos lista matricula cadastro novo responsavel criar buscar",
   },
   {
     id: "turmas",
     label: "Turmas",
-    descricao: "Alunos de cada turma",
     icon: School,
     termos: "turma turmas sala classe associar adicionar aluno enturmar",
   },
   {
     id: "usuarios",
     label: "Excluir usuários",
-    descricao: "Anonimizar dados (LGPD)",
     icon: UserX,
     termos: "excluir remover deletar anonimizar lgpd usuario dado pessoal privacidade",
   },
   {
     id: "comunicados",
     label: "Comunicados",
-    descricao: "Avisos para a escola",
     icon: Megaphone,
     termos: "comunicado aviso enviar mensagem recado",
   },
 ];
 
-const cabecalhos: Record<SecaoId, { titulo: string; subtitulo: string }> = {
-  dashboard: { titulo: "Visão geral", subtitulo: "Turmas, matrículas, alunos e comunicados." },
-  alunos: { titulo: "Alunos", subtitulo: "Busque um aluno, abra a ficha ou cadastre um novo." },
-  turmas: {
-    titulo: "Turmas",
-    subtitulo: "Escolha uma turma para ver os alunos e adicionar novos.",
-  },
-  usuarios: {
-    titulo: "Excluir usuários",
-    subtitulo:
-      "Anonimize os dados pessoais de alunos e responsáveis para atender pedidos de exclusão (LGPD). Ação irreversível.",
-  },
-  comunicados: {
-    titulo: "Comunicados",
-    subtitulo: "Envie avisos para alunos, responsáveis e professores.",
-  },
+const titulos: Record<SecaoId, string> = {
+  dashboard: "Visão geral",
+  alunos: "Alunos",
+  turmas: "Turmas",
+  usuarios: "Excluir usuários",
+  comunicados: "Comunicados",
 };
 
-const cabecalhoAlunos: Record<ModoAlunos["tipo"], { titulo: string; subtitulo: string }> = {
-  lista: cabecalhos.alunos,
-  cadastro: {
-    titulo: "Cadastrar aluno",
-    subtitulo: "Os dois recebem acesso ao portal com a senha inicial igual ao e-mail.",
-  },
-  ficha: { titulo: "Ficha do aluno", subtitulo: "Dados do aluno e do responsável." },
+const titulosAlunos: Record<ModoAlunos["tipo"], string> = {
+  lista: titulos.alunos,
+  cadastro: "Cadastrar aluno",
+  ficha: "Ficha do aluno",
 };
 
 function PainelAdmin() {
   const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("dashboard");
   const [modo, setModo] = useState<ModoAlunos>({ tipo: "lista" });
-  const { titulo, subtitulo } = secao === "alunos" ? cabecalhoAlunos[modo.tipo] : cabecalhos[secao];
+  const titulo = secao === "alunos" ? titulosAlunos[modo.tipo] : titulos[secao];
 
   function irParaAlunos(novoModo: ModoAlunos) {
     setModo(novoModo);
@@ -180,7 +162,16 @@ function PainelAdmin() {
         aoMudarBusca={setBusca}
         placeholderBusca="Pesquisar... (ex.: turma, LGPD)"
       >
-        <Secao titulo={titulo} descricao={subtitulo}>
+        <Secao
+          titulo={titulo}
+          etiqueta={
+            secao === "usuarios" && (
+              <Badge variant="destructive" className="text-sm">
+                Ação irreversível
+              </Badge>
+            )
+          }
+        >
           {secao === "dashboard" && <Dashboard irPara={irPara} irParaAlunos={irParaAlunos} />}
           {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
           {secao === "turmas" && <Turmas />}
