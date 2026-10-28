@@ -116,8 +116,12 @@ class AtividadeServiceUnitTest {
     }
 
     private AtividadeDTO pedido(LocalDate prazo, Long turmaId, Long disciplinaId) {
+        return pedido(prazo, turmaId, disciplinaId, null);
+    }
+
+    private AtividadeDTO pedido(LocalDate prazo, Long turmaId, Long disciplinaId, Float pontos) {
         return new AtividadeDTO(null, "  Lista 1  ", "Exercícios da página 10", Bimestre.QUARTO, prazo, turmaId,
-                disciplinaId, null, null, null, null);
+                disciplinaId, null, null, null, null, pontos);
     }
 
     @Test
@@ -135,7 +139,7 @@ class AtividadeServiceUnitTest {
             return salva;
         });
 
-        AtividadeDTO resultado = atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, null), PROFESSOR);
+        AtividadeDTO resultado = atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, null, 1.5f), PROFESSOR);
 
         assertEquals(100L, resultado.id());
         assertEquals("Lista 1", resultado.title());
@@ -143,7 +147,18 @@ class AtividadeServiceUnitTest {
         assertEquals(5L, resultado.disciplinaId());
         assertEquals("Matemática", resultado.disciplinaTitle());
         assertEquals("9º Ano A", resultado.turmaName());
+        assertEquals(1.5f, resultado.pontos());
         verify(eventPublisher).publishEvent(new AtividadePublicadaEvent(100L));
+    }
+
+    @Test
+    void deveRecusarAtividadeComPontosForaDoIntervalo() {
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> atividadeService.publicar(pedido(LocalDate.now().plusDays(3), 1L, null, 10.5f), PROFESSOR));
+
+        assertEquals("Os pontos da atividade devem ser maiores que 0 e no máximo 10.", excecao.getMessage());
+        verify(userRepository, never()).findByEmail(anyString());
+        verify(atividadeRepository, never()).save(any());
     }
 
     @Test
@@ -231,7 +246,7 @@ class AtividadeServiceUnitTest {
     @Test
     void deveRecusarAtividadeSemBimestre() {
         AtividadeDTO semBimestre = new AtividadeDTO(null, "Lista 1", "Exercícios da página 10", null,
-                LocalDate.now().plusDays(3), 1L, null, null, null, null, null);
+                LocalDate.now().plusDays(3), 1L, null, null, null, null, null, null);
 
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
                 () -> atividadeService.publicar(semBimestre, PROFESSOR));

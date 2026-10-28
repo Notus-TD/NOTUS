@@ -33,6 +33,8 @@ public class Atividade {
     private LocalDate prazo;
     @Getter @Setter
     private LocalDateTime publicadaEm;
+    @Getter @Setter
+    private Float pontos;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
