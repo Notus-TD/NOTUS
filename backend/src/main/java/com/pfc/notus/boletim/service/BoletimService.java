@@ -17,18 +17,22 @@ import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.repository.NotaRepository;
 import com.pfc.notus.notificacao.event.NotaFinalLancadaEvent;
 import com.pfc.notus.notificacao.service.NotificacaoService;
+import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -75,6 +79,33 @@ public class BoletimService {
     public List<BoletimDisciplinaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
 
+        Map<Long, Float> mediasDaSala = mediasDaSala(studentId);
+        return montarBoletim(studentId).stream()
+                .map(d -> BoletimMapper.comMediaSala(d, mediasDaSala.get(d.disciplinaId())))
+                .toList();
+    }
+
+    /** Média final da turma do aluno em cada disciplina, considerando só os alunos com matrícula ativa. */
+    private Map<Long, Float> mediasDaSala(Long studentId) {
+        Turma turma = studentRepository.findById(studentId).map(Student::getTurma).orElse(null);
+        if (turma == null) {
+            return Map.of();
+        }
+        Map<Long, List<Float>> mediasPorDisciplina = new HashMap<>();
+        for (Student colega : studentRepository.findByTurmaId(turma.getId(), Sort.unsorted())) {
+            if (colega.getStatusMatricula() != StatusMatricula.ATIVA) {
+                continue;
+            }
+            montarBoletim(colega.getId()).stream()
+                    .filter(d -> d.mediaFinal() != null)
+                    .forEach(d -> mediasPorDisciplina.computeIfAbsent(d.disciplinaId(), id -> new ArrayList<>()).add(d.mediaFinal()));
+        }
+        return mediasPorDisciplina.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        e -> (float) e.getValue().stream().mapToDouble(Float::doubleValue).average().orElseThrow()));
+    }
+
+    private List<BoletimDisciplinaDTO> montarBoletim(Long studentId) {
         List<Nota> notas = notaRepository.findByStudentIdOrderByIdAsc(studentId);
         List<Boletim> boletins = boletimRepository.findByStudentId(studentId);
         List<Entrega> pontuadas = entregasPontuadas(studentId);
