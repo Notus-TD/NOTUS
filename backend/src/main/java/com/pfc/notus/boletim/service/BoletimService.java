@@ -9,6 +9,8 @@ import com.pfc.notus.boletim.mapper.BoletimMapper;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.entrega.domain.Entrega;
+import com.pfc.notus.entrega.repository.EntregaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.nota.domain.Nota;
@@ -50,6 +52,9 @@ public class BoletimService {
     private NotaRepository notaRepository;
 
     @Autowired
+    private EntregaRepository entregaRepository;
+
+    @Autowired
     private StudentRepository studentRepository;
 
     @Autowired
@@ -73,20 +78,25 @@ public class BoletimService {
 
         List<Nota> notas = notaRepository.findByStudentIdOrderByIdAsc(studentId);
         List<Boletim> boletins = boletimRepository.findByStudentId(studentId);
+        List<Entrega> pontuadas = entregasPontuadas(studentId);
 
         Map<Long, Disciplina> disciplinas = new HashMap<>();
         notas.forEach(n -> disciplinas.putIfAbsent(n.getDisciplina().getId(), n.getDisciplina()));
         boletins.forEach(b -> disciplinas.putIfAbsent(b.getDisciplina().getId(), b.getDisciplina()));
+        pontuadas.forEach(e -> disciplinas.putIfAbsent(e.getAtividade().getDisciplina().getId(), e.getAtividade().getDisciplina()));
 
         Map<Celula, Double> medias = notas.stream()
                 .collect(Collectors.groupingBy(n -> new Celula(n.getDisciplina().getId(), n.getBimestre()),
                         Collectors.averagingDouble(Nota::getRate)));
         Map<Celula, Boletim> notasFinais = boletins.stream()
                 .collect(Collectors.toMap(b -> new Celula(b.getDisciplina().getId(), b.getBimestre()), Function.identity()));
+        Map<Celula, Double> pontos = pontuadas.stream()
+                .collect(Collectors.groupingBy(BoletimService::celulaDaEntrega,
+                        Collectors.summingDouble(Entrega::getPontosObtidos)));
 
         return disciplinas.values().stream()
                 .sorted(Comparator.comparing(Disciplina::getTitle))
-                .map(d -> montarDisciplina(studentId, d, medias, notasFinais))
+                .map(d -> montarDisciplina(studentId, d, medias, notasFinais, pontos))
                 .toList();
     }
 
@@ -114,7 +124,8 @@ public class BoletimService {
         entity = boletimRepository.save(entity);
 
         eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId()));
-        return BoletimMapper.toDto(entity, mediaCalculada(student.getId(), disciplina.getId(), dto.bimestre()));
+        return BoletimMapper.toDto(entity, mediaCalculada(student.getId(), disciplina.getId(), dto.bimestre()),
+                pontosAtividades(student.getId(), disciplina.getId(), dto.bimestre()));
     }
 
     @Transactional
@@ -134,12 +145,30 @@ public class BoletimService {
         return media.isPresent() ? (float) media.getAsDouble() : null;
     }
 
-    private BoletimDisciplinaDTO montarDisciplina(Long studentId, Disciplina disciplina,
-                                                  Map<Celula, Double> medias, Map<Celula, Boletim> notasFinais) {
+    private Float pontosAtividades(Long studentId, Long disciplinaId, Bimestre bimestre) {
+        Celula celula = new Celula(disciplinaId, bimestre);
+        List<Entrega> daCelula = entregasPontuadas(studentId).stream()
+                .filter(e -> celulaDaEntrega(e).equals(celula))
+                .toList();
+        return daCelula.isEmpty() ? null : (float) daCelula.stream().mapToDouble(Entrega::getPontosObtidos).sum();
+    }
+
+    private List<Entrega> entregasPontuadas(Long studentId) {
+        return entregaRepository.findByStudentId(studentId).stream()
+                .filter(e -> e.getPontosObtidos() != null)
+                .toList();
+    }
+
+    private static Celula celulaDaEntrega(Entrega entrega) {
+        return new Celula(entrega.getAtividade().getDisciplina().getId(), entrega.getAtividade().getBimestre());
+    }
+
+    private BoletimDisciplinaDTO montarDisciplina(Long studentId, Disciplina disciplina, Map<Celula, Double> medias,
+                                                  Map<Celula, Boletim> notasFinais, Map<Celula, Double> pontos) {
         List<BoletimDTO> bimestres = Arrays.stream(Bimestre.values())
                 .map(b -> new Celula(disciplina.getId(), b))
-                .filter(c -> medias.containsKey(c) || notasFinais.containsKey(c))
-                .map(c -> montarLinha(studentId, disciplina, c.bimestre(), medias.get(c), notasFinais.get(c)))
+                .filter(c -> medias.containsKey(c) || notasFinais.containsKey(c) || pontos.containsKey(c))
+                .map(c -> montarLinha(studentId, disciplina, c.bimestre(), medias.get(c), notasFinais.get(c), pontos.get(c)))
                 .toList();
         return BoletimMapper.toDisciplinaDto(disciplina, bimestres,
                 mediaDasNotas(bimestres, b -> b.getSemestre() == 1),
@@ -155,12 +184,14 @@ public class BoletimService {
         return media.isPresent() ? (float) media.getAsDouble() : null;
     }
 
-    private BoletimDTO montarLinha(Long studentId, Disciplina disciplina, Bimestre bimestre, Double media, Boletim notaFinal) {
+    private BoletimDTO montarLinha(Long studentId, Disciplina disciplina, Bimestre bimestre, Double media,
+                                   Boletim notaFinal, Double pontos) {
         Float mediaCalculada = media == null ? null : media.floatValue();
+        Float pontosAtividades = pontos == null ? null : pontos.floatValue();
         if (notaFinal == null) {
-            return BoletimMapper.toDtoSemNotaFinal(studentId, disciplina, bimestre, mediaCalculada);
+            return BoletimMapper.toDtoSemNotaFinal(studentId, disciplina, bimestre, mediaCalculada, pontosAtividades);
         }
-        return BoletimMapper.toDto(notaFinal, mediaCalculada);
+        return BoletimMapper.toDto(notaFinal, mediaCalculada, pontosAtividades);
     }
 
     private record Celula(Long disciplinaId, Bimestre bimestre) {
