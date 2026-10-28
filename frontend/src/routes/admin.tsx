@@ -38,6 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -67,6 +68,7 @@ import {
   type UsuarioDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { normalizar } from "@/lib/busca";
 import { useCarga, MensagemErro, type Carga } from "@/hooks/use-carga";
 
 export const Route = createFileRoute("/admin")({
@@ -829,7 +831,8 @@ function DetalheTurma({
   onExcluida: () => void;
 }) {
   const [editando, setEditando] = useState(false);
-  const [studentId, setStudentId] = useState("");
+  const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
+  const [filtroAlunos, setFiltroAlunos] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const detalhe = useCarga<TurmaDetalheDTO>(() => getTurma(turma.id), 0);
   const todos = useCarga<StudentMinDTO[]>(getStudents, 0);
@@ -839,8 +842,40 @@ function DetalheTurma({
   );
   const disponiveis =
     todos.estado === "ok"
-      ? todos.dados.filter((s) => s.matriculaStatus === "ATIVA" && !idsNaTurma.has(s.userId))
+      ? todos.dados
+          .filter((s) => s.matriculaStatus === "ATIVA" && !idsNaTurma.has(s.userId))
+          .sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"))
       : [];
+  const termoAlunos = normalizar(filtroAlunos.trim());
+  const disponiveisFiltrados = disponiveis.filter(
+    (s) =>
+      !termoAlunos ||
+      normalizar(s.studentName).includes(termoAlunos) ||
+      String(s.matricula).includes(termoAlunos),
+  );
+  const todosFiltradosMarcados =
+    disponiveisFiltrados.length > 0 &&
+    disponiveisFiltrados.every((s) => selecionados.has(s.userId));
+
+  function alternarAluno(id: number, marcado: boolean) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      if (marcado) novo.add(id);
+      else novo.delete(id);
+      return novo;
+    });
+  }
+
+  function alternarTodos(marcado: boolean) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      for (const s of disponiveisFiltrados) {
+        if (marcado) novo.add(s.userId);
+        else novo.delete(s.userId);
+      }
+      return novo;
+    });
+  }
 
   async function executar(acao: () => Promise<void>, erroPadrao: string) {
     setOcupado(true);
@@ -870,12 +905,26 @@ function DetalheTurma({
 
   function adicionar(e: FormEvent) {
     e.preventDefault();
-    if (!studentId) return;
+    const ids = disponiveis.filter((s) => selecionados.has(s.userId)).map((s) => s.userId);
+    if (ids.length === 0) return;
     executar(async () => {
-      const associado = await associarAlunoTurma(turma.id, Number(studentId));
-      toast.success(`${associado.studentName} adicionado(a) à turma ${associado.turmaName}.`);
+      let adicionados = 0;
+      let primeiroErro: string | null = null;
+      for (const id of ids) {
+        try {
+          await associarAlunoTurma(turma.id, id);
+          adicionados++;
+        } catch (err) {
+          primeiroErro ??= err instanceof ApiError ? err.message : "Erro desconhecido.";
+        }
+      }
+      if (adicionados > 0) {
+        toast.success(`${adicionados} aluno(s) adicionado(s) à turma ${turma.name}.`);
+      }
+      if (primeiroErro) toast.error(`Alguns alunos não foram adicionados: ${primeiroErro}`);
+      setSelecionados(new Set());
       onAlterada();
-    }, "Erro ao adicionar o aluno à turma.");
+    }, "Erro ao adicionar os alunos à turma.");
   }
 
   function remover(aluno: StudentMinDTO) {
@@ -942,9 +991,10 @@ function DetalheTurma({
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Adicionar aluno</CardTitle>
+                <CardTitle className="text-xl">Adicionar alunos</CardTitle>
                 <CardDescription className="text-base">
-                  Somente alunos com matrícula ativa. Um aluno pode estar em apenas uma turma.
+                  Marque os alunos e adicione todos de uma vez. Somente alunos com matrícula ativa;
+                  um aluno pode estar em apenas uma turma.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -954,30 +1004,72 @@ function DetalheTurma({
                 {todos.estado === "erro" && <MensagemErro carga={todos} />}
                 {todos.estado === "ok" && (
                   <form onSubmit={adicionar} className="space-y-4">
-                    <Select value={studentId} onValueChange={setStudentId}>
-                      <SelectTrigger className="h-12 text-lg" aria-label="Aluno">
-                        <SelectValue placeholder="Selecione o aluno" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {disponiveis.map((s) => (
-                          <SelectItem key={s.userId} value={String(s.userId)}>
-                            {s.studentName} · Matrícula nº {s.matricula}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {disponiveis.length === 0 && (
+                    {disponiveis.length === 0 ? (
                       <p className="text-base text-muted-foreground">
                         Nenhum aluno ativo disponível para esta turma.
                       </p>
+                    ) : (
+                      <>
+                        <div className="relative">
+                          <Search
+                            className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden="true"
+                          />
+                          <Input
+                            type="search"
+                            value={filtroAlunos}
+                            onChange={(e) => setFiltroAlunos(e.target.value)}
+                            placeholder="Filtrar por nome ou matrícula…"
+                            aria-label="Filtrar alunos disponíveis"
+                            className="h-12 pl-10 text-lg"
+                          />
+                        </div>
+                        <label className="flex cursor-pointer items-center gap-3 border-b border-border px-1 pb-2 text-base font-semibold text-foreground">
+                          <Checkbox
+                            checked={todosFiltradosMarcados}
+                            onCheckedChange={(v) => alternarTodos(v === true)}
+                            disabled={disponiveisFiltrados.length === 0}
+                            className="size-5"
+                          />
+                          Selecionar todos
+                        </label>
+                        <ul className="max-h-72 divide-y divide-border overflow-y-auto">
+                          {disponiveisFiltrados.map((s) => (
+                            <li key={s.userId}>
+                              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-2.5 hover:bg-muted">
+                                <Checkbox
+                                  checked={selecionados.has(s.userId)}
+                                  onCheckedChange={(v) => alternarAluno(s.userId, v === true)}
+                                  className="size-5"
+                                />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-lg text-foreground">
+                                    {s.studentName}
+                                  </span>
+                                  <span className="block text-sm text-muted-foreground">
+                                    Matrícula nº {s.matricula}
+                                  </span>
+                                </span>
+                              </label>
+                            </li>
+                          ))}
+                          {disponiveisFiltrados.length === 0 && (
+                            <li className="py-3 text-base text-muted-foreground">
+                              Nenhum aluno encontrado.
+                            </li>
+                          )}
+                        </ul>
+                      </>
                     )}
                     <Button
                       type="submit"
                       className="min-h-11 w-full text-base"
-                      disabled={!studentId || ocupado}
+                      disabled={selecionados.size === 0 || ocupado}
                     >
                       <UserPlus className="size-5" aria-hidden="true" />
-                      {ocupado ? "Salvando..." : `Adicionar à turma ${turma.name}`}
+                      {ocupado
+                        ? "Salvando..."
+                        : `Adicionar ${selecionados.size || ""} aluno(s) à turma ${turma.name}`}
                     </Button>
                   </form>
                 )}
