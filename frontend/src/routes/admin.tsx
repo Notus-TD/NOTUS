@@ -214,19 +214,12 @@ function Dashboard({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Indicador
-          icon={School}
-          rotulo="Turmas"
-          carga={turmas}
-          valor={(t) => t.length}
-          detalhe={(t) => (t[0]?.schoolYear ? `Ano letivo ${t[0].schoolYear}` : "")}
-        />
+        <Indicador icon={School} rotulo="Turmas" carga={turmas} valor={(t) => t.length} />
         <Indicador
           icon={GraduationCap}
           rotulo="Alunos matriculados"
           carga={matriculas}
           valor={(m) => m.filter((s) => s.matriculaStatus === "ATIVA").length}
-          detalhe={(m) => `${m.length} no total`}
         />
       </div>
 
@@ -287,13 +280,11 @@ function Indicador<T>({
   rotulo,
   carga,
   valor,
-  detalhe,
 }: {
   icon: LucideIcon;
   rotulo: string;
   carga: Carga<T>;
   valor: (d: T) => number;
-  detalhe?: (d: T) => string;
 }) {
   return (
     <Card>
@@ -307,16 +298,9 @@ function Indicador<T>({
             <p className="mt-1 font-display text-4xl font-bold text-muted-foreground">…</p>
           )}
           {carga.estado === "ok" && (
-            <>
-              <p className="mt-1 font-display text-4xl font-bold text-foreground">
-                {valor(carga.dados)}
-              </p>
-              {detalhe && (
-                <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {detalhe(carga.dados)}
-                </p>
-              )}
-            </>
+            <p className="mt-1 font-display text-4xl font-bold text-foreground">
+              {valor(carga.dados)}
+            </p>
           )}
           {carga.estado === "erro" && (
             <>
@@ -979,10 +963,6 @@ function DetalheTurma({
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Adicionar alunos</CardTitle>
-                <CardDescription className="text-base">
-                  Marque os alunos e adicione todos de uma vez. Somente alunos com matrícula ativa;
-                  um aluno pode estar em apenas uma turma.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 {todos.estado === "carregando" && (
@@ -1066,9 +1046,6 @@ function DetalheTurma({
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Professores e disciplinas</CardTitle>
-                <CardDescription className="text-base">
-                  Vínculos cadastrados no lecionamento desta turma.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 {detalhe.dados.lecionamentos.length === 0 ? (
@@ -1094,9 +1071,6 @@ function DetalheTurma({
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Alunos da turma</CardTitle>
-              <CardDescription className="text-base">
-                {detalhe.dados.alunos.length} aluno(s) em {turma.name}
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {detalhe.dados.alunos.length === 0 ? (
@@ -1459,9 +1433,6 @@ function Comunicados() {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Novo comunicado</CardTitle>
-          <CardDescription className="text-base">
-            Os comunicados enviados ficam salvos neste dispositivo.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <FormComunicado aoEnviar={(c) => setLista((l) => [c, ...l])} />
