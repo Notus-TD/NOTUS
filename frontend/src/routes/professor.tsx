@@ -58,7 +58,6 @@ import {
   type TurmaComDisciplinasDTO,
 } from "@/lib/api";
 import { BIMESTRES, bimestreAtual, nomeBimestre } from "@/lib/bimestres";
-import { normalizar } from "@/lib/busca";
 import { formatarData, hojeLocal } from "@/lib/datas";
 import { ORDEM_STATUS_ENTREGA, STATUS_ENTREGA } from "@/lib/entregas";
 import { cn } from "@/lib/utils";
@@ -90,25 +89,21 @@ const secoes: SecaoPainel<SecaoId>[] = [
     id: "inicio",
     label: "Início",
     icon: Home,
-    termos: "inicio home resumo painel turmas prazos",
   },
   {
     id: "chamada",
     label: "Chamada",
     icon: ClipboardCheck,
-    termos: "chamada falta faltas presenca frequencia dia data aula",
   },
   {
     id: "notas",
     label: "Notas",
     icon: BarChart3,
-    termos: "nota notas avaliacao prova lancar",
   },
   {
     id: "atividades",
     label: "Atividades",
     icon: ClipboardList,
-    termos: "atividade atividades tarefa trabalho prazo publicar recado aviso",
   },
 ];
 
@@ -130,7 +125,6 @@ async function alunosAtivosDaTurma(turmaId: number) {
 }
 
 function PainelProfessor() {
-  const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("inicio");
   const [minhasTurmas, setMinhasTurmas] = useState<TurmaComDisciplinasDTO[] | null>(null);
   const [turmaId, setTurmaId] = useState<number | null>(null);
@@ -165,21 +159,6 @@ function PainelProfessor() {
     turmaAtual?.disciplinas[0] ??
     null;
 
-  const termo = normalizar(busca.trim());
-  const turmasFiltradas = (minhasTurmas ?? []).filter(
-    (t) =>
-      !termo ||
-      normalizar(
-        `${t.turmaName} ${t.schoolYear} ${t.disciplinas.map((d) => d.title).join(" ")}`,
-      ).includes(termo),
-  );
-
-  function selecionarPrimeiraTurmaEncontrada() {
-    if (!termo || !turmasFiltradas[0]) return false;
-    setTurmaId(turmasFiltradas[0].turmaId);
-    return true;
-  }
-
   const listaDeTurmas = (
     <div className="space-y-1 border-b border-border pb-3">
       <p className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -193,22 +172,14 @@ function PainelProfessor() {
           Você ainda não está associado a nenhuma turma.
         </p>
       )}
-      {minhasTurmas && minhasTurmas.length > 0 && turmasFiltradas.length === 0 && (
-        <p className="px-3 py-2 text-base text-muted-foreground">
-          Nenhuma turma encontrada para "{busca}".
-        </p>
-      )}
-      {turmasFiltradas.map((t) => {
+      {minhasTurmas?.map((t) => {
         const ativa = t.turmaId === turmaId;
         return (
           <button
             key={t.turmaId}
             type="button"
             aria-pressed={ativa}
-            onClick={() => {
-              setTurmaId(t.turmaId);
-              setBusca("");
-            }}
+            onClick={() => setTurmaId(t.turmaId)}
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
               ativa ? "bg-primary/10 ring-1 ring-primary" : "hover:bg-accent"
             }`}
@@ -235,10 +206,6 @@ function PainelProfessor() {
         secoes={secoes}
         secaoAtiva={secao}
         aoSelecionarSecao={setSecao}
-        busca={busca}
-        aoMudarBusca={setBusca}
-        placeholderBusca="Pesquisar turma ou seção..."
-        aoPressionarEnter={selecionarPrimeiraTurmaEncontrada}
         topo={listaDeTurmas}
       >
         {erroCarregamento && (

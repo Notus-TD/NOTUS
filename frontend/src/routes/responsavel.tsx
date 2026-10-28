@@ -50,30 +50,25 @@ const secoes: SecaoPainel<SecaoId>[] = [
     id: "avisos",
     label: "Avisos",
     icon: Bell,
-    termos: "aviso avisos notificacao comunicado reuniao novo",
   },
   {
     id: "notas",
     label: "Boletim completo",
     icon: BarChart3,
-    termos: "boletim nota notas prova avaliacao media periodo",
   },
   {
     id: "faltas",
     label: "Controle de faltas",
     icon: UserX,
-    termos: "falta faltas presenca frequencia limite",
   },
   {
     id: "conversa",
     label: "Falar com a escola",
     icon: MessageCircle,
-    termos: "mensagem conversa coordenacao professor contato escrever",
   },
 ];
 
 function PainelResponsavel() {
-  const [busca, setBusca] = useState("");
   const [secao, setSecao] = useState<SecaoId>("avisos");
   const [lidos, setLidos] = useState<string[]>([]);
   const [mensagens, setMensagens] = useState(conversas);
@@ -135,14 +130,7 @@ function PainelResponsavel() {
         )
       }
     >
-      <PainelLateral
-        secoes={secoesComContador}
-        secaoAtiva={secao}
-        aoSelecionarSecao={setSecao}
-        busca={busca}
-        aoMudarBusca={setBusca}
-        placeholderBusca="Pesquisar... (ex.: faltas, notas)"
-      >
+      <PainelLateral secoes={secoesComContador} secaoAtiva={secao} aoSelecionarSecao={setSecao}>
         {secao === "avisos" && (
           <Secao titulo="Avisos e notificações">
             <div className="grid gap-4">

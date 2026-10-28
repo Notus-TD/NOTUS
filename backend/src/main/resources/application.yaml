@@ -13,6 +13,11 @@ security:
     secret: my-secret
     expiration: 3600000
 
+# Origens que podem chamar a API pelo navegador. Inclui a rede local (192.168.x.x) para testes
+# em outras máquinas; sobrescreva com a variável CORS_ALLOWED_ORIGINS (separada por vírgulas).
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*,http://192.168.*:*}
+
 resend:
   api-key: ${RESEND_API_KEY:}
   remetente: ${RESEND_REMETENTE:NOTUS <onboarding@resend.dev>}
