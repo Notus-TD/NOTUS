@@ -35,7 +35,7 @@ const destaques = [
 
 function Index() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link to="/" className="flex items-center gap-3">
@@ -48,7 +48,7 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6">
         <section className="max-w-3xl">
           <p className="text-base font-semibold uppercase tracking-widest text-primary">
             Gestão escolar do 5º ano ao 9º ano

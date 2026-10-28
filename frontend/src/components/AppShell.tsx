@@ -54,7 +54,7 @@ export function AppShell({
   const info = roleAtual ? perfil[roleAtual] : undefined;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <span className="flex items-center gap-3">
@@ -82,7 +82,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {titulo}
