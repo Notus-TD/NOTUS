@@ -20,6 +20,7 @@ import {
   type StudentMinDTO,
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import { useCarga, MensagemErro } from "@/hooks/use-carga";
 
 export const Route = createFileRoute("/responsavel")({
@@ -213,37 +214,7 @@ function PainelResponsavel() {
                 chamada começar.
               </p>
             )}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {frequencia?.map((f) => {
-                const limite = Math.floor(f.totalAulas * 0.25);
-                const alerta = f.totalFaltas >= limite && limite > 0;
-                return (
-                  <Card
-                    key={`${f.studentId}-${f.disciplinaId}`}
-                    className={alerta ? "border-2 border-warning" : undefined}
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xl">{f.disciplinaTitle}</CardTitle>
-                      <CardDescription className="text-base">
-                        {f.totalFaltas} de {f.totalAulas} aulas perdidas ·{" "}
-                        {Math.round(f.percentualPresenca)}% de presença
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-base">
-                      {alerta ? (
-                        <p className="font-semibold text-warning">
-                          Atenção: o limite é de {limite} faltas nesta disciplina.
-                        </p>
-                      ) : (
-                        <p className="text-muted-foreground">
-                          Dentro do limite permitido ({limite} faltas).
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            {frequencia && frequencia.length > 0 && <FrequenciaPorFilho frequencia={frequencia} />}
           </Secao>
         )}
 
@@ -365,5 +336,88 @@ function BoletinsDoFilho({ filho }: { filho: StudentMinDTO }) {
       </div>
       <BoletimMatriz studentId={filho.userId} />
     </section>
+  );
+}
+
+const PRESENCA_MINIMA = 75;
+const PRESENCA_ATENCAO = 85;
+
+function situacaoPresenca(percentual: number) {
+  if (percentual >= PRESENCA_ATENCAO)
+    return { rotulo: "Regular", texto: "text-success", barra: "bg-primary" };
+  if (percentual >= PRESENCA_MINIMA)
+    return { rotulo: "Atenção", texto: "text-warning", barra: "bg-warning" };
+  return { rotulo: "Abaixo do mínimo", texto: "text-destructive", barra: "bg-destructive" };
+}
+
+function FrequenciaPorFilho({ frequencia }: { frequencia: FrequenciaDTO[] }) {
+  const filhos = frequencia.reduce<{ id: number; nome: string; itens: FrequenciaDTO[] }[]>(
+    (grupos, f) => {
+      const grupo = grupos.find((g) => g.id === f.studentId);
+      if (grupo) grupo.itens.push(f);
+      else grupos.push({ id: f.studentId, nome: f.studentName, itens: [f] });
+      return grupos;
+    },
+    [],
+  );
+
+  return (
+    <div className="space-y-8">
+      {filhos.map((filho) => (
+        <div key={filho.id} className="space-y-3">
+          {filhos.length > 1 && (
+            <h3 className="font-display text-xl font-bold text-foreground">{filho.nome}</h3>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filho.itens.map((f) => (
+              <CardFrequencia key={f.disciplinaId} frequencia={f} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CardFrequencia({ frequencia: f }: { frequencia: FrequenciaDTO }) {
+  const percentual = Math.round(f.percentualPresenca);
+  const situacao = situacaoPresenca(percentual);
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-6">
+        <p className="text-base font-semibold text-muted-foreground">{f.disciplinaTitle}</p>
+        <div>
+          <p className="font-display text-5xl font-bold tabular-nums text-foreground">
+            {f.totalFaltas}
+          </p>
+          <p className="mt-1 text-base text-muted-foreground">
+            {f.totalFaltas === 1 ? "falta" : "faltas"} em {f.totalAulas}{" "}
+            {f.totalAulas === 1 ? "aula" : "aulas"}
+          </p>
+        </div>
+        <div
+          className="relative h-2.5 rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={percentual}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${percentual}% de presença em ${f.disciplinaTitle}`}
+        >
+          <div
+            className={cn("h-full rounded-full", situacao.barra)}
+            style={{ width: `${percentual}%` }}
+          />
+          <span
+            className="absolute -top-1 h-4.5 w-0.5 rounded-full bg-foreground/40"
+            style={{ left: `${PRESENCA_MINIMA}%` }}
+            title={`Mínimo exigido: ${PRESENCA_MINIMA}%`}
+          />
+        </div>
+        <div className="flex items-baseline justify-between gap-2 text-base">
+          <span className="tabular-nums text-muted-foreground">{percentual}% presença</span>
+          <span className={cn("font-semibold", situacao.texto)}>{situacao.rotulo}</span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

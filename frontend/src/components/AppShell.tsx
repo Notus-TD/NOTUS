@@ -7,7 +7,7 @@ import { RodapeSite } from "@/components/LegalPage";
 
 const perfil: Record<Role, { label: string; icon: typeof GraduationCap }> = {
   ROLE_ALUNO: { label: "Aluno", icon: GraduationCap },
-  ROLE_RESPONSAVEL: { label: "Pai / Responsável", icon: Users },
+  ROLE_RESPONSAVEL: { label: "Responsável", icon: Users },
   ROLE_PROFESSOR: { label: "Professor", icon: ClipboardCheck },
   ROLE_ADMIN: { label: "Administrador", icon: ShieldCheck },
 };
