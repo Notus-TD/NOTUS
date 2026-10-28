@@ -47,7 +47,17 @@ public class BoletimMapper {
                 disciplina.getId(),
                 disciplina.getTitle(),
                 bimestres,
-                mediaFinal);
+                mediaFinal,
+                null);
+    }
+
+    public static BoletimDisciplinaDTO comMediaSala(BoletimDisciplinaDTO disciplina, Float mediaSala) {
+        return new BoletimDisciplinaDTO(
+                disciplina.disciplinaId(),
+                disciplina.disciplinaTitle(),
+                disciplina.bimestres(),
+                disciplina.mediaFinal(),
+                mediaSala);
     }
 
     private static Float somarAtividades(Float nota, Float pontosAtividades) {

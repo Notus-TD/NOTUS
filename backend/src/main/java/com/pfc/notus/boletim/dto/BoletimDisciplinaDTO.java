@@ -6,6 +6,7 @@ public record BoletimDisciplinaDTO(
         Long disciplinaId,
         String disciplinaTitle,
         List<BoletimDTO> bimestres,
-        Float mediaFinal
+        Float mediaFinal,
+        Float mediaSala
 ) {
 }
