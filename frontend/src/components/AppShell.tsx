@@ -19,7 +19,7 @@ export function AppShell({
   children,
 }: {
   titulo: string;
-  subtitulo: string;
+  subtitulo?: string;
   role?: Role;
   children: ReactNode;
 }) {
@@ -87,7 +87,7 @@ export function AppShell({
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {titulo}
           </h1>
-          <p className="mt-2 max-w-2xl text-lg text-muted-foreground">{subtitulo}</p>
+          {subtitulo && <p className="mt-2 max-w-2xl text-lg text-muted-foreground">{subtitulo}</p>}
         </div>
 
         <div className="mt-8 space-y-8">{children}</div>
