@@ -127,11 +127,7 @@ function PainelResponsavel() {
   );
 
   return (
-    <AppShell
-      role="ROLE_RESPONSAVEL"
-      titulo={`Boa tarde, ${perfil?.nome ?? "..."}`}
-      subtitulo={`Acompanhamento de ${perfil?.dependentes[0]?.nome ?? "..."} — ${aluno.turma}. Use a busca ao lado para encontrar o que precisa.`}
-    >
+    <AppShell role="ROLE_RESPONSAVEL" titulo={`Boa tarde, ${perfil?.nome ?? "..."}`}>
       <PainelLateral
         secoes={secoesComContador}
         secaoAtiva={secao}
