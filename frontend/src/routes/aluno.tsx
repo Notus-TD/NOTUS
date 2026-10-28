@@ -64,49 +64,42 @@ const secoes: SecaoPainel<SecaoId>[] = [
   {
     id: "hoje",
     label: "Aulas de hoje",
-    descricao: "Grade horária do dia",
     icon: CalendarClock,
     termos: "grade horario aula hoje dia",
   },
   {
     id: "atrasadas",
     label: "Atividades em atraso",
-    descricao: "Prazos que já venceram",
     icon: AlertTriangle,
     termos: "atraso atrasada pendente vencida entrega",
   },
   {
     id: "atividades",
     label: "Todas as atividades",
-    descricao: "Tudo o que há para entregar",
     icon: ClipboardList,
     termos: "atividade tarefa trabalho entregar lista",
   },
   {
     id: "notas",
     label: "Notas recentes",
-    descricao: "Últimas avaliações",
     icon: BarChart3,
     termos: "nota prova media avaliação boletim",
   },
   {
     id: "presenca",
     label: "Presença por disciplina",
-    descricao: "Frequência em cada matéria",
     icon: UserX,
     termos: "presenca falta frequencia",
   },
   {
     id: "semana",
     label: "Quadro semanal",
-    descricao: "Horários de segunda a sexta",
     icon: CalendarDays,
     termos: "semana horario quadro grade",
   },
   {
     id: "faltas",
     label: "Faltas registradas",
-    descricao: "Registros oficiais da escola",
     icon: UserX,
     termos: "falta registro backend oficial",
   },
@@ -195,23 +188,13 @@ function PainelAluno() {
 
         {secao === "hoje" && <AulasDeHoje />}
         {secao === "atrasadas" && (
-          <Secao
-            titulo="Atividades em atraso"
-            descricao={
-              atrasadas.length
-                ? `${atrasadas.length} com prazo vencido`
-                : "Nenhuma atividade atrasada. Parabéns!"
-            }
-          >
+          <Secao titulo="Atividades em atraso">
             {avisoCarga}
             <ListaAtividades itens={atrasadas} />
           </Secao>
         )}
         {secao === "atividades" && (
-          <Secao
-            titulo="Todas as atividades"
-            descricao={`${atividades.filter((a) => a.situacao !== "entregue").length} para entregar`}
-          >
+          <Secao titulo="Todas as atividades">
             {avisoCarga}
             <ListaAtividades itens={atividades} />
           </Secao>
@@ -232,14 +215,7 @@ function AulasDeHoje() {
 
   const nomeDia = horarios.dias[hoje.idx];
   return (
-    <Secao
-      titulo={hoje.util ? `Aulas de hoje — ${nomeDia}` : "Hoje não há aulas"}
-      descricao={
-        hoje.util
-          ? `${horarios.aulas.length} aulas, começando às ${horarios.aulas[0]?.hora}`
-          : `Fim de semana. Veja como começa a ${nomeDia?.toLowerCase()}:`
-      }
-    >
+    <Secao titulo={hoje.util ? `Aulas de hoje — ${nomeDia}` : "Hoje não há aulas"}>
       <Card>
         <CardContent className="divide-y divide-border p-0">
           {horarios.aulas.map((a) => (
@@ -338,10 +314,7 @@ function Notas() {
   const [versao, setVersao] = useState(0);
 
   return (
-    <Secao
-      titulo="Boletim"
-      descricao="Nota de cada matéria nos quatro bimestres, com a média final."
-    >
+    <Secao titulo="Boletim">
       {studentId ? (
         <div className="space-y-3">
           <div className="flex justify-end">
@@ -398,10 +371,12 @@ function Presenca() {
   return (
     <Secao
       titulo="Presença por disciplina"
-      descricao={
-        geral !== null
-          ? `Presença geral: ${geral}% · mínimo exigido 75%`
-          : "Calculada a partir das aulas e faltas registradas pelo professor."
+      etiqueta={
+        geral !== null && (
+          <Badge variant={geral >= 75 ? "secondary" : "destructive"} className="text-sm">
+            Presença geral {geral}% · mínimo 75%
+          </Badge>
+        )
       }
     >
       <Card>
@@ -447,7 +422,7 @@ function Presenca() {
 
 function QuadroSemanal() {
   return (
-    <Secao titulo="Quadro de horários" descricao="Segunda a sexta">
+    <Secao titulo="Quadro de horários">
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full min-w-[640px] border-collapse text-left">
@@ -514,7 +489,7 @@ function FaltasBackend() {
   }, []);
 
   return (
-    <Secao titulo="Faltas registradas" descricao="Suas faltas lançadas pelo professor.">
+    <Secao titulo="Faltas registradas">
       <Card>
         <CardContent className="space-y-4 p-6">
           <Button

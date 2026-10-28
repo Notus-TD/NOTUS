@@ -180,8 +180,6 @@ export function BoletimMatriz({
 
   return (
     <div className="space-y-3">
-      <LegendaNotas />
-
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           <Table>
@@ -362,8 +360,6 @@ export function BoletimTurma({
           className="h-12 pl-10 text-lg"
         />
       </div>
-
-      <LegendaNotas />
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
@@ -549,31 +545,6 @@ function MatrizCarregando() {
         ))}
       </CardContent>
     </Card>
-  );
-}
-
-function LegendaNotas() {
-  const itens = [
-    { cor: "bg-success", texto: `Aprovado (≥ ${NOTA_APROVACAO})` },
-    { cor: "bg-warning", texto: `Atenção (${NOTA_ATENCAO} a ${NOTA_APROVACAO})` },
-    { cor: "bg-destructive", texto: `Abaixo da média (< ${NOTA_ATENCAO})` },
-  ];
-  return (
-    <div className="space-y-1">
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-        {itens.map((item) => (
-          <li key={item.texto} className="inline-flex items-center gap-1.5">
-            <span className={cn("size-2.5 rounded-full", item.cor)} aria-hidden="true" />
-            {item.texto}
-          </li>
-        ))}
-      </ul>
-      <p className="text-sm text-muted-foreground">
-        A nota do bimestre é a nota lançada pelo professor mais os pontos das atividades, limitada a
-        10. Só contorno: bimestre ainda sem nota lançada. A média final é a média das notas dos
-        bimestres, e a média da sala é a média final da turma na disciplina.
-      </p>
-    </div>
   );
 }
 
