@@ -814,6 +814,7 @@ function Atividades({
   const [titulo, setTitulo] = useState("");
   const [corpo, setCorpo] = useState("");
   const [prazo, setPrazo] = useState("");
+  const [pontos, setPontos] = useState("");
   const [bimestre, setBimestre] = useState<Bimestre>(bimestreAtual());
   const [publicando, setPublicando] = useState(false);
   const [entregasAbertas, setEntregasAbertas] = useState<number | null>(null);
@@ -844,6 +845,14 @@ function Atividades({
       toast.error("O prazo não pode ser uma data passada.");
       return;
     }
+    const valorPontos = pontos.trim() ? Number(pontos.replace(",", ".")) : null;
+    if (
+      valorPontos !== null &&
+      (Number.isNaN(valorPontos) || valorPontos <= 0 || valorPontos > 10)
+    ) {
+      toast.error("Os pontos devem ser maiores que 0 e no máximo 10.");
+      return;
+    }
     setPublicando(true);
     try {
       await publicarAtividade({
@@ -853,10 +862,12 @@ function Atividades({
         prazo,
         turmaId,
         disciplinaId: disciplina.id,
+        pontos: valorPontos,
       });
       setTitulo("");
       setCorpo("");
       setPrazo("");
+      setPontos("");
       toast.success(`Atividade de ${disciplina.title} publicada para o ${turmaName}.`);
       setVersao((v) => v + 1);
     } catch (e) {
@@ -946,7 +957,27 @@ function Atividades({
                   className="h-12 w-48 text-lg"
                 />
               </div>
+              <div className="space-y-2">
+                <label htmlFor="pontos" className="block text-lg font-semibold text-foreground">
+                  Vale pontos <span className="font-normal text-muted-foreground">(opcional)</span>
+                </label>
+                <Input
+                  id="pontos"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  inputMode="decimal"
+                  value={pontos}
+                  onChange={(e) => setPontos(e.target.value)}
+                  placeholder="Ex.: 1,0"
+                  className="h-12 w-40 text-lg"
+                />
+              </div>
             </div>
+            <p className="text-sm text-muted-foreground">
+              Os pontos que o aluno tirar na atividade somam na nota do bimestre (limitada a 10).
+            </p>
             <Button onClick={publicar} disabled={publicando} className="min-h-12 px-6 text-lg">
               {publicando ? "Publicando..." : "Publicar para a turma"}
             </Button>
@@ -973,6 +1004,8 @@ function Atividades({
                     <CardDescription className="text-base">
                       {nomeBimestre(a.bimestre)} · prazo {formatarData(a.prazo)}
                       {a.prazo < hoje && " (encerrado)"}
+                      {a.pontos !== null &&
+                        ` · vale ${a.pontos.toFixed(1).replace(".", ",")} ponto(s)`}
                     </CardDescription>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
