@@ -153,6 +153,38 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(aulaRegistroRepository.countByDisciplinaId(disciplina.id())).isEqualTo(1);
     }
 
+    @Test
+    void registrarAula_comDisciplinaInexistente_deveRetornar404ComMensagem() {
+        long idInexistente = System.nanoTime();
+
+        ResponseEntity<ErroPadrao> response = client.post().uri(BASE_PATH + "/" + idInexistente + "/aulas")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new AulaRequestDTO(DATA_AULA))
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().status()).isEqualTo(404);
+        assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
+    }
+
+    @Test
+    void registrarAula_semData_deveRetornar422ComCampoInvalidoESemGravar() {
+        DisciplinaDTO disciplina = criarDisciplina("Ingles " + System.nanoTime());
+
+        ResponseEntity<ErroValidacao> response = client.post().uri(BASE_PATH + "/" + disciplina.id() + "/aulas")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new AulaRequestDTO(null))
+                .retrieve()
+                .toEntity(ErroValidacao.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(422);
+        assertThat(response.getBody().errors()).extracting(CampoInvalido::fieldName).containsExactly("data");
+        assertThat(aulaRegistroRepository.countByDisciplinaId(disciplina.id())).isZero();
+    }
+
     private ResponseEntity<Void> registrarAula(Long disciplinaId, LocalDate data) {
         return client.post().uri(BASE_PATH + "/" + disciplinaId + "/aulas")
                 .header("Authorization", "Bearer " + tokenAdmin)
