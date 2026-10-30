@@ -242,6 +242,37 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody().errors()).extracting(CampoInvalido::fieldName).containsExactly("schoolYear");
     }
 
+    @Test
+    void remover_comTurmaSemVinculos_deveRetornar204EBuscaSeguinteRetornar404() {
+        TurmaDTO criada = criarTurma("2L " + System.nanoTime());
+
+        ResponseEntity<Void> response = client.delete().uri(BASE_PATH + "/" + criada.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(turmaRepository.findById(criada.id())).isEmpty();
+        ResponseEntity<Void> busca = client.get().uri(BASE_PATH + "/" + criada.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toBodilessEntity();
+        assertThat(busca.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void remover_comIdInexistente_deveRetornar404ComMensagem() {
+        long idInexistente = System.nanoTime();
+
+        ResponseEntity<ErroPadrao> response = client.delete().uri(BASE_PATH + "/" + idInexistente)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
