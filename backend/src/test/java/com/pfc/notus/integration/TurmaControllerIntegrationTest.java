@@ -466,6 +466,34 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(turmaRepository.existsByNameAndSchoolYear(nome, ANO_LETIVO)).isFalse();
     }
 
+    @Test
+    void fluxoTurma_comProfessorDisciplinaEAluno_deveRefletirEmTodosOsRecursos() {
+        ProfessorLogado professor = criarProfessorLogado();
+        TurmaDTO turma = criarTurma("0X " + System.nanoTime());
+        DisciplinaDTO disciplina = criarDisciplina("Biologia " + System.nanoTime());
+        StudentRegistrationResponse aluno = criarAluno();
+
+        vincularProfessor(turma.id(), disciplina.id(), professor.id());
+        associarAluno(turma.id(), aluno.userId());
+
+        ResponseEntity<TurmaDetalheDTO> detalhe = client.get().uri(BASE_PATH + "/" + turma.id())
+                .header("Authorization", "Bearer " + professor.token())
+                .retrieve()
+                .toEntity(TurmaDetalheDTO.class);
+
+        assertThat(detalhe.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(detalhe.getBody().alunos()).extracting(StudentMinDTO::studentName).containsExactly(aluno.studentName());
+        assertThat(detalhe.getBody().lecionamentos()).hasSize(1);
+        assertThat(detalhe.getBody().lecionamentos().getFirst().disciplinaId()).isEqualTo(disciplina.id());
+        assertThat(detalhe.getBody().lecionamentos().getFirst().professorId()).isEqualTo(professor.id());
+
+        List<TurmaDTO> turmas = client.get().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+        assertThat(turmas).contains(new TurmaDTO(turma.id(), turma.name(), ANO_LETIVO, 1));
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
