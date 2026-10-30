@@ -108,6 +108,25 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(lista).doesNotContain(criada);
     }
 
+    @Test
+    void remover_comIdInexistente_deveRetornar404ComMensagem() {
+        long idInexistente = System.nanoTime();
+
+        ResponseEntity<ErroPadrao> response = client.delete().uri(BASE_PATH + "/" + idInexistente)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        ErroPadrao body = response.getBody();
+        assertThat(body.status()).isEqualTo(404);
+        assertThat(body.message()).contains(String.valueOf(idInexistente));
+        assertThat(body.path()).isEqualTo(BASE_PATH + "/" + idInexistente);
+    }
+
+    private record ErroPadrao(Integer status, String message, String path) {
+    }
+
     private record ErroValidacao(Integer status, String message, String path, List<CampoInvalido> errors) {
     }
 
