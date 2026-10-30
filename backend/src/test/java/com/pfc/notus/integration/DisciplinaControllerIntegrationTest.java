@@ -1,7 +1,9 @@
 package com.pfc.notus.integration;
 
 import com.pfc.notus.disciplina.domain.Disciplina;
+import com.pfc.notus.disciplina.dto.AulaRequestDTO;
 import com.pfc.notus.disciplina.dto.DisciplinaDTO;
+import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,9 +23,13 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
 
     private static final String BASE_PATH = "/disciplina";
     private static final LocalDateTime DATA_CRIACAO = LocalDateTime.of(2026, 3, 2, 8, 0);
+    private static final LocalDate DATA_AULA = LocalDate.of(2026, 3, 9);
 
     @Autowired
     private DisiciplinaRepository disciplinaRepository;
+
+    @Autowired
+    private AulaRegistroRepository aulaRegistroRepository;
 
     private String tokenAdmin;
 
@@ -122,6 +129,37 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(body.status()).isEqualTo(404);
         assertThat(body.message()).contains(String.valueOf(idInexistente));
         assertThat(body.path()).isEqualTo(BASE_PATH + "/" + idInexistente);
+    }
+
+    @Test
+    void registrarAula_comDisciplinaExistente_deveRetornar204EGravarAAula() {
+        DisciplinaDTO disciplina = criarDisciplina("Ciencias " + System.nanoTime());
+
+        ResponseEntity<Void> response = registrarAula(disciplina.id(), DATA_AULA);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(aulaRegistroRepository.existsByDisciplinaIdAndData(disciplina.id(), DATA_AULA)).isTrue();
+        assertThat(aulaRegistroRepository.countByDisciplinaId(disciplina.id())).isEqualTo(1);
+    }
+
+    @Test
+    void registrarAula_comMesmaDataDuasVezes_deveRetornar204EManterUmRegistro() {
+        DisciplinaDTO disciplina = criarDisciplina("Artes " + System.nanoTime());
+        registrarAula(disciplina.id(), DATA_AULA);
+
+        ResponseEntity<Void> response = registrarAula(disciplina.id(), DATA_AULA);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(aulaRegistroRepository.countByDisciplinaId(disciplina.id())).isEqualTo(1);
+    }
+
+    private ResponseEntity<Void> registrarAula(Long disciplinaId, LocalDate data) {
+        return client.post().uri(BASE_PATH + "/" + disciplinaId + "/aulas")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new AulaRequestDTO(data))
+                .retrieve()
+                .toBodilessEntity();
     }
 
     private record ErroPadrao(Integer status, String message, String path) {
