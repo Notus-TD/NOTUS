@@ -195,6 +195,53 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(gravada.getSchoolYear()).isEqualTo("2027");
     }
 
+    @Test
+    void atualizar_comIdInexistente_deveRetornar404ComMensagem() {
+        long idInexistente = System.nanoTime();
+
+        ResponseEntity<ErroPadrao> response = client.put().uri(BASE_PATH + "/" + idInexistente)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaRequestDTO("3H " + idInexistente, ANO_LETIVO))
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
+    }
+
+    @Test
+    void atualizar_comNomeDeOutraTurma_deveRetornar409EManterONomeOriginal() {
+        TurmaDTO existente = criarTurma("3I " + System.nanoTime());
+        TurmaDTO editada = criarTurma("3J " + System.nanoTime());
+
+        ResponseEntity<ErroPadrao> response = client.put().uri(BASE_PATH + "/" + editada.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaRequestDTO(existente.name(), ANO_LETIVO))
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().message()).contains(existente.name());
+        assertThat(turmaRepository.findById(editada.id()).orElseThrow().getName()).isEqualTo(editada.name());
+    }
+
+    @Test
+    void atualizar_comAnoLetivoEmBranco_deveRetornar422ComCampoInvalido() {
+        TurmaDTO criada = criarTurma("3K " + System.nanoTime());
+
+        ResponseEntity<ErroValidacao> response = client.put().uri(BASE_PATH + "/" + criada.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaRequestDTO(criada.name(), " "))
+                .retrieve()
+                .toEntity(ErroValidacao.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(422);
+        assertThat(response.getBody().errors()).extracting(CampoInvalido::fieldName).containsExactly("schoolYear");
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
