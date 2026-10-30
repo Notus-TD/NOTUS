@@ -360,6 +360,49 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(turmaRepository.findById(turma.id())).isPresent();
     }
 
+    @Test
+    void removerAluno_comAlunoAssociado_deveRetornar204ESairDaTurma() {
+        TurmaDTO turma = criarTurma("1R " + System.nanoTime());
+        StudentRegistrationResponse aluno = criarAluno();
+        associarAluno(turma.id(), aluno.userId());
+
+        ResponseEntity<Void> response = client.delete().uri(BASE_PATH + "/" + turma.id() + "/alunos/" + aluno.userId())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(buscarTurma(turma.id()).alunos()).isEmpty();
+    }
+
+    @Test
+    void removerAluno_semAssociacaoComATurma_deveRetornar409ComMensagem() {
+        TurmaDTO turma = criarTurma("1S " + System.nanoTime());
+        StudentRegistrationResponse aluno = criarAluno();
+
+        ResponseEntity<ErroPadrao> response = client.delete().uri(BASE_PATH + "/" + turma.id() + "/alunos/" + aluno.userId())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().message()).contains("associado");
+    }
+
+    @Test
+    void removerAluno_comAlunoInexistente_deveRetornar404ComMensagem() {
+        TurmaDTO turma = criarTurma("1T " + System.nanoTime());
+        long idInexistente = System.nanoTime();
+
+        ResponseEntity<ErroPadrao> response = client.delete().uri(BASE_PATH + "/" + turma.id() + "/alunos/" + idInexistente)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
