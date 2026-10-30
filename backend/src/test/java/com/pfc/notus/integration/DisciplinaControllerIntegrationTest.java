@@ -70,6 +70,32 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(gravada.getDescription()).isEqualTo("Descricao de " + titulo);
     }
 
+    @Test
+    void criar_comTituloEmBranco_deveRetornar422ComCampoInvalidoESemGravar() {
+        long quantidadeAntes = disciplinaRepository.count();
+
+        ResponseEntity<ErroValidacao> response = client.post().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(buildDisciplinaRequest(" "))
+                .retrieve()
+                .toEntity(ErroValidacao.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(422);
+        ErroValidacao body = response.getBody();
+        assertThat(body.status()).isEqualTo(422);
+        assertThat(body.message()).isEqualTo("Invalid data");
+        assertThat(body.path()).isEqualTo(BASE_PATH);
+        assertThat(body.errors()).extracting(CampoInvalido::fieldName).containsExactly("title");
+        assertThat(disciplinaRepository.count()).isEqualTo(quantidadeAntes);
+    }
+
+    private record ErroValidacao(Integer status, String message, String path, List<CampoInvalido> errors) {
+    }
+
+    private record CampoInvalido(String fieldName, String message) {
+    }
+
     private DisciplinaDTO buildDisciplinaRequest(String titulo) {
         return new DisciplinaDTO(null, titulo, "Descricao de " + titulo, DATA_CRIACAO);
     }
