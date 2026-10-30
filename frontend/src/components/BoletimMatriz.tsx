@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { AlertCircle, ClipboardList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -277,19 +277,23 @@ export function BoletimTurma({
 }) {
   const [boletins, setBoletins] = useState<Record<number, BoletimDoAluno>>({});
   const [filtro, setFiltro] = useState("");
-  const [celula, setCelula] = useState<{ aluno: AlunoRef; bimestre: Bimestre } | null>(null);
-  const [entregas, setEntregas] = useState<EntregaDTO[] | null>(null);
+  // Notas lançadas em sequência recarregam o mesmo aluno: só a última resposta vale.
+  const ultimaCarga = useRef<Record<number, number>>({});
 
   const carregarAluno = useCallback(
     async (studentId: number) => {
+      const carga = (ultimaCarga.current[studentId] ?? 0) + 1;
+      ultimaCarga.current[studentId] = carga;
       try {
         const boletim = await getBoletimDoAluno(studentId);
+        if (ultimaCarga.current[studentId] !== carga) return;
         const daDisciplina = boletim.find((b) => b.disciplinaId === disciplina.id) ?? null;
         setBoletins((atual) => ({
           ...atual,
           [studentId]: { estado: "ok", disciplina: daDisciplina },
         }));
       } catch (e) {
+        if (ultimaCarga.current[studentId] !== carga) return;
         setBoletins((atual) => ({
           ...atual,
           [studentId]: {
@@ -306,18 +310,6 @@ export function BoletimTurma({
     setBoletins(Object.fromEntries(alunos.map((a) => [a.userId, { estado: "carregando" }])));
     alunos.forEach((a) => void carregarAluno(a.userId));
   }, [alunos, carregarAluno]);
-
-  function abrir(aluno: AlunoRef, bimestre: Bimestre) {
-    setCelula({ aluno, bimestre });
-    setEntregas(null);
-    getEntregasDoAluno(aluno.userId)
-      .then((lista) =>
-        setEntregas(
-          lista.filter((e) => e.disciplinaId === disciplina.id && e.bimestre === bimestre),
-        ),
-      )
-      .catch(() => setEntregas([]));
-  }
 
   function linhaDe(studentId: number, bimestre: Bimestre) {
     const boletim = boletins[studentId];
@@ -410,10 +402,13 @@ export function BoletimTurma({
                       COLUNAS.map((c) =>
                         c.tipo === "bimestre" ? (
                           <TableCell key={c.label} className="text-center">
-                            <CelulaValor
+                            <NotaEditavel
+                              studentId={a.userId}
+                              disciplina={disciplina}
+                              bimestre={c.bimestre}
                               linha={linhaDe(a.userId, c.bimestre)}
-                              editable
-                              aoClicar={() => abrir(a, c.bimestre)}
+                              rotulo={`Nota de ${a.studentName} no ${c.label}`}
+                              aoMudar={() => carregarAluno(a.userId)}
                             />
                           </TableCell>
                         ) : (
@@ -464,33 +459,6 @@ export function BoletimTurma({
           </Table>
         </CardContent>
       </Card>
-
-      <Dialog
-        open={celula !== null}
-        onOpenChange={(open) => {
-          if (!open) setCelula(null);
-        }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
-          {celula && (
-            <>
-              <p className="text-sm font-semibold text-primary">{celula.aluno.studentName}</p>
-              {entregas === null ? (
-                <p className="text-base text-muted-foreground">Carregando…</p>
-              ) : (
-                <CelulaEditor
-                  studentId={celula.aluno.userId}
-                  disciplina={disciplina}
-                  bimestre={celula.bimestre}
-                  linha={linhaDe(celula.aluno.userId, celula.bimestre)}
-                  entregas={entregas}
-                  aoMudar={() => void carregarAluno(celula.aluno.userId)}
-                />
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -614,6 +582,173 @@ function CelulaValor({
   );
 }
 
+/** Nota da tabela da turma: ao clicar, a célula vira um campo para digitar a nota. */
+function NotaEditavel({
+  studentId,
+  disciplina,
+  bimestre,
+  linha,
+  rotulo,
+  aoMudar,
+}: {
+  studentId: number;
+  disciplina: DisciplinaRef;
+  bimestre: Bimestre;
+  linha: BoletimDTO | null;
+  rotulo: string;
+  aoMudar: () => Promise<void>;
+}) {
+  const notaFinal = linha?.notaFinal ?? null;
+  const [editando, setEditando] = useState(false);
+  const [valor, setValor] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
+  // Enter, Esc e a perda de foco podem disparar juntos: só o primeiro vale.
+  const finalizado = useRef(false);
+
+  function iniciar() {
+    finalizado.current = false;
+    setValor(notaFinal === null ? "" : formatarNota(notaFinal));
+    setEditando(true);
+  }
+
+  function cancelar() {
+    finalizado.current = true;
+    setEditando(false);
+  }
+
+  async function salvar() {
+    if (finalizado.current) return;
+    finalizado.current = true;
+
+    const texto = valor.trim();
+    if (!texto) {
+      if (notaFinal === null) setEditando(false);
+      else setConfirmandoRemocao(true);
+      return;
+    }
+    const resultado = interpretarNota(texto);
+    if ("erro" in resultado) {
+      toast.error(resultado.erro);
+      setEditando(false);
+      return;
+    }
+    // Sem mudança não salva: cada lançamento avisa o responsável por e-mail.
+    if (resultado.nota === notaFinal || texto === formatarNota(notaFinal)) {
+      setEditando(false);
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      await lancarNotaFinal({
+        studentId,
+        disciplinaId: disciplina.id,
+        bimestre,
+        notaFinal: resultado.nota,
+      });
+      await aoMudar();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao lançar a nota do bimestre.");
+    } finally {
+      setSalvando(false);
+      setEditando(false);
+    }
+  }
+
+  async function remover() {
+    if (!linha?.id) return;
+    setSalvando(true);
+    try {
+      await removerNotaFinal(linha.id);
+      await aoMudar();
+      toast.success("Nota do bimestre removida.");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao remover a nota do bimestre.");
+    } finally {
+      setSalvando(false);
+      setEditando(false);
+    }
+  }
+
+  if (!editando) {
+    return (
+      <button
+        type="button"
+        onClick={iniciar}
+        onFocus={iniciar}
+        title={linha ? detalheNota(linha) || "Digitar nota" : "Digitar nota"}
+        aria-label={rotulo}
+        className="rounded-lg transition-all hover:scale-105 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {conteudoCelula(linha, true)}
+      </button>
+    );
+  }
+
+  return (
+    <>
+      <Input
+        autoFocus
+        inputMode="decimal"
+        value={valor}
+        disabled={salvando}
+        onChange={(e) => setValor(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onBlur={() => void salvar()}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") cancelar();
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const texto = valor.trim();
+            const resultado = texto ? interpretarNota(texto) : null;
+            if (resultado && "erro" in resultado) {
+              toast.error(resultado.erro);
+              return;
+            }
+            const celulaAtual = e.currentTarget.closest("td");
+            const abaixo =
+              celulaAtual?.parentElement?.nextElementSibling?.children[
+                celulaAtual.cellIndex
+              ]?.querySelector("button");
+            void salvar();
+            if (texto) abaixo?.focus();
+          }
+        }}
+        aria-label={rotulo}
+        className="mx-auto h-9 w-16 px-1 text-center text-base font-semibold tabular-nums"
+      />
+      <AlertDialog
+        open={confirmandoRemocao}
+        onOpenChange={(aberto) => {
+          if (aberto) return;
+          setConfirmandoRemocao(false);
+          setEditando(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover a nota do bimestre?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {disciplina.title} no {nomeBimestre(bimestre)} fica só com os pontos das atividades
+              para o aluno e o responsável.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={remover}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function CelulaEditor({
   studentId,
   disciplina,
@@ -700,6 +835,13 @@ function ResumoEntregas({ entregas }: { entregas: EntregaDTO[] }) {
   );
 }
 
+function interpretarNota(texto: string): { nota: number } | { erro: string } {
+  const numero = Number(texto.replace(",", "."));
+  if (!texto.trim() || Number.isNaN(numero)) return { erro: "Informe uma nota válida." };
+  if (numero < 0 || numero > 10) return { erro: "A nota do bimestre deve estar entre 0 e 10." };
+  return { nota: numero };
+}
+
 function NotaBimestreForm({
   studentId,
   disciplina,
@@ -719,13 +861,9 @@ function NotaBimestreForm({
 
   async function lancar(e: FormEvent) {
     e.preventDefault();
-    const numero = Number(valor.replace(",", "."));
-    if (!valor.trim() || Number.isNaN(numero)) {
-      toast.error("Informe uma nota válida.");
-      return;
-    }
-    if (numero < 0 || numero > 10) {
-      toast.error("A nota do bimestre deve estar entre 0 e 10.");
+    const resultado = interpretarNota(valor);
+    if ("erro" in resultado) {
+      toast.error(resultado.erro);
       return;
     }
     setSalvando(true);
@@ -734,7 +872,7 @@ function NotaBimestreForm({
         studentId,
         disciplinaId: disciplina.id,
         bimestre,
-        notaFinal: numero,
+        notaFinal: resultado.nota,
       });
       toast.success("Nota do bimestre lançada. O responsável recebe o aviso por e-mail.");
       aoMudar();
