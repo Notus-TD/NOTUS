@@ -403,6 +403,69 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
     }
 
+    @Test
+    void listar_semToken_deveRetornar401() {
+        ResponseEntity<Void> response = client.get().uri(BASE_PATH)
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void listar_comoProfessor_deveRetornar403() {
+        String tokenProfessor = criarProfessorELogar();
+
+        ResponseEntity<Void> response = client.get().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenProfessor)
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void listar_comoAdmin_deveRetornar200ComLista() {
+        TurmaDTO criada = criarTurma("0U " + System.nanoTime());
+
+        ResponseEntity<List<TurmaDTO>> response = client.get().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(new ParameterizedTypeReference<>() {});
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).extracting(TurmaDTO::id).contains(criada.id());
+    }
+
+    @Test
+    void buscarPorId_comoProfessorSemVinculoComATurma_deveRetornar403() {
+        TurmaDTO turma = criarTurma("0V " + System.nanoTime());
+        String tokenProfessor = criarProfessorELogar();
+
+        ResponseEntity<Void> response = client.get().uri(BASE_PATH + "/" + turma.id())
+                .header("Authorization", "Bearer " + tokenProfessor)
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void criar_comoProfessor_deveRetornar403ESemGravar() {
+        String nome = "0W " + System.nanoTime();
+        String tokenProfessor = criarProfessorELogar();
+
+        ResponseEntity<Void> response = client.post().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenProfessor)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaRequestDTO(nome, ANO_LETIVO))
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(turmaRepository.existsByNameAndSchoolYear(nome, ANO_LETIVO)).isFalse();
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
