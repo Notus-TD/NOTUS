@@ -2,6 +2,7 @@ package com.pfc.notus.integration;
 
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.turma.dto.TurmaDTO;
+import com.pfc.notus.turma.dto.TurmaDetalheDTO;
 import com.pfc.notus.turma.dto.TurmaRequestDTO;
 import com.pfc.notus.turma.repository.TurmaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,6 +100,38 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains(criada);
+    }
+
+    @Test
+    void buscarPorId_comTurmaExistente_deveRetornar200ComDetalhes() {
+        TurmaDTO criada = criarTurma("6D " + System.nanoTime());
+
+        ResponseEntity<TurmaDetalheDTO> response = client.get().uri(BASE_PATH + "/" + criada.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(TurmaDetalheDTO.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        TurmaDetalheDTO body = response.getBody();
+        assertThat(body.id()).isEqualTo(criada.id());
+        assertThat(body.name()).isEqualTo(criada.name());
+        assertThat(body.schoolYear()).isEqualTo(ANO_LETIVO);
+        assertThat(body.alunos()).isEmpty();
+        assertThat(body.lecionamentos()).isEmpty();
+    }
+
+    @Test
+    void buscarPorId_comIdInexistente_deveRetornar404ComMensagem() {
+        long idInexistente = System.nanoTime();
+
+        ResponseEntity<ErroPadrao> response = client.get().uri(BASE_PATH + "/" + idInexistente)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().status()).isEqualTo(404);
+        assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
     }
 
     private record ErroPadrao(Integer status, String message, String path) {
