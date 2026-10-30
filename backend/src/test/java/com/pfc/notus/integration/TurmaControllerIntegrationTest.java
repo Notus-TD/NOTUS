@@ -494,15 +494,6 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(turmas).contains(new TurmaDTO(turma.id(), turma.name(), ANO_LETIVO, 1));
     }
 
-    private record ErroPadrao(Integer status, String message, String path) {
-    }
-
-    private record ErroValidacao(Integer status, String message, String path, List<CampoInvalido> errors) {
-    }
-
-    private record CampoInvalido(String fieldName, String message) {
-    }
-
     private TurmaDTO criarTurma(String nome) {
         return client.post().uri(BASE_PATH)
                 .header("Authorization", "Bearer " + tokenAdmin)

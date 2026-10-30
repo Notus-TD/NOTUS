@@ -255,15 +255,6 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
                 .toBodilessEntity();
     }
 
-    private record ErroPadrao(Integer status, String message, String path) {
-    }
-
-    private record ErroValidacao(Integer status, String message, String path, List<CampoInvalido> errors) {
-    }
-
-    private record CampoInvalido(String fieldName, String message) {
-    }
-
     private DisciplinaDTO buildDisciplinaRequest(String titulo) {
         return new DisciplinaDTO(null, titulo, "Descricao de " + titulo, DATA_CRIACAO);
     }

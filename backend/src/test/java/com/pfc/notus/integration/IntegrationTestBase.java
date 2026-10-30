@@ -16,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
+
 /**
  * Sobe a aplicacao inteira em porta aleatoria, com banco H2 descartavel, e chama a API por HTTP real.
  * Nao existe cadastro publico de usuario, entao o usuario nasce pelo repositorio, com e-mail e id
@@ -42,6 +44,15 @@ abstract class IntegrationTestBase {
     protected RestClient client;
 
     protected record ProfessorLogado(Long id, String token) {
+    }
+
+    protected record ErroPadrao(Integer status, String message, String path) {
+    }
+
+    protected record ErroValidacao(Integer status, String message, String path, List<CampoInvalido> errors) {
+    }
+
+    protected record CampoInvalido(String fieldName, String message) {
     }
 
     @BeforeEach
