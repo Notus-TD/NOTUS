@@ -86,7 +86,7 @@ abstract class IntegrationTestBase {
         return logar(user.getEmail());
     }
 
-    private Role buscarOuCriarRole(String authority) {
+    protected Role buscarOuCriarRole(String authority) {
         return roleRepository.findByAuthority(authority)
                 .orElseGet(() -> roleRepository.save(new Role(null, authority)));
     }

@@ -4,10 +4,17 @@ import com.pfc.notus.disciplina.dto.DisciplinaDTO;
 import com.pfc.notus.lecionamento.dto.LecionamentoRequestDTO;
 import com.pfc.notus.lecionamento.dto.TurmaComDisciplinasDTO;
 import com.pfc.notus.turma.domain.Turma;
+import com.pfc.notus.turma.dto.TurmaAlunoRequestDTO;
+import com.pfc.notus.turma.dto.TurmaAlunoResponseDTO;
 import com.pfc.notus.turma.dto.TurmaDTO;
 import com.pfc.notus.turma.dto.TurmaDetalheDTO;
 import com.pfc.notus.turma.dto.TurmaRequestDTO;
 import com.pfc.notus.turma.repository.TurmaRepository;
+import com.pfc.notus.user.dto.ResponsibleRequest;
+import com.pfc.notus.user.dto.StudentMinDTO;
+import com.pfc.notus.user.dto.StudentRegistrationRequest;
+import com.pfc.notus.user.dto.StudentRegistrationResponse;
+import com.pfc.notus.user.dto.StudentRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -273,6 +281,85 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
     }
 
+    @Test
+    void associarAluno_comDadosValidos_deveRetornar200EAlunoAparecerNaTurma() {
+        TurmaDTO turma = criarTurma("1M " + System.nanoTime());
+        StudentRegistrationResponse aluno = criarAluno();
+
+        ResponseEntity<TurmaAlunoResponseDTO> response = associarAluno(turma.id(), aluno.userId());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        TurmaAlunoResponseDTO body = response.getBody();
+        assertThat(body.turmaId()).isEqualTo(turma.id());
+        assertThat(body.turmaName()).isEqualTo(turma.name());
+        assertThat(body.studentId()).isEqualTo(aluno.userId());
+        assertThat(body.studentName()).isEqualTo(aluno.studentName());
+        assertThat(buscarTurma(turma.id()).alunos()).extracting(StudentMinDTO::userId).containsExactly(aluno.userId());
+    }
+
+    @Test
+    void associarAluno_jaAssociadoAEstaTurma_deveRetornar409ComMensagem() {
+        TurmaDTO turma = criarTurma("1N " + System.nanoTime());
+        StudentRegistrationResponse aluno = criarAluno();
+        associarAluno(turma.id(), aluno.userId());
+
+        ResponseEntity<ErroPadrao> response = client.post().uri(BASE_PATH + "/" + turma.id() + "/alunos")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaAlunoRequestDTO(aluno.userId()))
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().message()).contains("associado");
+    }
+
+    @Test
+    void associarAluno_comAlunoInexistente_deveRetornar404ComMensagem() {
+        TurmaDTO turma = criarTurma("1O " + System.nanoTime());
+        long idInexistente = System.nanoTime();
+
+        ResponseEntity<ErroPadrao> response = client.post().uri(BASE_PATH + "/" + turma.id() + "/alunos")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaAlunoRequestDTO(idInexistente))
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
+    }
+
+    @Test
+    void associarAluno_semIdDoAluno_deveRetornar422ComCampoInvalido() {
+        TurmaDTO turma = criarTurma("1P " + System.nanoTime());
+
+        ResponseEntity<ErroValidacao> response = client.post().uri(BASE_PATH + "/" + turma.id() + "/alunos")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaAlunoRequestDTO(null))
+                .retrieve()
+                .toEntity(ErroValidacao.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(422);
+        assertThat(response.getBody().errors()).extracting(CampoInvalido::fieldName).containsExactly("studentId");
+    }
+
+    @Test
+    void remover_comAlunoAssociado_deveRetornar409EManterATurma() {
+        TurmaDTO turma = criarTurma("1Q " + System.nanoTime());
+        associarAluno(turma.id(), criarAluno().userId());
+
+        ResponseEntity<ErroPadrao> response = client.delete().uri(BASE_PATH + "/" + turma.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(ErroPadrao.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().message()).contains("alunos associados");
+        assertThat(turmaRepository.findById(turma.id())).isPresent();
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
@@ -307,5 +394,35 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
                 .body(new LecionamentoRequestDTO(turmaId, disciplinaId, professorId))
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    private StudentRegistrationResponse criarAluno() {
+        buscarOuCriarRole("ROLE_ALUNO");
+        buscarOuCriarRole("ROLE_RESPONSAVEL");
+        long ts = System.nanoTime();
+        ResponsibleRequest responsavel = new ResponsibleRequest("Responsavel " + ts, "responsavel." + ts + "@teste.com", "11999998888");
+        StudentRequest aluno = new StudentRequest("Aluno " + ts, "aluno." + ts + "@teste.com", ts, LocalDate.of(2012, 5, 10));
+        return client.post().uri("/students")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new StudentRegistrationRequest(responsavel, aluno))
+                .retrieve()
+                .body(StudentRegistrationResponse.class);
+    }
+
+    private ResponseEntity<TurmaAlunoResponseDTO> associarAluno(Long turmaId, Long studentId) {
+        return client.post().uri(BASE_PATH + "/" + turmaId + "/alunos")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaAlunoRequestDTO(studentId))
+                .retrieve()
+                .toEntity(TurmaAlunoResponseDTO.class);
+    }
+
+    private TurmaDetalheDTO buscarTurma(Long turmaId) {
+        return client.get().uri(BASE_PATH + "/" + turmaId)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .body(TurmaDetalheDTO.class);
     }
 }
