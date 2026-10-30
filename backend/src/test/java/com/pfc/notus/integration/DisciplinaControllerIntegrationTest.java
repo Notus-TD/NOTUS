@@ -185,6 +185,67 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(aulaRegistroRepository.countByDisciplinaId(disciplina.id())).isZero();
     }
 
+    @Test
+    void criar_semToken_deveRetornar401ESemGravar() {
+        String titulo = "Sem token " + System.nanoTime();
+
+        ResponseEntity<Void> response = client.post().uri(BASE_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(buildDisciplinaRequest(titulo))
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(disciplinaRepository.findAll()).extracting(Disciplina::getTitle).doesNotContain(titulo);
+    }
+
+    @Test
+    void criar_comoProfessor_deveRetornar403ESemGravar() {
+        String titulo = "Sem permissao " + System.nanoTime();
+        String tokenProfessor = criarProfessorELogar();
+
+        ResponseEntity<Void> response = client.post().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenProfessor)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(buildDisciplinaRequest(titulo))
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(disciplinaRepository.findAll()).extracting(Disciplina::getTitle).doesNotContain(titulo);
+    }
+
+    @Test
+    void criar_comoAdmin_deveRetornar200ComADisciplinaCriada() {
+        String titulo = "Com permissao " + System.nanoTime();
+
+        ResponseEntity<DisciplinaDTO> response = client.post().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(buildDisciplinaRequest(titulo))
+                .retrieve()
+                .toEntity(DisciplinaDTO.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().title()).isEqualTo(titulo);
+    }
+
+    @Test
+    void registrarAula_comoProfessorSemVinculoComADisciplina_deveRetornar403ESemGravar() {
+        DisciplinaDTO disciplina = criarDisciplina("Quimica " + System.nanoTime());
+        String tokenProfessor = criarProfessorELogar();
+
+        ResponseEntity<Void> response = client.post().uri(BASE_PATH + "/" + disciplina.id() + "/aulas")
+                .header("Authorization", "Bearer " + tokenProfessor)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new AulaRequestDTO(DATA_AULA))
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(aulaRegistroRepository.countByDisciplinaId(disciplina.id())).isZero();
+    }
+
     private ResponseEntity<Void> registrarAula(Long disciplinaId, LocalDate data) {
         return client.post().uri(BASE_PATH + "/" + disciplinaId + "/aulas")
                 .header("Authorization", "Bearer " + tokenAdmin)
