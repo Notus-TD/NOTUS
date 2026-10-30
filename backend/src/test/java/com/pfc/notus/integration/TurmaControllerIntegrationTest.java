@@ -173,6 +173,28 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody()).isEmpty();
     }
 
+    @Test
+    void atualizar_comDadosValidos_deveRetornar200EGravarONovoNome() {
+        TurmaDTO criada = criarTurma("4F " + System.nanoTime());
+        String novoNome = "4G " + System.nanoTime();
+
+        ResponseEntity<TurmaDTO> response = client.put().uri(BASE_PATH + "/" + criada.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new TurmaRequestDTO(novoNome, "2027"))
+                .retrieve()
+                .toEntity(TurmaDTO.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().id()).isEqualTo(criada.id());
+        assertThat(response.getBody().name()).isEqualTo(novoNome);
+        assertThat(response.getBody().schoolYear()).isEqualTo("2027");
+
+        Turma gravada = turmaRepository.findById(criada.id()).orElseThrow();
+        assertThat(gravada.getName()).isEqualTo(novoNome);
+        assertThat(gravada.getSchoolYear()).isEqualTo("2027");
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
