@@ -7,6 +7,7 @@ import com.pfc.notus.turma.repository.TurmaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -85,6 +86,19 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody().message()).isEqualTo("Invalid data");
         assertThat(response.getBody().errors()).extracting(CampoInvalido::fieldName).containsExactly("name");
         assertThat(turmaRepository.count()).isEqualTo(quantidadeAntes);
+    }
+
+    @Test
+    void listar_comTurmaCriada_deveRetornar200ComATurmaNaLista() {
+        TurmaDTO criada = criarTurma("9C " + System.nanoTime());
+
+        ResponseEntity<List<TurmaDTO>> response = client.get().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toEntity(new ParameterizedTypeReference<>() {});
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains(criada);
     }
 
     private record ErroPadrao(Integer status, String message, String path) {
