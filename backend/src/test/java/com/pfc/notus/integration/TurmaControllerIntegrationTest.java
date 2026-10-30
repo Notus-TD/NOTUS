@@ -1,5 +1,8 @@
 package com.pfc.notus.integration;
 
+import com.pfc.notus.disciplina.dto.DisciplinaDTO;
+import com.pfc.notus.lecionamento.dto.LecionamentoRequestDTO;
+import com.pfc.notus.lecionamento.dto.TurmaComDisciplinasDTO;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.turma.dto.TurmaDTO;
 import com.pfc.notus.turma.dto.TurmaDetalheDTO;
@@ -13,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -134,6 +138,41 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(response.getBody().message()).contains(String.valueOf(idInexistente));
     }
 
+    @Test
+    void minhasTurmas_comProfessorVinculado_deveRetornar200ComTurmaEDisciplina() {
+        ProfessorLogado professor = criarProfessorLogado();
+        TurmaDTO turma = criarTurma("5E " + System.nanoTime());
+        DisciplinaDTO disciplina = criarDisciplina("Fisica " + System.nanoTime());
+        vincularProfessor(turma.id(), disciplina.id(), professor.id());
+
+        ResponseEntity<List<TurmaComDisciplinasDTO>> response = client.get().uri(BASE_PATH + "/me")
+                .header("Authorization", "Bearer " + professor.token())
+                .retrieve()
+                .toEntity(new ParameterizedTypeReference<>() {});
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        TurmaComDisciplinasDTO minhaTurma = response.getBody().getFirst();
+        assertThat(minhaTurma.turmaId()).isEqualTo(turma.id());
+        assertThat(minhaTurma.turmaName()).isEqualTo(turma.name());
+        assertThat(minhaTurma.schoolYear()).isEqualTo(ANO_LETIVO);
+        assertThat(minhaTurma.disciplinas()).containsExactly(
+                new TurmaComDisciplinasDTO.DisciplinaResumoDTO(disciplina.id(), disciplina.title()));
+    }
+
+    @Test
+    void minhasTurmas_comProfessorSemVinculo_deveRetornar200ComListaVazia() {
+        ProfessorLogado professor = criarProfessorLogado();
+
+        ResponseEntity<List<TurmaComDisciplinasDTO>> response = client.get().uri(BASE_PATH + "/me")
+                .header("Authorization", "Bearer " + professor.token())
+                .retrieve()
+                .toEntity(new ParameterizedTypeReference<>() {});
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEmpty();
+    }
+
     private record ErroPadrao(Integer status, String message, String path) {
     }
 
@@ -150,5 +189,23 @@ class TurmaControllerIntegrationTest extends IntegrationTestBase {
                 .body(new TurmaRequestDTO(nome, ANO_LETIVO))
                 .retrieve()
                 .body(TurmaDTO.class);
+    }
+
+    private DisciplinaDTO criarDisciplina(String titulo) {
+        return client.post().uri("/disciplina")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new DisciplinaDTO(null, titulo, "Descricao de " + titulo, LocalDateTime.of(2026, 3, 2, 8, 0)))
+                .retrieve()
+                .body(DisciplinaDTO.class);
+    }
+
+    private void vincularProfessor(Long turmaId, Long disciplinaId, Long professorId) {
+        client.post().uri("/lecionamento")
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new LecionamentoRequestDTO(turmaId, disciplinaId, professorId))
+                .retrieve()
+                .toBodilessEntity();
     }
 }

@@ -41,6 +41,9 @@ abstract class IntegrationTestBase {
 
     protected RestClient client;
 
+    protected record ProfessorLogado(Long id, String token) {
+    }
+
     @BeforeEach
     void configurarCliente() {
         client = RestClient.builder()
@@ -56,10 +59,14 @@ abstract class IntegrationTestBase {
     }
 
     protected String criarProfessorELogar() {
+        return criarProfessorLogado().token();
+    }
+
+    protected ProfessorLogado criarProfessorLogado() {
         long ts = System.nanoTime();
         Professor professor = new Professor("Professor " + ts, "professor." + ts + "@teste.com");
         professor.setPassword(passwordEncoder.encode(SENHA));
-        return salvarELogar(professor, ts, "ROLE_PROFESSOR");
+        return new ProfessorLogado(ts, salvarELogar(professor, ts, "ROLE_PROFESSOR"));
     }
 
     protected String logar(String email) {
