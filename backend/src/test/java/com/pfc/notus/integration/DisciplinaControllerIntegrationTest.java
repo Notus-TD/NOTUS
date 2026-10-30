@@ -90,6 +90,24 @@ class DisciplinaControllerIntegrationTest extends IntegrationTestBase {
         assertThat(disciplinaRepository.count()).isEqualTo(quantidadeAntes);
     }
 
+    @Test
+    void remover_comIdExistente_deveRetornar204ESumirDoBancoEDaLista() {
+        DisciplinaDTO criada = criarDisciplina("Geografia " + System.nanoTime());
+
+        ResponseEntity<Void> response = client.delete().uri(BASE_PATH + "/" + criada.id())
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(disciplinaRepository.findById(criada.id())).isEmpty();
+        List<DisciplinaDTO> lista = client.get().uri(BASE_PATH)
+                .header("Authorization", "Bearer " + tokenAdmin)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+        assertThat(lista).doesNotContain(criada);
+    }
+
     private record ErroValidacao(Integer status, String message, String path, List<CampoInvalido> errors) {
     }
 
