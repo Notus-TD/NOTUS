@@ -11,6 +11,7 @@ import {
   Megaphone,
   Pencil,
   Plus,
+  MailPlus,
   RefreshCw,
   School,
   Search,
@@ -55,6 +56,7 @@ import {
 import {
   ApiError,
   anonymizeUser,
+  reenviarConvite,
   associarAlunoTurma,
   createLecionamento,
   createTurma,
@@ -492,6 +494,47 @@ function fichaExemplo(aluno: StudentMinDTO) {
   };
 }
 
+function BotaoReenviarConvite({ userId, nome }: { userId: number; nome: string }) {
+  const [enviando, setEnviando] = useState(false);
+
+  async function reenviar() {
+    setEnviando(true);
+    try {
+      await reenviarConvite(userId);
+      toast.success(`Convite reenviado para ${nome}. O link anterior deixou de valer.`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao reenviar o convite.");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      className="min-h-10 text-base"
+      onClick={() => void reenviar()}
+      disabled={enviando}
+      aria-busy={enviando}
+    >
+      <MailPlus className="size-5" aria-hidden="true" />
+      {enviando ? "Enviando..." : "Reenviar convite"}
+    </Button>
+  );
+}
+
+function BadgeAcessoPendente() {
+  return (
+    <Badge
+      variant="outline"
+      className="px-2 py-0.5 text-sm font-medium text-muted-foreground"
+      title="Ainda não abriu o link de convite para criar a senha."
+    >
+      Acesso pendente
+    </Badge>
+  );
+}
+
 function BotaoAnonimizar({
   userId,
   nome,
@@ -721,11 +764,17 @@ function Professores() {
                     const vinculos = vinculosDe(p.id);
                     return (
                       <li key={p.id} className="space-y-2 py-4">
-                        <div className="min-w-0">
-                          <p className="truncate text-lg font-semibold text-foreground">
-                            {p.fullName}
-                          </p>
-                          <p className="truncate text-base text-muted-foreground">{p.email}</p>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="flex flex-wrap items-center gap-2 text-lg font-semibold text-foreground">
+                              <span className="truncate">{p.fullName}</span>
+                              {p.acessoPendente && <BadgeAcessoPendente />}
+                            </p>
+                            <p className="truncate text-base text-muted-foreground">{p.email}</p>
+                          </div>
+                          {p.acessoPendente && (
+                            <BotaoReenviarConvite userId={p.id} nome={p.fullName} />
+                          )}
                         </div>
                         {vinculos.length === 0 ? (
                           <p className="text-base text-muted-foreground">
@@ -1524,9 +1573,12 @@ function ExcluirUsuarios() {
                 <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
                     <p
-                      className={`truncate text-lg font-semibold ${u.anonimizado ? "text-muted-foreground" : "text-foreground"}`}
+                      className={`flex flex-wrap items-center gap-2 text-lg font-semibold ${u.anonimizado ? "text-muted-foreground" : "text-foreground"}`}
                     >
-                      {u.anonimizado ? "Anonimizado" : (u.nome ?? "Sem nome")}
+                      <span className="truncate">
+                        {u.anonimizado ? "Anonimizado" : (u.nome ?? "Sem nome")}
+                      </span>
+                      {!u.anonimizado && u.acessoPendente && <BadgeAcessoPendente />}
                     </p>
                     <p className="text-base text-muted-foreground">{descricaoUsuario(u)}</p>
                   </div>
@@ -1535,14 +1587,22 @@ function ExcluirUsuarios() {
                       Anonimizado
                     </Badge>
                   ) : (
-                    <BotaoAnonimizar
-                      userId={u.id}
-                      nome={u.nome ?? `o registro nº ${u.id}`}
-                      codigo={String(u.matricula ?? u.id)}
-                      rotuloCodigo={u.matricula === null ? "o registro" : "a matrícula"}
-                      compacto
-                      aoConcluir={() => setVersao((v) => v + 1)}
-                    />
+                    <div className="flex flex-wrap gap-2">
+                      {u.acessoPendente && (
+                        <BotaoReenviarConvite
+                          userId={u.id}
+                          nome={u.nome ?? `o registro nº ${u.id}`}
+                        />
+                      )}
+                      <BotaoAnonimizar
+                        userId={u.id}
+                        nome={u.nome ?? `o registro nº ${u.id}`}
+                        codigo={String(u.matricula ?? u.id)}
+                        rotuloCodigo={u.matricula === null ? "o registro" : "a matrícula"}
+                        compacto
+                        aoConcluir={() => setVersao((v) => v + 1)}
+                      />
+                    </div>
                   )}
                 </li>
               ))}

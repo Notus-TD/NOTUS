@@ -197,8 +197,8 @@ function LoginPage() {
                 <div className="space-y-0.5">
                   <p className="text-base font-semibold text-foreground">Primeiro acesso?</p>
                   <p className="text-sm text-muted-foreground">
-                    Sua senha inicial é o próprio e-mail cadastrado. Logo depois de entrar, você vai
-                    criar uma senha nova.
+                    Abra o link que a escola enviou para o seu e-mail para criar sua senha. Não
+                    recebeu ou o link expirou? Use &quot;Esqueci minha senha&quot;.
                   </p>
                 </div>
               </div>

@@ -5,6 +5,7 @@ public record UsuarioDTO(
         String perfil,
         String nome,
         Long matricula,
-        boolean anonimizado
+        boolean anonimizado,
+        boolean acessoPendente
 ) {
 }

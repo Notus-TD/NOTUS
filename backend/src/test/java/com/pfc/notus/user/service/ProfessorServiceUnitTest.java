@@ -46,7 +46,7 @@ class ProfessorServiceUnitTest {
         ProfessorDTO dto = professorService.createProfessor(
                 new ProfessorRequest("  Luciana Almeida ", " luciana@escola.com "));
 
-        assertEquals(new ProfessorDTO(2026000200L, "Luciana Almeida", "luciana@escola.com"), dto);
+        assertEquals(new ProfessorDTO(2026000200L, "Luciana Almeida", "luciana@escola.com", true), dto);
         ArgumentCaptor<Professor> captor = ArgumentCaptor.forClass(Professor.class);
         verify(userService).register(captor.capture(), eq("ROLE_PROFESSOR"));
         assertEquals("luciana@escola.com", captor.getValue().getEmail());
@@ -70,7 +70,7 @@ class ProfessorServiceUnitTest {
         anonimizado.setAnonimizadoEm(LocalDateTime.of(2026, 5, 1, 10, 0));
         when(professorRepository.findAll(Sort.by("fullName"))).thenReturn(List.of(ativo, anonimizado));
 
-        assertEquals(List.of(new ProfessorDTO(1L, "Luciana Almeida", "luciana@escola.com")),
+        assertEquals(List.of(new ProfessorDTO(1L, "Luciana Almeida", "luciana@escola.com", true)),
                 professorService.listProfessors());
     }
 }

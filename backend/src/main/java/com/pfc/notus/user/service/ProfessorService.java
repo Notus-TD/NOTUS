@@ -20,7 +20,7 @@ public class ProfessorService {
     @Autowired
     private UserService userService;
 
-    // Mesma regra do aluno e do responsável: no primeiro acesso a senha é o próprio e-mail.
+    // Mesma regra do aluno e do responsável: o professor recebe um link de convite por e-mail.
     @Transactional
     public ProfessorDTO createProfessor(ProfessorRequest dto) {
         Professor professor = new Professor(dto.fullName().trim(), dto.email().trim());
@@ -37,6 +37,6 @@ public class ProfessorService {
     }
 
     private static ProfessorDTO toDTO(Professor p) {
-        return new ProfessorDTO(p.getId(), p.getFullName(), p.getEmail());
+        return new ProfessorDTO(p.getId(), p.getFullName(), p.getEmail(), p.isFirstLogin());
     }
 }

@@ -55,13 +55,13 @@ class SenhaServiceUnitTest {
         user = new Responsible("Marta", EMAIL, "11999999999");
         user.setId(2026000003L);
         user.setPassword("hash-antigo");
+        user.setFirstLogin(false);
     }
 
     @Test
     void solicitarRedefinicaoGeraTokenComHashEPublicaEventoComTokenEmTexto() {
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(tokenSenhaRepository.countByUserIdAndTipoAndCriadoEmAfter(eq(user.getId()), eq(TipoTokenSenha.REDEFINICAO), any()))
-                .thenReturn(0L);
+        when(tokenSenhaRepository.countByUserIdAndCriadoEmAfter(eq(user.getId()), any())).thenReturn(0L);
 
         senhaService.solicitarRedefinicao("  " + EMAIL + " ");
 
@@ -76,6 +76,20 @@ class SenhaServiceUnitTest {
         assertEquals(SenhaService.hash(evento.getValue().token()), salvo.getValue().getTokenHash());
         assertEquals(salvo.getValue().getCriadoEm().plusHours(1), salvo.getValue().getExpiraEm());
         verify(tokenSenhaRepository).encerrarAbertos(eq(user.getId()), any());
+    }
+
+    @Test
+    void solicitarRedefinicaoDeContaNuncaAtivadaEnviaConviteNovo() {
+        user.setFirstLogin(true);
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+        when(tokenSenhaRepository.countByUserIdAndCriadoEmAfter(eq(user.getId()), any())).thenReturn(0L);
+
+        senhaService.solicitarRedefinicao(EMAIL);
+
+        ArgumentCaptor<TokenSenha> salvo = ArgumentCaptor.forClass(TokenSenha.class);
+        verify(tokenSenhaRepository).save(salvo.capture());
+        assertEquals(TipoTokenSenha.CONVITE, salvo.getValue().getTipo());
+        assertEquals(salvo.getValue().getCriadoEm().plusDays(7), salvo.getValue().getExpiraEm());
     }
 
     @Test
@@ -102,7 +116,7 @@ class SenhaServiceUnitTest {
     @Test
     void solicitarRedefinicaoAcimaDoLimiteIgnoraEmSilencio() {
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(tokenSenhaRepository.countByUserIdAndTipoAndCriadoEmAfter(anyLong(), any(), any()))
+        when(tokenSenhaRepository.countByUserIdAndCriadoEmAfter(anyLong(), any()))
                 .thenReturn((long) SenhaService.MAX_REDEFINICOES_POR_HORA);
 
         assertDoesNotThrow(() -> senhaService.solicitarRedefinicao(EMAIL));

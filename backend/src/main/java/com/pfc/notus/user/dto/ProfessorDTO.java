@@ -1,4 +1,5 @@
 package com.pfc.notus.user.dto;
 
-public record ProfessorDTO(Long id, String fullName, String email) {
+/** acessoPendente: ainda não abriu o link de convite para definir a senha. */
+public record ProfessorDTO(Long id, String fullName, String email, boolean acessoPendente) {
 }

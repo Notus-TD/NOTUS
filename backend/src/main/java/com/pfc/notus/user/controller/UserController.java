@@ -28,6 +28,13 @@ public class UserController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{userId}/reenviar-convite")
+    public ResponseEntity<Void> reenviarConvite(@PathVariable Long userId, Authentication authentication) {
+        userService.reenviarConvite(userId, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UsuarioDTO>> listarUsuarios() {
         return ResponseEntity.ok(userService.listarUsuarios());

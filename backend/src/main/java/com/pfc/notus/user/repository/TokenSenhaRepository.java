@@ -1,7 +1,6 @@
 package com.pfc.notus.user.repository;
 
 import com.pfc.notus.user.domain.TokenSenha;
-import com.pfc.notus.user.domain.enums.TipoTokenSenha;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,7 +14,7 @@ public interface TokenSenhaRepository extends JpaRepository<TokenSenha, Long> {
 
     Optional<TokenSenha> findByTokenHash(String tokenHash);
 
-    long countByUserIdAndTipoAndCriadoEmAfter(Long userId, TipoTokenSenha tipo, LocalDateTime desde);
+    long countByUserIdAndCriadoEmAfter(Long userId, LocalDateTime desde);
 
     @Modifying
     @Query("UPDATE TokenSenha t SET t.encerradoEm = :agora WHERE t.user.id = :userId AND t.encerradoEm IS NULL")

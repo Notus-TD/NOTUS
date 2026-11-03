@@ -340,7 +340,8 @@ export type LecionamentoDTO = {
   professorEmail: string;
 };
 export type LecionamentoRequestDTO = { turmaId: number; disciplinaId: number; professorId: number };
-export type ProfessorDTO = { id: number; fullName: string; email: string };
+// acessoPendente: ainda não usou o link de convite para criar a senha.
+export type ProfessorDTO = { id: number; fullName: string; email: string; acessoPendente: boolean };
 export type ProfessorRequest = { fullName: string; email: string };
 export type TurmaDetalheDTO = {
   id: number;
@@ -529,8 +530,11 @@ export type UsuarioDTO = {
   nome: string | null;
   matricula: number | null;
   anonimizado: boolean;
+  acessoPendente: boolean;
 };
 export const getUsuarios = () => getJson<UsuarioDTO[]>("/users");
+export const reenviarConvite = (userId: number) =>
+  sendJson<void>("POST", `/users/${userId}/reenviar-convite`);
 export const anonymizeUser = (userId: number, confirmacao: string) =>
   sendJson<void>("PUT", `/users/me/anonymize/${userId}`, { confirmacao });
 

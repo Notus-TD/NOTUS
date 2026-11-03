@@ -111,8 +111,7 @@ function OnboardingPage() {
                 Primeiro acesso
               </h1>
               <p className="text-base text-muted-foreground">
-                Sua senha atual é o mesmo dado usado pra login. Defina uma nova senha antes de
-                continuar.
+                Defina uma senha pessoal e aceite os termos antes de continuar.
               </p>
             </div>
           </div>
