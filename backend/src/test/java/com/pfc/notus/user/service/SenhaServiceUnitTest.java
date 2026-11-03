@@ -45,6 +45,9 @@ class SenhaServiceUnitTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private LoginTentativaService loginTentativaService;
+
     @InjectMocks
     private SenhaService senhaService;
 
@@ -138,6 +141,7 @@ class SenhaServiceUnitTest {
         assertFalse(user.isFirstLogin());
         verify(tokenSenhaRepository).encerrarAbertos(eq(user.getId()), any());
         verify(userRepository).save(user);
+        verify(loginTentativaService).limpar(EMAIL);
     }
 
     @Test

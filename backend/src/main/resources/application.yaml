@@ -21,6 +21,11 @@ cors:
 # Endereço do front usado nos links de convite e de redefinição de senha enviados por e-mail.
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  # Limite de tentativas de login erradas (contadores em memória).
+  login:
+    max-falhas-conta: ${LOGIN_MAX_FALHAS_CONTA:5}
+    bloqueio-minutos: ${LOGIN_BLOQUEIO_MINUTOS:15}
+    max-falhas-ip-por-minuto: ${LOGIN_MAX_FALHAS_IP_POR_MINUTO:20}
 
 resend:
   api-key: ${RESEND_API_KEY:}

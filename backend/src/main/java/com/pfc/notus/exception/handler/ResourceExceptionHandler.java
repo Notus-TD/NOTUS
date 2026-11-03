@@ -1,6 +1,7 @@
 package com.pfc.notus.exception.handler;
 
 import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.MuitasTentativasException;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.exception.dto.StandardError;
@@ -31,6 +32,14 @@ public class ResourceExceptionHandler {
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<StandardError> handleRegraNegocio(RegraNegocioException e, HttpServletRequest request) {
         return buildStandardResponse(HttpStatus.UNPROCESSABLE_ENTITY, e, request);
+    }
+
+    @ExceptionHandler(MuitasTentativasException.class)
+    public ResponseEntity<StandardError> handleMuitasTentativas(MuitasTentativasException e, HttpServletRequest request) {
+        ResponseEntity<StandardError> resposta = buildStandardResponse(HttpStatus.TOO_MANY_REQUESTS, e, request);
+        return ResponseEntity.status(resposta.getStatusCode())
+                .header("Retry-After", String.valueOf(e.getSegundosParaLiberar()))
+                .body(resposta.getBody());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

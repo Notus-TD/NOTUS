@@ -11,6 +11,7 @@ import com.pfc.notus.user.dto.security.TokenDTO;
 import com.pfc.notus.user.service.AuthService;
 import com.pfc.notus.user.service.SenhaService;
 import com.pfc.notus.user.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -36,8 +37,9 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<TokenDTO> login(@Valid @RequestBody AccountCredentialsDTO dto) {
-        TokenDTO tokenDTO = authService.login(dto);
+    public ResponseEntity<TokenDTO> login(@Valid @RequestBody AccountCredentialsDTO dto, HttpServletRequest request) {
+        // getRemoteAddr e não X-Forwarded-For: esse cabeçalho pode ser forjado para escapar do limite por IP.
+        TokenDTO tokenDTO = authService.login(dto, request.getRemoteAddr());
         return ResponseEntity.ok(tokenDTO);
     }
 

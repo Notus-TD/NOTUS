@@ -23,6 +23,14 @@ export async function login(email: string, password: string): Promise<Session> {
   if (res.status === 401 || res.status === 403) {
     throw new ApiError(res.status, "E-mail ou senha incorretos.");
   }
+  if (res.status === 429) {
+    // Bloqueio por excesso de senhas erradas: o servidor diz quantos minutos faltam.
+    const err = (await res.json().catch(() => null)) as StandardError | null;
+    throw new ApiError(
+      res.status,
+      err?.message ?? "Muitas tentativas de login. Aguarde alguns minutos e tente de novo.",
+    );
+  }
   if (!res.ok) throw new ApiError(res.status, `Login falhou: ${res.status}`);
   const data = (await res.json()) as TokenDTO;
   return saveSession(data);
