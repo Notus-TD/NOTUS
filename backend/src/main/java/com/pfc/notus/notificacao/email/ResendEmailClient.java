@@ -58,18 +58,26 @@ public class ResendEmailClient implements NotificadorPort {
 
     @Override
     public ResultadoEnvio enviar(String email, String template, List<String> variaveis) {
+        if (email == null || email.isBlank()) {
+            return ResultadoEnvio.definitivo("Responsável sem e-mail cadastrado");
+        }
+        return enviarTexto(email, templateRegistry.assunto(template), templateRegistry.renderizar(template, variaveis));
+    }
+
+    /** Envio de texto livre, usado pelos e-mails transacionais (links de senha). Nunca lança exceção. */
+    public ResultadoEnvio enviarTexto(String email, String assunto, String texto) {
         if (!properties.credenciaisConfiguradas()) {
             return ResultadoEnvio.definitivo("Resend sem API key configurada (RESEND_API_KEY)");
         }
         if (email == null || email.isBlank()) {
-            return ResultadoEnvio.definitivo("Responsável sem e-mail cadastrado");
+            return ResultadoEnvio.definitivo("Destinatário sem e-mail");
         }
 
         Map<String, Object> corpo = Map.of(
                 "from", properties.remetente(),
                 "to", List.of(email),
-                "subject", templateRegistry.assunto(template),
-                "text", templateRegistry.renderizar(template, variaveis)
+                "subject", assunto,
+                "text", texto
         );
 
         try {

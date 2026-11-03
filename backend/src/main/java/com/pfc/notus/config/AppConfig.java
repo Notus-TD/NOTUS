@@ -57,6 +57,9 @@ public class AppConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/login",
+                                "/auth/esqueci-senha",
+                                "/auth/token-senha/validar",
+                                "/auth/definir-senha",
                                 "/h2-console/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
