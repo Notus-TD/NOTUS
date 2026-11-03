@@ -818,6 +818,29 @@ function Professores() {
   );
 }
 
+// Um item por professor da turma, em ordem alfabética, com as disciplinas que ele leciona nela.
+function agruparPorProfessor(
+  lecionamentos: LecionamentoDTO[],
+): { professorId: number; nome: string; disciplinas: string[] }[] {
+  const grupos = new Map<number, { professorId: number; nome: string; disciplinas: string[] }>();
+  for (const l of lecionamentos) {
+    const grupo = grupos.get(l.professorId);
+    if (grupo) grupo.disciplinas.push(l.disciplinaTitle);
+    else
+      grupos.set(l.professorId, {
+        professorId: l.professorId,
+        nome: nomeProfessor(l),
+        disciplinas: [l.disciplinaTitle],
+      });
+  }
+  return [...grupos.values()]
+    .map((g) => ({
+      ...g,
+      disciplinas: [...g.disciplinas].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
 function VincularProfessor({
   professores,
   turmas,
@@ -1418,7 +1441,7 @@ function DetalheTurma({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Professores e disciplinas</CardTitle>
+                <CardTitle className="text-xl">Professores da turma</CardTitle>
               </CardHeader>
               <CardContent>
                 {detalhe.dados.lecionamentos.length === 0 ? (
@@ -1427,12 +1450,10 @@ function DetalheTurma({
                   </p>
                 ) : (
                   <ul className="divide-y divide-border">
-                    {detalhe.dados.lecionamentos.map((l) => (
-                      <li key={l.id} className="py-3">
-                        <p className="text-lg font-semibold text-foreground">{l.disciplinaTitle}</p>
-                        <p className="truncate text-base text-muted-foreground">
-                          {l.professorName ?? l.professorEmail}
-                        </p>
+                    {agruparPorProfessor(detalhe.dados.lecionamentos).map((g) => (
+                      <li key={g.professorId} className="py-3">
+                        <p className="truncate text-lg font-semibold text-foreground">{g.nome}</p>
+                        <p className="text-sm text-muted-foreground">{g.disciplinas.join(" · ")}</p>
                       </li>
                     ))}
                   </ul>
