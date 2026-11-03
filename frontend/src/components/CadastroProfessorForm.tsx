@@ -41,7 +41,7 @@ export function CadastroProfessorForm({
     try {
       const criado = await cadastrarProfessor({ fullName: nome.trim(), email: email.trim() });
       toast.success(
-        `${criado.fullName} cadastrado(a). No primeiro acesso, a senha é o próprio e-mail.`,
+        `${criado.fullName} cadastrado(a). Enviamos um link por e-mail para criar a senha.`,
       );
       setNome("");
       setEmail("");

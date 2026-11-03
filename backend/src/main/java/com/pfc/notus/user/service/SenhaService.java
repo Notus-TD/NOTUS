@@ -32,7 +32,7 @@ public class SenhaService {
 
     private static final Logger log = LoggerFactory.getLogger(SenhaService.class);
 
-    /** Pedidos de redefinição aceitos por usuário a cada hora; os que passam disso são ignorados em silêncio. */
+    /** Links gerados por usuário a cada hora; pedidos de redefinição acima disso são ignorados em silêncio. */
     static final int MAX_REDEFINICOES_POR_HORA = 3;
 
     static final String LINK_INVALIDO = "Este link é inválido ou já expirou. Peça um novo link.";
@@ -66,14 +66,15 @@ public class SenhaService {
         User user = encontrado.get();
 
         LocalDateTime agora = LocalDateTime.now();
-        long recentes = tokenSenhaRepository.countByUserIdAndTipoAndCriadoEmAfter(
-                user.getId(), TipoTokenSenha.REDEFINICAO, agora.minusHours(1));
+        long recentes = tokenSenhaRepository.countByUserIdAndCriadoEmAfter(user.getId(), agora.minusHours(1));
         if (recentes >= MAX_REDEFINICOES_POR_HORA) {
             log.warn("Limite de pedidos de redefinição atingido para o usuário {}", user.getId());
             return;
         }
 
-        gerarLink(user, TipoTokenSenha.REDEFINICAO, agora);
+        // Quem nunca ativou o acesso recebe um convite novo, que também pede o aceite dos termos.
+        TipoTokenSenha tipo = user.isFirstLogin() ? TipoTokenSenha.CONVITE : TipoTokenSenha.REDEFINICAO;
+        gerarLink(user, tipo, agora);
     }
 
     /** Cria um link novo, encerra os anteriores do usuário e agenda o e-mail para depois do commit. */

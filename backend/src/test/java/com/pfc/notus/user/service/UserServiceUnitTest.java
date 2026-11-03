@@ -7,8 +7,10 @@ import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.user.domain.Professor;
 import com.pfc.notus.user.domain.Responsible;
+import com.pfc.notus.user.domain.Role;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
+import com.pfc.notus.user.domain.enums.TipoTokenSenha;
 import com.pfc.notus.user.dto.UsuarioDTO;
 import com.pfc.notus.user.repository.ResponsibleRepository;
 import com.pfc.notus.user.repository.RoleRepository;
@@ -36,6 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,6 +69,9 @@ class UserServiceUnitTest {
 
     @Mock
     private NotificacaoService notificacaoService;
+
+    @Mock
+    private SenhaService senhaService;
 
     @InjectMocks
     private UserService userService;
@@ -237,5 +244,52 @@ class UserServiceUnitTest {
         assertEquals(11L, resultado.get(2).id());
         assertTrue(resultado.get(2).anonimizado());
         assertNull(resultado.get(2).nome());
+        assertTrue(resultado.get(0).acessoPendente());
+    }
+
+    @Test
+    void registerUsaSenhaAleatoriaEEnviaConvite() {
+        Responsible novo = new Responsible("Carla", "carla@gmail.com", "11988887777");
+        when(userRepository.findByEmail("carla@gmail.com")).thenReturn(Optional.empty());
+        when(roleRepository.findByAuthority("ROLE_RESPONSAVEL")).thenReturn(Optional.of(new Role(3L, "ROLE_RESPONSAVEL")));
+        when(passwordEncoder.encode(any())).thenAnswer(inv -> "hash:" + inv.getArgument(0));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.register(novo, "ROLE_RESPONSAVEL");
+
+        verify(passwordEncoder, never()).encode("carla@gmail.com");
+        verify(passwordEncoder).encode(argThat(s -> s.toString().length() >= 32));
+        verify(senhaService).gerarLink(novo, TipoTokenSenha.CONVITE);
+        assertTrue(novo.isFirstLogin());
+    }
+
+    @Test
+    void reenviarConviteGeraNovoLinkParaQuemNaoAtivou() {
+        Responsible pendente = criarResponsavel(3L, "Marta Responsável");
+        when(userRepository.findById(3L)).thenReturn(Optional.of(pendente));
+
+        userService.reenviarConvite(3L, ADMIN);
+
+        verify(senhaService).gerarLink(pendente, TipoTokenSenha.CONVITE);
+    }
+
+    @Test
+    void reenviarConviteRecusaQuemJaAtivou() {
+        Responsible ativo = criarResponsavel(3L, "Marta Responsável");
+        ativo.setFirstLogin(false);
+        when(userRepository.findById(3L)).thenReturn(Optional.of(ativo));
+
+        assertThrows(ConflictException.class, () -> userService.reenviarConvite(3L, ADMIN));
+        verify(senhaService, never()).gerarLink(any(), any());
+    }
+
+    @Test
+    void reenviarConviteRecusaAnonimizado() {
+        Responsible anonimizado = criarResponsavel(3L, "Marta Responsável");
+        anonimizado.setAnonimizadoEm(LocalDateTime.now());
+        when(userRepository.findById(3L)).thenReturn(Optional.of(anonimizado));
+
+        assertThrows(RegraNegocioException.class, () -> userService.reenviarConvite(3L, ADMIN));
+        verify(senhaService, never()).gerarLink(any(), eq(TipoTokenSenha.CONVITE));
     }
 }

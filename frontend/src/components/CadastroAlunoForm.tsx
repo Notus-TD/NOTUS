@@ -376,7 +376,7 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
               ))}
             </ul>
             <p className="mt-2 text-base text-muted-foreground">
-              O aluno e o responsável entram no portal com o e-mail e, no primeiro acesso, a senha igual ao e-mail.
+              Quem foi cadastrado agora recebe por e-mail um link para criar a senha. Se o e-mail não chegar, a pessoa pode usar "Esqueci minha senha" no login.
             </p>
           </CardContent>
         </Card>

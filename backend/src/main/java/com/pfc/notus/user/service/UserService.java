@@ -10,6 +10,7 @@ import com.pfc.notus.user.domain.Role;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
+import com.pfc.notus.user.domain.enums.TipoTokenSenha;
 import com.pfc.notus.user.dto.DependenteDTO;
 import com.pfc.notus.user.dto.MeuPerfilDTO;
 import com.pfc.notus.user.dto.UsuarioDTO;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -63,6 +65,9 @@ public class UserService implements UserDetailsService {
     @Autowired
     private AuthUtil authUtil;
 
+    @Autowired
+    private SenhaService senhaService;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         List<UserDetailsProjection> result = userRepository.searchUserAndRolesByEmail(username);
@@ -80,6 +85,10 @@ public class UserService implements UserDetailsService {
 
         return user;
     }
+    /**
+     * A senha inicial é aleatória e ninguém a conhece: o usuário define a dele pelo link de convite
+     * que vai por e-mail depois do commit.
+     */
     @Transactional
     public User register(User user, String roleAuthority) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
@@ -90,11 +99,27 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Role não encontrada: " + roleAuthority));
 
         user.setId(gerarProximoId());
-        user.setEmail(user.getEmail());
-        user.setPassword(passwordEncoder.encode(user.getEmail()));
+        user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
         user.addRole(role);
 
-        return userRepository.save(user);
+        User salvo = userRepository.save(user);
+        senhaService.gerarLink(salvo, TipoTokenSenha.CONVITE);
+        return salvo;
+    }
+
+    /** Novo link de convite para quem ainda não ativou o acesso (o anterior deixa de valer). */
+    @Transactional
+    public void reenviarConvite(Long userId, String requesterEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + userId));
+        if (user.getAnonimizadoEm() != null || !user.isAtivo() || user.getEmail() == null) {
+            throw new RegraNegocioException("Este usuário não está ativo.");
+        }
+        if (!user.isFirstLogin()) {
+            throw new ConflictException("Este usuário já ativou o acesso. Ele pode usar \"Esqueci minha senha\" no login.");
+        }
+        senhaService.gerarLink(user, TipoTokenSenha.CONVITE);
+        log.info(AuditMarker.AUDIT, "Convite do usuário {} reenviado por {}", user.getId(), requesterEmail);
     }
 
     @Transactional
@@ -124,10 +149,6 @@ public class UserService implements UserDetailsService {
     public void onBoarding (String newPassword, Boolean acceptTerms){
         User user = authUtil.getLoggedUser();
 
-        if (user.getAuthorities().equals("ROLE_ADMIN")) {
-
-        }
-
         if(!user.isFirstLogin()){
             throw new ConflictException("Usuário já fez login no sistema");
         }
@@ -152,9 +173,9 @@ public class UserService implements UserDetailsService {
     public List<UsuarioDTO> listarUsuarios() {
         return Stream.concat(
                         studentRepository.findAll().stream()
-                                .map(s -> new UsuarioDTO(s.getId(), "ALUNO", s.getFullName(), s.getMatricula(), s.getAnonimizadoEm() != null)),
+                                .map(s -> new UsuarioDTO(s.getId(), "ALUNO", s.getFullName(), s.getMatricula(), s.getAnonimizadoEm() != null, s.isFirstLogin())),
                         responsibleRepository.findAll().stream()
-                                .map(r -> new UsuarioDTO(r.getId(), "RESPONSAVEL", r.getName(), null, r.getAnonimizadoEm() != null)))
+                                .map(r -> new UsuarioDTO(r.getId(), "RESPONSAVEL", r.getName(), null, r.getAnonimizadoEm() != null, r.isFirstLogin())))
                 .sorted(Comparator.comparing(UsuarioDTO::anonimizado)
                         .thenComparing(UsuarioDTO::nome, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
                         .thenComparing(UsuarioDTO::id))
