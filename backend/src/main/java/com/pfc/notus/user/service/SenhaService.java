@@ -43,13 +43,16 @@ public class SenhaService {
     private final TokenSenhaRepository tokenSenhaRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
+    private final LoginTentativaService loginTentativaService;
 
     public SenhaService(UserRepository userRepository, TokenSenhaRepository tokenSenhaRepository,
-                        PasswordEncoder passwordEncoder, ApplicationEventPublisher eventPublisher) {
+                        PasswordEncoder passwordEncoder, ApplicationEventPublisher eventPublisher,
+                        LoginTentativaService loginTentativaService) {
         this.userRepository = userRepository;
         this.tokenSenhaRepository = tokenSenhaRepository;
         this.passwordEncoder = passwordEncoder;
         this.eventPublisher = eventPublisher;
+        this.loginTentativaService = loginTentativaService;
     }
 
     /**
@@ -107,6 +110,8 @@ public class SenhaService {
         // Encerra este link e qualquer outro que ainda estivesse aberto para o mesmo usuário.
         tokenSenhaRepository.encerrarAbertos(user.getId(), agora);
         userRepository.save(user);
+        // Quem acabou de provar que é dono do e-mail não deve continuar bloqueado no login.
+        loginTentativaService.limpar(user.getEmail());
 
         log.info(AuditMarker.AUDIT, "Senha do usuário {} definida por link de {}", user.getId(), tokenSenha.getTipo());
     }
