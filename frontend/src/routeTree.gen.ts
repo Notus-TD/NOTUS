@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ProfessorRouteImport } from './routes/professor'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as ResponsavelRouteImport } from './routes/responsavel'
 import { Route as TermosRouteImport } from './routes/termos'
 
@@ -60,6 +61,11 @@ const ProfessorRoute = ProfessorRouteImport.update({
   path: '/professor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResponsavelRoute = ResponsavelRouteImport.update({
   id: '/responsavel',
   path: '/responsavel',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/privacidade': typeof PrivacidadeRoute
   '/professor': typeof ProfessorRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/responsavel': typeof ResponsavelRoute
   '/termos': typeof TermosRoute
 }
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/privacidade': typeof PrivacidadeRoute
   '/professor': typeof ProfessorRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/responsavel': typeof ResponsavelRoute
   '/termos': typeof TermosRoute
 }
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/privacidade': typeof PrivacidadeRoute
   '/professor': typeof ProfessorRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/responsavel': typeof ResponsavelRoute
   '/termos': typeof TermosRoute
 }
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/privacidade'
     | '/professor'
+    | '/redefinir-senha'
     | '/responsavel'
     | '/termos'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/privacidade'
     | '/professor'
+    | '/redefinir-senha'
     | '/responsavel'
     | '/termos'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/privacidade'
     | '/professor'
+    | '/redefinir-senha'
     | '/responsavel'
     | '/termos'
   fileRoutesById: FileRoutesById
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
   ProfessorRoute: typeof ProfessorRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   ResponsavelRoute: typeof ResponsavelRoute
   TermosRoute: typeof TermosRoute
 }
@@ -218,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfessorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/responsavel': {
       id: '/responsavel'
       path: '/responsavel'
@@ -244,6 +264,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   PrivacidadeRoute: PrivacidadeRoute,
   ProfessorRoute: ProfessorRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   ResponsavelRoute: ResponsavelRoute,
   TermosRoute: TermosRoute,
 }

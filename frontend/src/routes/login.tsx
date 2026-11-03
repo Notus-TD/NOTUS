@@ -50,6 +50,11 @@ function esquecerEmail() {
 }
 
 export const Route = createFileRoute("/login")({
+  // ?recuperar=1 abre direto o "Esqueci minha senha" (usado quando o link de senha expira).
+  validateSearch: (search: Record<string, unknown>): { recuperar?: boolean } =>
+    search["recuperar"] === true || search["recuperar"] === "1" || search["recuperar"] === 1
+      ? { recuperar: true }
+      : {},
   head: () => ({
     meta: [
       { title: "Entrar · NOTUS" },
@@ -61,6 +66,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { recuperar } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState<string | null>(null);
@@ -68,7 +74,7 @@ function LoginPage() {
   const [verSenha, setVerSenha] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [lembrar, setLembrar] = useState(true);
-  const [modo, setModo] = useState<"entrar" | "recuperar">("entrar");
+  const [modo, setModo] = useState<"entrar" | "recuperar">(recuperar ? "recuperar" : "entrar");
   const focarEmailAposErro = useRef(false);
   const [errosCampo, setErrosCampo] = useState<{
     email?: string | undefined;
