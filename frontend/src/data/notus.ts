@@ -32,38 +32,6 @@ export const presenca = [
   { disciplina: "Inglês", aulas: 24, faltas: 0 },
 ];
 
-export const avisos = [
-  {
-    titulo: "Reunião de pais e mestres",
-    data: "Sábado, 19 de setembro, às 9h",
-    origem: "Coordenação pedagógica",
-    texto:
-      "A reunião do 7º ano acontece no auditório. Entrega dos boletins do 3º bimestre e conversa com os professores.",
-    naoLido: true,
-  },
-  {
-    titulo: "Excursão ao Museu da Ciência",
-    data: "Autorização até 16 de setembro",
-    origem: "Secretaria",
-    texto: "A autorização assinada deve ser entregue na secretaria. Valor já incluso na mensalidade.",
-    naoLido: true,
-  },
-  {
-    titulo: "Faltas em Ciências",
-    data: "Registrado em 10 de setembro",
-    origem: "Professor Rafael",
-    texto: "Beatriz acumulou 5 faltas em Ciências. Pedimos atenção para a frequência nas próximas semanas.",
-    naoLido: false,
-  },
-  {
-    titulo: "Campanha do agasalho",
-    data: "Durante todo o mês",
-    origem: "Grêmio estudantil",
-    texto: "Roupas em bom estado podem ser entregues na portaria, das 7h às 18h.",
-    naoLido: false,
-  },
-];
-
 export const boletim = [
   { disciplina: "Matemática", b1: 7.5, b2: 8.0, b3: 8.5 },
   { disciplina: "Português", b1: 9.0, b2: 8.5, b3: 9.0 },
@@ -71,28 +39,6 @@ export const boletim = [
   { disciplina: "História", b1: 6.5, b2: 6.0, b3: 6.0 },
   { disciplina: "Geografia", b1: 8.0, b2: 7.5, b3: 8.0 },
   { disciplina: "Inglês", b1: 9.5, b2: 9.0, b3: 9.5 },
-];
-
-export const conversas = [
-  {
-    de: "Coordenação pedagógica",
-    quando: "Ontem, 14h20",
-    texto:
-      "Boa tarde, Sr. Antônio. Confirmando a presença na reunião de sábado. Podemos conversar sobre o desempenho em Ciências.",
-    meu: false,
-  },
-  {
-    de: "Você",
-    quando: "Ontem, 18h05",
-    texto: "Boa tarde. Estarei presente, sim. Obrigado pelo aviso.",
-    meu: true,
-  },
-  {
-    de: "Professora Helena (Português)",
-    quando: "Hoje, 09h10",
-    texto: "Bom dia! A Beatriz evoluiu muito na produção de texto. Parabéns pelo acompanhamento em casa.",
-    meu: false,
-  },
 ];
 
 export const turmas = ["7º ano B", "8º ano A", "9º ano C"];

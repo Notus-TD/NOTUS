@@ -499,6 +499,9 @@ export const getMinhasAtividades = () => getJson<AtividadeDTO[]>("/atividade/me"
 export const publicarAtividade = (dto: NovaAtividade) =>
   sendJson<AtividadeDTO>("POST", "/atividade", dto);
 export const deleteAtividade = (id: number) => sendJson<void>("DELETE", `/atividade/${id}`);
+// Edita título, texto, bimestre, prazo e pontos (turma e disciplina não mudam).
+export const atualizarAtividade = (id: number, dto: NovaAtividade) =>
+  sendJson<AtividadeDTO>("PUT", `/atividade/${id}`, dto);
 export const getBoletimDoAluno = (studentId: number) =>
   getJson<BoletimDisciplinaDTO[]>(`/boletim/student/${studentId}`);
 export const lancarNotaFinal = (dto: NotaFinalRequest) =>
@@ -545,6 +548,48 @@ export const reenviarConvite = (userId: number) =>
   sendJson<void>("POST", `/users/${userId}/reenviar-convite`);
 export const anonymizeUser = (userId: number, confirmacao: string) =>
   sendJson<void>("PUT", `/users/me/anonymize/${userId}`, { confirmacao });
+
+export type StatusNotificacao =
+  "PENDENTE" | "ENVIANDO" | "ENVIADA" | "ENTREGUE" | "LIDA" | "FALHA" | "CANCELADA";
+export type NotificacaoDTO = {
+  id: number;
+  tipo: "FALTA" | "ATIVIDADE" | "NOTA_FINAL" | "COMUNICADO";
+  status: StatusNotificacao;
+  criadoEm: string;
+};
+export const getNotificacoes = () => getJson<NotificacaoDTO[]>("/notificacao");
+
+// Avisos do responsável (faltas, notas e atividades dos filhos), com o texto do e-mail.
+export type AvisoDTO = {
+  id: number;
+  tipo: "FALTA" | "ATIVIDADE" | "NOTA_FINAL" | "COMUNICADO";
+  titulo: string;
+  texto: string;
+  studentId: number | null;
+  alunoNome: string | null;
+  criadoEm: string;
+};
+export const getMeusAvisos = () => getJson<AvisoDTO[]>("/notificacao/me");
+
+// Comunicados gerais da escola, salvos no back-end.
+export type PublicoComunicado = "TODOS" | "ALUNOS" | "RESPONSAVEIS" | "PROFESSORES";
+export type ComunicadoDTO = {
+  id: number;
+  titulo: string;
+  texto: string;
+  publico: PublicoComunicado;
+  enviadoEm: string;
+  autorEmail: string;
+};
+export type ComunicadoRequest = { titulo: string; texto: string; publico: PublicoComunicado };
+export const getComunicados = () => getJson<ComunicadoDTO[]>("/comunicado");
+export const getComunicadosParaMim = () => getJson<ComunicadoDTO[]>("/comunicado/me");
+export const publicarComunicado = (dto: ComunicadoRequest) =>
+  sendJson<ComunicadoDTO>("POST", "/comunicado", dto);
+
+// Atividades de um aluno com a situação da entrega (responsável acompanhando os filhos).
+export const getAtividadesDoAluno = (studentId: number) =>
+  getJson<AtividadeDTO[]>(`/atividade/student/${studentId}`);
 
 export const getMinhasFaltas = () => getJson<FaltaDTO[]>("/falta/me");
 export const getMinhaFrequencia = () => getJson<FrequenciaDTO[]>("/falta/me/frequencia");

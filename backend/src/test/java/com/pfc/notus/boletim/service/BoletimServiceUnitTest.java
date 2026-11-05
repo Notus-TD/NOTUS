@@ -242,7 +242,7 @@ class BoletimServiceUnitTest {
         assertEquals(7.5f, resultado.mediaCalculada());
         assertNotNull(resultado.lancadoEm());
         verify(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
-        verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L));
+        verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L, false));
     }
 
     @Test
@@ -262,6 +262,24 @@ class BoletimServiceUnitTest {
         assertEquals(50L, resultado.id());
         assertEquals(7f, resultado.notaFinal());
         assertNull(resultado.mediaCalculada());
+        // nota mudou (6 -> 7): o responsável recebe o aviso de nota atualizada
+        verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L, true));
+    }
+
+    @Test
+    void naoDeveAvisarOResponsavelQuandoANotaSalvaEAMesma() {
+        Student aluno = criarAluno(10L);
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        Boletim existente = criarNotaFinal(50L, 7f, Bimestre.PRIMEIRO, aluno, matematica);
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.of(existente));
+        when(boletimRepository.save(existente)).thenReturn(existente);
+
+        boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 7f), PROFESSOR);
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

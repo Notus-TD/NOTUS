@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { toast } from "sonner";
 import { AlertCircle, ClipboardList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/blocos";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,

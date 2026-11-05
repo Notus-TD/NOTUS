@@ -148,12 +148,17 @@ public class BoletimService {
 
         Boletim entity = boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(student.getId(), disciplina.getId(), dto.bimestre())
                 .orElseGet(() -> new Boletim(student, disciplina, dto.bimestre()));
+        Float notaAnterior = entity.getNotaFinal();
+        boolean mudou = notaAnterior == null || !notaAnterior.equals(dto.notaFinal());
         entity.setNotaFinal(dto.notaFinal());
         entity.setLancadoPor(lancadoPor);
         entity.setLancadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         entity = boletimRepository.save(entity);
 
-        eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId()));
+        // O responsável é avisado quando a nota é lançada e quando ela muda; salvar o mesmo valor não avisa.
+        if (mudou) {
+            eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId(), notaAnterior != null));
+        }
         return BoletimMapper.toDto(entity, mediaCalculada(student.getId(), disciplina.getId(), dto.bimestre()),
                 pontosAtividades(student.getId(), disciplina.getId(), dto.bimestre()));
     }

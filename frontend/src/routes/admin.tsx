@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
+  BarChart3,
   BookOpen,
   ChevronRight,
   EyeOff,
-  GraduationCap,
   Link2,
   LayoutDashboard,
   Megaphone,
@@ -17,18 +17,19 @@ import {
   Search,
   Send,
   Trash2,
-  UserMinus,
+  UserRound,
   UserPlus,
   Users,
   UserX,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
 import { CadastroAlunoForm } from "@/components/CadastroAlunoForm";
 import { CadastroProfessorForm } from "@/components/CadastroProfessorForm";
+import { DashboardAdmin } from "@/components/DashboardAdmin";
+import { VisaoGeralAdmin } from "@/components/VisaoGeralAdmin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,9 +41,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/blocos";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +71,10 @@ import {
   getUsuarios,
   removerAlunoTurma,
   updateTurma,
+  getComunicados,
+  publicarComunicado,
+  type ComunicadoDTO,
+  type PublicoComunicado,
   type DisciplinaDTO,
   type LecionamentoDTO,
   type ProfessorDTO,
@@ -83,7 +87,7 @@ import {
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { normalizar } from "@/lib/busca";
-import { useCarga, MensagemErro, type Carga } from "@/hooks/use-carga";
+import { useCarga, MensagemErro } from "@/hooks/use-carga";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -98,7 +102,8 @@ export const Route = createFileRoute("/admin")({
   component: PainelAdmin,
 });
 
-type SecaoId = "dashboard" | "alunos" | "professores" | "turmas" | "usuarios" | "comunicados";
+type SecaoId =
+  "dashboard" | "graficos" | "alunos" | "professores" | "turmas" | "usuarios" | "comunicados";
 
 type ModoAlunos =
   { tipo: "lista" } | { tipo: "cadastro" } | { tipo: "ficha"; aluno: StudentMinDTO };
@@ -108,6 +113,11 @@ const itens: SecaoPainel<SecaoId>[] = [
     id: "dashboard",
     label: "Visão geral",
     icon: LayoutDashboard,
+  },
+  {
+    id: "graficos",
+    label: "Dashboard",
+    icon: BarChart3,
   },
   {
     id: "alunos",
@@ -138,6 +148,7 @@ const itens: SecaoPainel<SecaoId>[] = [
 
 const titulos: Record<SecaoId, string> = {
   dashboard: "Visão geral",
+  graficos: "Dashboard",
   alunos: "Alunos",
   professores: "Professores",
   turmas: "Turmas",
@@ -169,17 +180,17 @@ function PainelAdmin() {
   return (
     <AppShell role="ROLE_ADMIN" titulo="Administração">
       <PainelLateral secoes={itens} secaoAtiva={secao} aoSelecionarSecao={irPara}>
-        <Secao
-          titulo={titulo}
-          etiqueta={
-            secao === "usuarios" && (
-              <Badge variant="destructive" className="text-sm">
-                Ação irreversível
-              </Badge>
-            )
-          }
-        >
-          {secao === "dashboard" && <Dashboard irPara={irPara} irParaAlunos={irParaAlunos} />}
+        <Secao titulo={titulo}>
+          {secao === "dashboard" && (
+            <VisaoGeralAdmin
+              aoCadastrarAluno={() => irParaAlunos({ tipo: "cadastro" })}
+              aoAbrirAluno={(aluno) => irParaAlunos({ tipo: "ficha", aluno })}
+              aoVerAlunos={() => irPara("alunos")}
+              aoVerComunicados={() => irPara("comunicados")}
+              formComunicado={<FormComunicado compacto />}
+            />
+          )}
+          {secao === "graficos" && <DashboardAdmin />}
           {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
           {secao === "professores" && <Professores />}
           {secao === "turmas" && <Turmas />}
@@ -191,146 +202,14 @@ function PainelAdmin() {
   );
 }
 
-function Dashboard({
-  irPara,
-  irParaAlunos,
-}: {
-  irPara: (s: SecaoId) => void;
-  irParaAlunos: (m: ModoAlunos) => void;
-}) {
-  const [versao, setVersao] = useState(0);
-  const matriculas = useCarga<StudentMinDTO[]>(getStudents, versao);
-  const turmas = useCarga<TurmaDTO[]>(getTurmas, versao);
-  const carregando = matriculas.estado === "carregando" || turmas.estado === "carregando";
-
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          className="min-h-11 text-base"
-          onClick={() => setVersao((v) => v + 1)}
-          disabled={carregando}
-        >
-          <RefreshCw className={`size-5 ${carregando ? "animate-spin" : ""}`} aria-hidden="true" />
-          Atualizar
-        </Button>
-        <Button className="min-h-11 text-base" onClick={() => irParaAlunos({ tipo: "cadastro" })}>
-          <UserPlus className="size-5" aria-hidden="true" />
-          Cadastrar aluno
-        </Button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Indicador icon={School} rotulo="Turmas" carga={turmas} valor={(t) => t.length} />
-        <Indicador
-          icon={GraduationCap}
-          rotulo="Alunos matriculados"
-          carga={matriculas}
-          valor={(m) => m.filter((s) => s.matriculaStatus === "ATIVA").length}
-        />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="text-xl">Alunos</CardTitle>
-              <CardDescription className="text-base">Últimos cadastros</CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              className="min-h-10 text-base"
-              onClick={() => irPara("alunos")}
-            >
-              Ver todos
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {matriculas.estado === "carregando" && (
-              <p className="text-base text-muted-foreground">Carregando…</p>
-            )}
-            {matriculas.estado === "erro" && <MensagemErro carga={matriculas} />}
-            {matriculas.estado === "ok" && (
-              <ListaAlunos
-                itens={[...matriculas.dados].reverse().slice(0, 5)}
-                onAbrir={(a) => irParaAlunos({ tipo: "ficha", aluno: a })}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="text-xl">Comunicados</CardTitle>
-              <CardDescription className="text-base">Envie um aviso rápido</CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              className="min-h-10 text-base"
-              onClick={() => irPara("comunicados")}
-            >
-              Ver enviados
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <FormComunicado compacto />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function Indicador<T>({
-  icon: Icon,
-  rotulo,
-  carga,
-  valor,
-}: {
-  icon: LucideIcon;
-  rotulo: string;
-  carga: Carga<T>;
-  valor: (d: T) => number;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-4 p-6">
-        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <Icon className="size-7" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-base text-muted-foreground">{rotulo}</p>
-          {carga.estado === "carregando" && (
-            <p className="mt-1 font-display text-4xl font-bold text-muted-foreground">…</p>
-          )}
-          {carga.estado === "ok" && (
-            <p className="mt-1 font-display text-4xl font-bold text-foreground">
-              {valor(carga.dados)}
-            </p>
-          )}
-          {carga.estado === "erro" && (
-            <>
-              <p className="mt-1 font-display text-4xl font-bold text-muted-foreground">—</p>
-              <p className="mt-1 text-sm font-semibold text-destructive">
-                {carga.status === 403 ? "Sem acesso para este perfil" : carga.mensagem}
-              </p>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
+// Situação da matrícula como texto discreto (sem selo), no estilo simples do admin.
 function BadgeStatus({ status }: { status: StudentMinDTO["matriculaStatus"] }) {
   return (
-    <Badge
-      className={`px-3 py-1 text-sm font-semibold ${status === "ATIVA" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}
+    <span
+      className={`text-sm font-medium ${status === "ATIVA" ? "text-success" : "text-muted-foreground"}`}
     >
-      {status}
-    </Badge>
+      {status === "ATIVA" ? "Ativa" : "Finalizada"}
+    </span>
   );
 }
 
@@ -355,7 +234,7 @@ function ListaAlunos({
           >
             <div className="min-w-0">
               <p className="truncate text-lg font-semibold text-foreground">{s.studentName}</p>
-              <p className="text-base text-muted-foreground">Matrícula nº {s.matricula}</p>
+              <p className="text-base text-muted-foreground">Matrícula {s.matricula}</p>
             </div>
             <span className="flex shrink-0 items-center gap-2">
               <BadgeStatus status={s.matriculaStatus} />
@@ -525,13 +404,12 @@ function BotaoReenviarConvite({ userId, nome }: { userId: number; nome: string }
 
 function BadgeAcessoPendente() {
   return (
-    <Badge
-      variant="outline"
-      className="px-2 py-0.5 text-sm font-medium text-muted-foreground"
+    <span
+      className="text-sm font-medium text-warning"
       title="Ainda não abriu o link de convite para criar a senha."
     >
       Acesso pendente
-    </Badge>
+    </span>
   );
 }
 
@@ -579,8 +457,14 @@ function BotaoAnonimizar({
     >
       <AlertDialogTrigger asChild>
         <Button
-          variant="destructive"
-          className={compacto ? "min-h-10 text-base" : "min-h-11 text-base"}
+          // Na lista (compacto) o botão é contornado, para a tela não ficar toda vermelha;
+          // a confirmação continua no diálogo.
+          variant={compacto ? "outline" : "destructive"}
+          className={
+            compacto
+              ? "min-h-10 border-destructive/40 text-base text-destructive hover:bg-destructive/10 hover:text-destructive"
+              : "min-h-11 text-base"
+          }
           disabled={anonimizando}
         >
           <EyeOff className="size-5" aria-hidden="true" />
@@ -787,7 +671,7 @@ function Professores() {
                                 key={l.id}
                                 className="flex items-center gap-1 rounded-full border border-border bg-muted py-1 pl-3 pr-1 text-sm font-medium text-foreground"
                               >
-                                {l.turmaName} · {l.disciplinaTitle}
+                                {l.disciplinaTitle} no {l.turmaName}
                                 <ConfirmarAcao
                                   titulo={`Remover ${l.disciplinaTitle} do ${l.turmaName}?`}
                                   descricao={`${p.fullName} deixa de lecionar essa disciplina nessa turma. As notas e faltas já lançadas continuam no sistema.`}
@@ -930,7 +814,7 @@ function VincularProfessor({
               <SelectContent>
                 {turmas.map((t) => (
                   <SelectItem key={t.id} value={String(t.id)}>
-                    {t.name} · {t.schoolYear}
+                    {t.name}, {t.schoolYear}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -951,7 +835,7 @@ function VincularProfessor({
                   const ocupada = ocupadas.get(d.id);
                   return (
                     <SelectItem key={d.id} value={String(d.id)} disabled={!!ocupada}>
-                      {ocupada ? `${d.title} · ${nomeProfessor(ocupada)}` : d.title}
+                      {ocupada ? `${d.title} (${nomeProfessor(ocupada)})` : d.title}
                     </SelectItem>
                   );
                 })}
@@ -1009,7 +893,8 @@ function Turmas() {
               <SelectContent>
                 {turmas.dados.map((t) => (
                   <SelectItem key={t.id} value={String(t.id)}>
-                    {t.name} · {t.schoolYear} · {t.totalAlunos} aluno(s)
+                    {t.name} de {t.schoolYear}, {t.totalAlunos}{" "}
+                    {t.totalAlunos === 1 ? "aluno" : "alunos"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1312,7 +1197,8 @@ function DetalheTurma({
                 {turma.name}
               </p>
               <p className="text-base text-muted-foreground">
-                Ano letivo {turma.schoolYear} · {turma.totalAlunos} aluno(s)
+                Ano letivo {turma.schoolYear}, {turma.totalAlunos}{" "}
+                {turma.totalAlunos === 1 ? "aluno" : "alunos"}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1410,7 +1296,7 @@ function DetalheTurma({
                                     {s.studentName}
                                   </span>
                                   <span className="block text-sm text-muted-foreground">
-                                    Matrícula nº {s.matricula}
+                                    Matrícula {s.matricula}
                                   </span>
                                 </span>
                               </label>
@@ -1453,7 +1339,7 @@ function DetalheTurma({
                     {agruparPorProfessor(detalhe.dados.lecionamentos).map((g) => (
                       <li key={g.professorId} className="py-3">
                         <p className="truncate text-lg font-semibold text-foreground">{g.nome}</p>
-                        <p className="text-sm text-muted-foreground">{g.disciplinas.join(" · ")}</p>
+                        <p className="text-sm text-muted-foreground">{g.disciplinas.join(", ")}</p>
                       </li>
                     ))}
                   </ul>
@@ -1480,9 +1366,7 @@ function DetalheTurma({
                         <p className="truncate text-lg font-semibold text-foreground">
                           {s.studentName}
                         </p>
-                        <p className="text-base text-muted-foreground">
-                          Matrícula nº {s.matricula}
-                        </p>
+                        <p className="text-base text-muted-foreground">Matrícula {s.matricula}</p>
                       </div>
                       <span className="flex shrink-0 items-center gap-2">
                         <BadgeStatus status={s.matriculaStatus} />
@@ -1497,7 +1381,7 @@ function DetalheTurma({
                             disabled={ocupado}
                             aria-label={`Remover ${s.studentName} da turma`}
                           >
-                            <UserMinus className="size-5" aria-hidden="true" />
+                            <UserRound className="size-5" aria-hidden="true" />
                             Remover
                           </Button>
                         </ConfirmarAcao>
@@ -1520,8 +1404,8 @@ const PERFIS: Record<PerfilUsuario, string> = {
 };
 
 function descricaoUsuario(u: UsuarioDTO) {
-  const matricula = u.matricula === null ? "" : ` · Matrícula nº ${u.matricula}`;
-  return `${PERFIS[u.perfil]}${matricula} · Registro nº ${u.id}`;
+  const matricula = u.matricula === null ? "" : `, matrícula ${u.matricula}`;
+  return `${PERFIS[u.perfil]}${matricula}, registro ${u.id}`;
 }
 
 function ExcluirUsuarios() {
@@ -1604,9 +1488,9 @@ function ExcluirUsuarios() {
                     <p className="text-base text-muted-foreground">{descricaoUsuario(u)}</p>
                   </div>
                   {u.anonimizado ? (
-                    <Badge className="bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
-                      Anonimizado
-                    </Badge>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Dados apagados
+                    </span>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {u.acessoPendente && (
@@ -1651,7 +1535,7 @@ function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => voi
           <div>
             <CardTitle className="font-display text-2xl">{aluno.studentName}</CardTitle>
             <CardDescription className="text-base">
-              Matrícula nº {aluno.matricula} · Registro nº {aluno.userId}
+              Matrícula {aluno.matricula}, registro {aluno.userId}
             </CardDescription>
           </div>
           <BadgeStatus status={aluno.matriculaStatus} />
@@ -1676,7 +1560,7 @@ function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => voi
 
       <p className="text-sm text-muted-foreground">Dados do aluno cadastrados na escola.</p>
 
-      <Card className="border-destructive/40">
+      <Card>
         <CardHeader>
           <CardTitle className="text-xl text-destructive">Zona de risco</CardTitle>
           <CardDescription className="text-base">
@@ -1708,16 +1592,9 @@ function Dado({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-type Publico = "TODOS" | "ALUNOS" | "RESPONSAVEIS" | "PROFESSORES";
-
-type Comunicado = {
-  id: string;
-  titulo: string;
-  texto: string;
-  publico: Publico;
-  enviadoEm: string;
-  por: string;
-};
+// Comunicados agora são salvos no back-end; responsáveis recebem aviso por e-mail
+// quando o público é "Toda a escola" ou "Responsáveis".
+type Publico = PublicoComunicado;
 
 const rotuloPublico: Record<Publico, string> = {
   TODOS: "Toda a escola",
@@ -1726,54 +1603,40 @@ const rotuloPublico: Record<Publico, string> = {
   PROFESSORES: "Professores",
 };
 
-const CHAVE_COMUNICADOS = "notus.comunicados";
-
-function lerComunicados(): Comunicado[] {
-  try {
-    return JSON.parse(localStorage.getItem(CHAVE_COMUNICADOS) ?? "[]") as Comunicado[];
-  } catch {
-    return [];
-  }
-}
-
-function salvarComunicados(lista: Comunicado[]) {
-  try {
-    localStorage.setItem(CHAVE_COMUNICADOS, JSON.stringify(lista));
-  } catch {
-    /* ignore */
-  }
-}
-
 function FormComunicado({
   compacto = false,
   aoEnviar,
 }: {
   compacto?: boolean;
-  aoEnviar?: (c: Comunicado) => void;
+  aoEnviar?: (c: ComunicadoDTO) => void;
 }) {
   const [titulo, setTitulo] = useState("");
   const [texto, setTexto] = useState("");
   const [publico, setPublico] = useState<Publico>("TODOS");
+  const [enviando, setEnviando] = useState(false);
 
-  function enviar(e: FormEvent) {
+  async function enviar(e: FormEvent) {
     e.preventDefault();
     if (!titulo.trim() || !texto.trim()) {
       toast.error("Preencha o título e o texto do comunicado.");
       return;
     }
-    const novo: Comunicado = {
-      id: `${Date.now()}`,
-      titulo: titulo.trim(),
-      texto: texto.trim(),
-      publico,
-      enviadoEm: new Date().toISOString(),
-      por: getSession()?.email ?? "admin",
-    };
-    salvarComunicados([novo, ...lerComunicados()]);
-    setTitulo("");
-    setTexto("");
-    toast.success(`Comunicado enviado para ${rotuloPublico[publico].toLowerCase()}.`);
-    aoEnviar?.(novo);
+    setEnviando(true);
+    try {
+      const novo = await publicarComunicado({
+        titulo: titulo.trim(),
+        texto: texto.trim(),
+        publico,
+      });
+      setTitulo("");
+      setTexto("");
+      toast.success(`Comunicado enviado para ${rotuloPublico[publico].toLowerCase()}.`);
+      aoEnviar?.(novo);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao enviar o comunicado.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -1820,17 +1683,17 @@ function FormComunicado({
           className="text-base"
         />
       </div>
-      <Button type="submit" className="min-h-11 text-base">
+      <Button type="submit" className="min-h-11 text-base" disabled={enviando} aria-busy={enviando}>
         <Send className="size-5" aria-hidden="true" />
-        Enviar comunicado
+        {enviando ? "Enviando..." : "Enviar comunicado"}
       </Button>
     </form>
   );
 }
 
 function Comunicados() {
-  const [lista, setLista] = useState<Comunicado[]>([]);
-  useEffect(() => setLista(lerComunicados()), []);
+  const [versao, setVersao] = useState(0);
+  const carga = useCarga<ComunicadoDTO[]>(getComunicados, versao);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -1839,31 +1702,32 @@ function Comunicados() {
           <CardTitle className="text-xl">Novo comunicado</CardTitle>
         </CardHeader>
         <CardContent>
-          <FormComunicado aoEnviar={(c) => setLista((l) => [c, ...l])} />
+          <FormComunicado aoEnviar={() => setVersao((v) => v + 1)} />
         </CardContent>
       </Card>
 
       <div>
         <h2 className="mb-3 font-display text-xl font-bold text-foreground">Enviados</h2>
-        {lista.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-base text-muted-foreground">
-              Nenhum comunicado enviado ainda.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {lista.map((c) => (
-              <Card key={c.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+        {carga.estado === "carregando" && (
+          <p className="text-base text-muted-foreground">Carregando…</p>
+        )}
+        {carga.estado === "erro" && <MensagemErro carga={carga} />}
+        {carga.estado === "ok" && carga.dados.length === 0 && (
+          <p className="text-base text-muted-foreground">Nenhum comunicado enviado ainda.</p>
+        )}
+        {carga.estado === "ok" && carga.dados.length > 0 && (
+          <div className="divide-y divide-border border-y border-border">
+            {carga.dados.map((c) => (
+              <Card key={c.id} className="py-5">
+                <CardHeader className="mb-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <CardTitle className="text-lg">{c.titulo}</CardTitle>
-                    <Badge className="bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
-                      {rotuloPublico[c.publico]}
-                    </Badge>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Para {rotuloPublico[c.publico].toLowerCase()}
+                    </span>
                   </div>
-                  <CardDescription className="text-sm">
-                    {new Date(c.enviadoEm).toLocaleString("pt-BR")} · {c.por}
+                  <CardDescription>
+                    Enviado em {new Date(c.enviadoEm).toLocaleString("pt-BR")} por {c.autorEmail}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="text-base text-muted-foreground">{c.texto}</CardContent>
