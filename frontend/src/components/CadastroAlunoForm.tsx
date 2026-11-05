@@ -2,7 +2,7 @@ import { useEffect, useState, type ChangeEvent, type ComponentProps, type FormEv
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/blocos";
 import { Input } from "@/components/ui/input";
 import { ApiError, cadastrarAlunos, type StudentRegistrationResponse } from "@/lib/api";
 import { emailValido, formatarTelefone, idadeEm, somenteDigitos, telefoneValido } from "@/lib/validacao";
@@ -260,7 +260,7 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
       limpar();
       toast.success(
         res.length === 1
-          ? `${res[0]!.studentName} cadastrado(a). Registro nº ${res[0]!.userId}.`
+          ? `${res[0]!.studentName} cadastrado(a), registro ${res[0]!.userId}.`
           : `${res.length} alunos cadastrados.`,
       );
     } catch (err) {
@@ -371,7 +371,7 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
             <ul className="space-y-1">
               {resultado.map((r) => (
                 <li key={r.userId}>
-                  <strong>{r.studentName}</strong> — registro nº {r.userId}
+                  <strong>{r.studentName}</strong>, registro {r.userId}
                 </li>
               ))}
             </ul>

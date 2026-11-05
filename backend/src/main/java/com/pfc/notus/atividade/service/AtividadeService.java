@@ -78,7 +78,26 @@ public class AtividadeService {
     @Transactional
     public List<AtividadeDTO> getMinhas(String requesterEmail) {
         User requester = buscarUsuario(requesterEmail);
-        if (!(requester instanceof Student aluno) || aluno.getTurma() == null) {
+        if (!(requester instanceof Student aluno)) {
+            return List.of();
+        }
+        return atividadesComEntrega(aluno);
+    }
+
+    /** Atividades da turma de um aluno, com a entrega dele. Responsável só vê os próprios dependentes. */
+    @Transactional
+    public List<AtividadeDTO> getDoAluno(Long studentId, String requesterEmail) {
+        studentAccessGuardService.assertCanView(studentId, requesterEmail);
+        User usuario = userRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        if (!(usuario instanceof Student aluno)) {
+            throw new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId);
+        }
+        return atividadesComEntrega(aluno);
+    }
+
+    private List<AtividadeDTO> atividadesComEntrega(Student aluno) {
+        if (aluno.getTurma() == null) {
             return List.of();
         }
         Set<Long> entregues = entregaRepository.findByStudentId(aluno.getId()).stream()
@@ -119,6 +138,47 @@ public class AtividadeService {
         entity = atividadeRepository.save(entity);
         eventPublisher.publishEvent(new AtividadePublicadaEvent(entity.getId()));
         return toDTO(entity, null);
+    }
+
+    /**
+     * Edita título, texto, bimestre, prazo e pontos de uma atividade já publicada.
+     * Turma e disciplina não mudam. Só o professor que leciona a disciplina na turma (ou o admin) pode editar.
+     */
+    @Transactional
+    public AtividadeDTO atualizar(Long id, AtividadeDTO dto, String requesterEmail) {
+        Atividade atividade = atividadeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + id));
+        User requester = buscarUsuario(requesterEmail);
+        boolean podeEditar = requester.hasRole("ROLE_ADMIN")
+                || (requester.hasRole("ROLE_PROFESSOR") && lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(
+                        requester.getId(), atividade.getTurma().getId(), atividade.getDisciplina().getId()));
+        if (!podeEditar) {
+            throw new AccessDeniedException("Sem permissão para editar esta atividade.");
+        }
+        if (dto.bimestre() == null) {
+            throw new RegraNegocioException("Informe o bimestre da atividade.");
+        }
+        // Um prazo já vencido pode ser mantido; só não dá para mudar o prazo para uma data passada.
+        if (!dto.prazo().equals(atividade.getPrazo()) && dto.prazo().isBefore(LocalDate.now())) {
+            throw new RegraNegocioException("O prazo da atividade não pode ser uma data passada.");
+        }
+        if (dto.pontos() != null && (dto.pontos().isNaN() || dto.pontos() <= 0 || dto.pontos() > 10)) {
+            throw new RegraNegocioException("Os pontos da atividade devem ser maiores que 0 e no máximo 10.");
+        }
+        float novoMaximo = dto.pontos() == null ? 0f : dto.pontos();
+        boolean entregaAcimaDoNovoValor = entregaRepository.findByAtividadeId(id).stream()
+                .anyMatch(e -> e.getPontosObtidos() != null && e.getPontosObtidos() > novoMaximo);
+        if (entregaAcimaDoNovoValor) {
+            throw new ConflictException("Há entregas com mais pontos do que o novo valor da atividade. "
+                    + "Ajuste os pontos dessas entregas antes.");
+        }
+
+        atividade.setTitle(dto.title().trim());
+        atividade.setContent(dto.content().trim());
+        atividade.setBimestre(dto.bimestre());
+        atividade.setPrazo(dto.prazo());
+        atividade.setPontos(dto.pontos());
+        return toDTO(atividadeRepository.save(atividade), null);
     }
 
     @Transactional

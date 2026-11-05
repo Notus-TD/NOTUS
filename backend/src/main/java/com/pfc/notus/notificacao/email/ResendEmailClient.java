@@ -5,6 +5,7 @@ import com.pfc.notus.notificacao.config.ResendProperties;
 import com.pfc.notus.notificacao.port.NotificadorPort;
 import com.pfc.notus.notificacao.port.ResultadoEnvio;
 import com.pfc.notus.notificacao.service.TemplateRegistry;
+import com.pfc.notus.notificacao.util.EmailUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -54,6 +55,10 @@ public class ResendEmailClient implements NotificadorPort {
         if (!properties.credenciaisConfiguradas()) {
             log.warn("RESEND_API_KEY não configurada: as notificações vão ficar com status FALHA.");
         }
+        if (properties.redirecionamentoAtivo()) {
+            log.warn("RESEND_REDIRECIONAR_PARA ativo: todos os e-mails vão para {} (só para desenvolvimento).",
+                    EmailUtil.mascarar(properties.redirecionarPara()));
+        }
     }
 
     @Override
@@ -73,12 +78,7 @@ public class ResendEmailClient implements NotificadorPort {
             return ResultadoEnvio.definitivo("Destinatário sem e-mail");
         }
 
-        Map<String, Object> corpo = Map.of(
-                "from", properties.remetente(),
-                "to", List.of(email),
-                "subject", assunto,
-                "text", texto
-        );
+        Map<String, Object> corpo = montarCorpo(email, assunto, texto);
 
         try {
             RespostaEnvio resposta = restClient.post()
@@ -100,6 +100,22 @@ public class ResendEmailClient implements NotificadorPort {
             // Nunca propaga: qualquer outro erro vira nova tentativa.
             return ResultadoEnvio.temporario("Erro inesperado ao chamar o Resend: " + e.getMessage());
         }
+    }
+
+    /** Corpo do POST /emails; com o redirecionamento ativo, troca o destinatário e mostra o original. */
+    Map<String, Object> montarCorpo(String email, String assunto, String texto) {
+        String destino = email;
+        if (properties.redirecionamentoAtivo()) {
+            destino = properties.redirecionarPara().trim();
+            assunto = "[para " + email + "] " + assunto;
+            texto = "(E-mail de teste: no sistema, o destinatário é " + email + ".)\n\n" + texto;
+        }
+        return Map.of(
+                "from", properties.remetente(),
+                "to", List.of(destino),
+                "subject", assunto,
+                "text", texto
+        );
     }
 
     /** 429 (limite de envio) e 5xx: tenta de novo no próximo ciclo. O resto (401, 403, 422...) é definitivo. */

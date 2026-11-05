@@ -37,11 +37,25 @@ public class AtividadeController {
         return atividadeService.getMinhas(authentication.getName());
     }
 
+    /** Atividades de um aluno com a situação da entrega (para o responsável acompanhar os filhos). */
+    @PreAuthorize("hasAnyRole('RESPONSAVEL', 'ADMIN')")
+    @GetMapping("/student/{studentId}")
+    public List<AtividadeDTO> getDoAluno(@PathVariable Long studentId, Authentication authentication) {
+        return atividadeService.getDoAluno(studentId, authentication.getName());
+    }
+
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
     @PostMapping
     public ResponseEntity<AtividadeDTO> create(@RequestBody @Valid AtividadeDTO dto, Authentication authentication) {
         AtividadeDTO created = atividadeService.publicar(dto, authentication.getName());
         return ResponseEntity.ok(created);
+    }
+
+    @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<AtividadeDTO> atualizar(@PathVariable Long id, @Valid @RequestBody AtividadeDTO dto,
+                                                  Authentication authentication) {
+        return ResponseEntity.ok(atividadeService.atualizar(id, dto, authentication.getName()));
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")

@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   BarChart3,
-  CalendarClock,
   ClipboardCheck,
   ClipboardList,
   Home,
+  Pencil,
   Trash2,
   Users,
 } from "lucide-react";
@@ -24,9 +24,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/blocos";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -49,6 +48,7 @@ import {
   getStudentsByTurma,
   marcarEntrega,
   publicarAtividade,
+  atualizarAtividade,
   registrarAula,
   type AtividadeDTO,
   type Bimestre,
@@ -111,9 +111,9 @@ type DisciplinaRef = { id: number; title: string };
 
 function EtiquetaTurma({ turma, disciplina }: { turma: string; disciplina: string }) {
   return (
-    <Badge variant="secondary" className="text-sm">
-      {turma} · {disciplina}
-    </Badge>
+    <span className="text-base text-muted-foreground">
+      {disciplina} no {turma}
+    </span>
   );
 }
 
@@ -161,9 +161,7 @@ function PainelProfessor() {
 
   const listaDeTurmas = (
     <div className="space-y-1 border-b border-border pb-3">
-      <p className="px-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Turmas
-      </p>
+      <p className="px-1 text-sm font-semibold text-muted-foreground">Suas turmas</p>
       {minhasTurmas === null && !erroCarregamento && (
         <p className="px-3 py-2 text-base text-muted-foreground">Carregando…</p>
       )}
@@ -191,7 +189,7 @@ function PainelProfessor() {
             <span className="min-w-0 flex-1">
               <span className="block text-base font-semibold text-foreground">{t.turmaName}</span>
               <span className="block truncate text-sm text-muted-foreground">
-                {t.disciplinas.map((d) => d.title).join(", ")} · {t.schoolYear}
+                {t.disciplinas.map((d) => d.title).join(", ")}, {t.schoolYear}
               </span>
             </span>
           </button>
@@ -333,18 +331,20 @@ function InicioProfessor({
       <div className="space-y-6">
         {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* Um card simples por turma (borda fina, sem sombra) para agrupar dados e ações. */}
+        <div className="grid gap-5 md:grid-cols-2">
           {turmas.map((t) => {
             const resumo = resumos?.[t.turmaId];
             return (
-              <Card key={t.turmaId}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Users className="size-5 text-primary" aria-hidden="true" />
-                    {t.turmaName}
-                  </CardTitle>
+              <section
+                key={t.turmaId}
+                aria-label={t.turmaName}
+                className="rounded-xl border border-border bg-card p-5"
+              >
+                <CardHeader className="mb-4">
+                  <CardTitle className="text-xl">{t.turmaName}</CardTitle>
                   <CardDescription className="text-base">
-                    {t.disciplinas.map((d) => d.title).join(", ")} · {t.schoolYear}
+                    {t.disciplinas.map((d) => d.title).join(", ")}, {t.schoolYear}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -353,13 +353,19 @@ function InicioProfessor({
                       <span className="block text-2xl font-bold tabular-nums text-foreground">
                         {resumo ? resumo.alunos : "…"}
                       </span>
-                      <span className="text-muted-foreground">aluno(s) ativos</span>
+                      <span className="text-muted-foreground">
+                        {resumo?.alunos === 1 ? "aluno ativo" : "alunos ativos"}
+                      </span>
                     </p>
                     <p>
                       <span className="block text-2xl font-bold tabular-nums text-foreground">
                         {resumo ? resumo.proximas.length : "…"}
                       </span>
-                      <span className="text-muted-foreground">atividade(s) em aberto</span>
+                      <span className="text-muted-foreground">
+                        {resumo?.proximas.length === 1
+                          ? "atividade em aberto"
+                          : "atividades em aberto"}
+                      </span>
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -389,17 +395,14 @@ function InicioProfessor({
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
+              </section>
             );
           })}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <CalendarClock className="size-5 text-primary" aria-hidden="true" />
-              Próximos prazos
-            </CardTitle>
+            <CardTitle className="text-xl">Próximos prazos</CardTitle>
           </CardHeader>
           <CardContent>
             {!erro && resumos === null && (
@@ -422,7 +425,7 @@ function InicioProfessor({
                       <span className="min-w-0">
                         <span className="block text-lg text-foreground">{atividade.title}</span>
                         <span className="block text-sm text-muted-foreground">
-                          {turma.turmaName} · {atividade.disciplinaTitle}
+                          {atividade.disciplinaTitle} no {turma.turmaName}
                         </span>
                       </span>
                       <span className="text-base font-semibold text-foreground">
@@ -606,7 +609,7 @@ function Chamada({
                       <span className="text-lg text-foreground">
                         {a.studentName}{" "}
                         <span className="text-base text-muted-foreground">
-                          · matr. {a.matricula}
+                          matrícula {a.matricula}
                         </span>
                       </span>
                       <div className="flex gap-2">
@@ -691,6 +694,157 @@ function NotasDaTurma({
   );
 }
 
+/** Formulário de edição de uma atividade publicada, aberto dentro do próprio card. */
+function EditarAtividade({
+  atividade,
+  disciplinaId,
+  aoSalvar,
+  aoCancelar,
+}: {
+  atividade: AtividadeDTO;
+  disciplinaId: number;
+  aoSalvar: () => void;
+  aoCancelar: () => void;
+}) {
+  const hoje = hojeLocal();
+  const [titulo, setTitulo] = useState(atividade.title);
+  const [corpo, setCorpo] = useState(atividade.content);
+  const [bimestre, setBimestre] = useState<Bimestre>(atividade.bimestre);
+  const [prazo, setPrazo] = useState(atividade.prazo);
+  const [pontos, setPontos] = useState(
+    atividade.pontos === null ? "" : String(atividade.pontos).replace(".", ","),
+  );
+  const [salvando, setSalvando] = useState(false);
+  const id = `editar-${atividade.id}`;
+
+  async function salvar() {
+    if (!titulo.trim() || !corpo.trim() || !prazo) {
+      toast.error("Preencha o título, o texto e o prazo da atividade.");
+      return;
+    }
+    // Pode manter um prazo que já venceu; só não pode trocar por uma data passada.
+    if (prazo !== atividade.prazo && prazo < hoje) {
+      toast.error("O prazo não pode ser uma data passada.");
+      return;
+    }
+    const valorPontos = pontos.trim() ? Number(pontos.replace(",", ".")) : null;
+    if (
+      valorPontos !== null &&
+      (Number.isNaN(valorPontos) || valorPontos <= 0 || valorPontos > 10)
+    ) {
+      toast.error("Os pontos devem ser maiores que 0 e no máximo 10.");
+      return;
+    }
+    setSalvando(true);
+    try {
+      await atualizarAtividade(atividade.id, {
+        title: titulo.trim(),
+        content: corpo.trim(),
+        bimestre,
+        prazo,
+        turmaId: atividade.turmaId,
+        disciplinaId,
+        pontos: valorPontos,
+      });
+      toast.success("Atividade atualizada.");
+      aoSalvar();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao atualizar a atividade.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="font-display text-lg font-semibold text-foreground">Editar atividade</p>
+      <div className="space-y-2">
+        <label htmlFor={`${id}-titulo`} className="block text-base font-semibold text-foreground">
+          Título
+        </label>
+        <Input
+          id={`${id}-titulo`}
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          className="h-11 text-base"
+        />
+      </div>
+      <div className="space-y-2">
+        <label htmlFor={`${id}-corpo`} className="block text-base font-semibold text-foreground">
+          Texto
+        </label>
+        <Textarea
+          id={`${id}-corpo`}
+          rows={3}
+          value={corpo}
+          onChange={(e) => setCorpo(e.target.value)}
+          className="text-base"
+        />
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <div className="space-y-2">
+          <label
+            htmlFor={`${id}-bimestre`}
+            className="block text-base font-semibold text-foreground"
+          >
+            Bimestre
+          </label>
+          <Select value={bimestre} onValueChange={(v) => setBimestre(v as Bimestre)}>
+            <SelectTrigger id={`${id}-bimestre`} className="h-11 w-44 text-base">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BIMESTRES.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label htmlFor={`${id}-prazo`} className="block text-base font-semibold text-foreground">
+            Prazo de entrega
+          </label>
+          <Input
+            id={`${id}-prazo`}
+            type="date"
+            value={prazo}
+            onChange={(e) => setPrazo(e.target.value)}
+            className="h-11 w-44 text-base"
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor={`${id}-pontos`} className="block text-base font-semibold text-foreground">
+            Vale pontos
+          </label>
+          <Input
+            id={`${id}-pontos`}
+            inputMode="decimal"
+            value={pontos}
+            onChange={(e) => setPontos(e.target.value)}
+            placeholder="Sem pontos"
+            className="h-11 w-36 text-base"
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={salvar} disabled={salvando} className="min-h-11 text-base">
+          {salvando ? "Salvando..." : "Salvar alterações"}
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={aoCancelar}
+          disabled={salvando}
+          className="min-h-11 text-base"
+        >
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function Atividades({
   turmaId,
   turmaName,
@@ -711,6 +865,7 @@ function Atividades({
   const [bimestre, setBimestre] = useState<Bimestre>(bimestreAtual());
   const [publicando, setPublicando] = useState(false);
   const [entregasAbertas, setEntregasAbertas] = useState<number | null>(null);
+  const [editando, setEditando] = useState<number | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -884,68 +1039,102 @@ function Atividades({
               Nenhuma atividade de {disciplina.title} publicada para esta turma ainda.
             </p>
           )}
+          {/* Um card simples por atividade publicada, no mesmo estilo dos cards de turma do Início. */}
           <div className="grid gap-4">
             {doProfessor?.map((a) => (
-              <Card key={a.id}>
-                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
-                  <div>
-                    <CardTitle className="text-xl">{a.title}</CardTitle>
-                    <CardDescription className="text-base">
-                      {nomeBimestre(a.bimestre)} · prazo {formatarData(a.prazo)}
-                      {a.prazo < hoje && " (encerrado)"}
-                      {a.pontos !== null &&
-                        ` · vale ${a.pontos.toFixed(1).replace(".", ",")} ponto(s)`}
-                    </CardDescription>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="outline"
-                      className="min-h-9 text-sm"
-                      aria-expanded={entregasAbertas === a.id}
-                      onClick={() => setEntregasAbertas(entregasAbertas === a.id ? null : a.id)}
-                    >
-                      {entregasAbertas === a.id ? "Fechar entregas" : "Marcar entregas"}
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
+              <section
+                key={a.id}
+                aria-label={a.title}
+                className="rounded-xl border border-border bg-card p-5"
+              >
+                {editando === a.id ? (
+                  <EditarAtividade
+                    atividade={a}
+                    disciplinaId={disciplina.id}
+                    aoCancelar={() => setEditando(null)}
+                    aoSalvar={() => {
+                      setEditando(null);
+                      setVersao((v) => v + 1);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <CardHeader className="mb-3 flex flex-row items-start justify-between gap-3 space-y-0">
+                      <div>
+                        <CardTitle className="text-xl">{a.title}</CardTitle>
+                        <CardDescription className="text-base">
+                          {nomeBimestre(a.bimestre)}, prazo {formatarData(a.prazo)}
+                          {a.prazo < hoje && " (encerrado)"}
+                          {a.pontos !== null &&
+                            `, vale ${a.pontos.toFixed(1).replace(".", ",")} ${a.pontos === 1 ? "ponto" : "pontos"}`}
+                        </CardDescription>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="size-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={`Excluir ${a.title}`}
-                          title="Excluir"
+                          className="min-h-9 text-sm"
+                          onClick={() => {
+                            setEntregasAbertas(null);
+                            setEditando(a.id);
+                          }}
                         >
-                          <Trash2 className="size-4" aria-hidden="true" />
+                          <Pencil className="size-4" aria-hidden="true" />
+                          Editar
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir esta atividade?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            "{a.title}" deixa de aparecer para os alunos do {turmaName}. Atividades
-                            que já têm entregas não podem ser excluídas.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => excluir(a)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 text-base text-muted-foreground">
-                  <p>{a.content}</p>
-                  {entregasAbertas === a.id && (
-                    <EntregasDaAtividade atividadeId={a.id} turmaId={turmaId} pontos={a.pontos} />
-                  )}
-                </CardContent>
-              </Card>
+                        <Button
+                          variant="outline"
+                          className="min-h-9 text-sm"
+                          aria-expanded={entregasAbertas === a.id}
+                          onClick={() => setEntregasAbertas(entregasAbertas === a.id ? null : a.id)}
+                        >
+                          {entregasAbertas === a.id ? "Fechar entregas" : "Marcar entregas"}
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-9 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              aria-label={`Excluir ${a.title}`}
+                              title="Excluir"
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir esta atividade?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                "{a.title}" deixa de aparecer para os alunos do {turmaName}.
+                                Atividades que já têm entregas não podem ser excluídas.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => excluir(a)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-base text-muted-foreground">
+                      <p>{a.content}</p>
+                      {entregasAbertas === a.id && (
+                        <EntregasDaAtividade
+                          atividadeId={a.id}
+                          turmaId={turmaId}
+                          pontos={a.pontos}
+                        />
+                      )}
+                    </CardContent>
+                  </>
+                )}
+              </section>
             ))}
           </div>
         </div>

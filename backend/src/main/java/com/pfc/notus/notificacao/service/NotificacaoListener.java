@@ -1,6 +1,7 @@
 package com.pfc.notus.notificacao.service;
 
 import com.pfc.notus.notificacao.event.AtividadePublicadaEvent;
+import com.pfc.notus.notificacao.event.ComunicadoPublicadoEvent;
 import com.pfc.notus.notificacao.event.FaltaRegistradaEvent;
 import com.pfc.notus.notificacao.event.NotaFinalLancadaEvent;
 import org.slf4j.Logger;
@@ -18,10 +19,15 @@ public class NotificacaoListener {
     @Autowired
     private NotificacaoService notificacaoService;
 
+    @Autowired
+    private NotificacaoWorker worker;
+
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onFaltaRegistrada(FaltaRegistradaEvent evento) {
         try {
+            // notificarFalta roda em transação própria: ao voltar, a notificação já está salva.
             notificacaoService.notificarFalta(evento.faltaId(), evento.totalFaltasNaDisciplina());
+            worker.processarAgora();
         } catch (RuntimeException e) {
             log.error("Falha ao criar a notificação da falta {}. A falta foi salva normalmente.", evento.faltaId(), e);
         }
@@ -30,9 +36,20 @@ public class NotificacaoListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onNotaFinalLancada(NotaFinalLancadaEvent evento) {
         try {
-            notificacaoService.notificarNotaFinal(evento.boletimId());
+            notificacaoService.notificarNotaFinal(evento.boletimId(), evento.atualizada());
+            worker.processarAgora();
         } catch (RuntimeException e) {
             log.error("Falha ao criar a notificação da nota final {}. A nota final foi lançada normalmente.", evento.boletimId(), e);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onComunicadoPublicado(ComunicadoPublicadoEvent evento) {
+        try {
+            notificacaoService.notificarComunicado(evento.comunicadoId());
+            worker.processarAgora();
+        } catch (RuntimeException e) {
+            log.error("Falha ao criar as notificações do comunicado {}. O comunicado foi publicado normalmente.", evento.comunicadoId(), e);
         }
     }
 
@@ -40,6 +57,7 @@ public class NotificacaoListener {
     public void onAtividadePublicada(AtividadePublicadaEvent evento) {
         try {
             notificacaoService.notificarAtividadePublicada(evento.atividadeId());
+            worker.processarAgora();
         } catch (RuntimeException e) {
             log.error("Falha ao criar as notificações da atividade {}. A atividade foi publicada normalmente.", evento.atividadeId(), e);
         }

@@ -18,6 +18,16 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
     boolean existsByChaveIdempotencia(String chaveIdempotencia);
 
     @Query("""
+            SELECT n FROM Notificacao n LEFT JOIN FETCH n.student s
+            WHERE n.responsavel.id = :responsavelId
+              AND n.status <> :cancelada
+              AND n.tipo <> :excluido
+            ORDER BY n.criadoEm DESC, n.id DESC
+            """)
+    List<Notificacao> buscarAvisosDoResponsavel(Long responsavelId, StatusNotificacao cancelada,
+                                                TipoNotificacao excluido);
+
+    @Query("""
             SELECT n.id FROM Notificacao n
             WHERE n.status IN (:pendente, :enviando)
               AND n.proximaTentativaEm <= :agora

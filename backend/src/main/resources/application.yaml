@@ -30,6 +30,8 @@ app:
 resend:
   api-key: ${RESEND_API_KEY:}
   remetente: ${RESEND_REMETENTE:NOTUS <onboarding@resend.dev>}
+  # Só para desenvolvimento/demonstração: manda TODOS os e-mails para este endereço (vazio = desligado).
+  redirecionar-para: ${RESEND_REDIRECIONAR_PARA:}
 
 notificacao:
   taxa-por-segundo: ${NOTIFICACAO_TAXA_POR_SEGUNDO:20}

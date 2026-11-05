@@ -12,6 +12,17 @@ const perfil: Record<Role, { label: string; icon: typeof GraduationCap }> = {
   ROLE_ADMIN: { label: "Administrador", icon: ShieldCheck },
 };
 
+export function MarcaNotus({ className = "" }: { className?: string }) {
+  return (
+    <span className={`flex items-center gap-3 ${className}`}>
+      <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
+        N
+      </span>
+      <span className="font-display text-xl font-bold tracking-tight text-foreground">NOTUS</span>
+    </span>
+  );
+}
+
 export function AppShell({
   titulo,
   etiqueta,
@@ -54,15 +65,12 @@ export function AppShell({
   const info = roleAtual ? perfil[roleAtual] : undefined;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    // lg:pl-72 reserva o espaço da sidebar fixa (PainelLateral), que ocupa a altura toda à esquerda.
+    <div className="flex min-h-screen flex-col bg-background lg:pl-72">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <span className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
-              N
-            </span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">NOTUS</span>
-          </span>
+        <div className="flex h-18 items-center justify-between gap-4 px-4 sm:px-6 lg:justify-end lg:px-8">
+          {/* No desktop o logo fica no topo da sidebar. */}
+          <MarcaNotus className="lg:hidden" />
 
           <div className="flex items-center gap-3">
             {info && (
@@ -71,7 +79,10 @@ export function AppShell({
                 {info.label}
               </span>
             )}
-            <span className="hidden max-w-56 truncate text-base text-muted-foreground md:block" title={session.email}>
+            <span
+              className="hidden min-w-0 max-w-[16rem] truncate text-base text-muted-foreground md:block lg:max-w-none"
+              title={session.email}
+            >
               {session.email}
             </span>
             <Button variant="outline" className="min-h-11 text-base" onClick={sair}>
@@ -82,7 +93,7 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {titulo}

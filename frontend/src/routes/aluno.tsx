@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  CheckCircle2,
+  Clock,
   BarChart3,
   CalendarClock,
   CalendarDays,
@@ -12,10 +14,19 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { BoletimMatriz } from "@/components/BoletimMatriz";
 import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/blocos";
+import { ListaAtividades } from "@/components/ListaAtividades";
+import { paraAtividadeAluno } from "@/lib/atividadesAluno";
 import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { aluno, horarios } from "@/data/notus";
 import {
   ApiError,
@@ -50,14 +61,7 @@ export const Route = createFileRoute("/aluno")({
   component: PainelAluno,
 });
 
-const situacaoInfo = {
-  hoje: { texto: "Entregar hoje", classe: "bg-warning text-warning-foreground" },
-  atrasada: { texto: "Atrasada", classe: "bg-destructive text-destructive-foreground" },
-  proxima: { texto: "Próxima", classe: "bg-secondary text-secondary-foreground" },
-  entregue: { texto: "Entregue", classe: "bg-success text-success-foreground" },
-} as const;
-
-type SecaoId = "hoje" | "atrasadas" | "atividades" | "notas" | "presenca" | "semana" | "faltas";
+type SecaoId = "hoje" | "atividades" | "notas" | "presenca" | "semana" | "faltas";
 
 const secoes: SecaoPainel<SecaoId>[] = [
   {
@@ -66,18 +70,15 @@ const secoes: SecaoPainel<SecaoId>[] = [
     icon: CalendarClock,
   },
   {
-    id: "atrasadas",
-    label: "Atividades em atraso",
-    icon: AlertTriangle,
-  },
-  {
+    // Uma aba só: a lista mostra a situação de cada atividade (atrasada, para entregar,
+    // entregue) e tem filtro; o número ao lado conta as atrasadas.
     id: "atividades",
-    label: "Todas as atividades",
+    label: "Atividades",
     icon: ClipboardList,
   },
   {
     id: "notas",
-    label: "Notas recentes",
+    label: "Notas",
     icon: BarChart3,
   },
   {
@@ -141,7 +142,7 @@ function PainelAluno() {
 
   const atrasadas = atividades.filter((a) => a.situacao === "atrasada");
   const secoesComContador = secoes.map((s) =>
-    s.id === "atrasadas" ? { ...s, contador: atrasadas.length } : s,
+    s.id === "atividades" ? { ...s, contador: atrasadas.length } : s,
   );
 
   const avisoCarga = erroAtividades ? (
@@ -154,16 +155,10 @@ function PainelAluno() {
     <AppShell role="ROLE_ALUNO" titulo={`Olá, ${primeiroNome ?? "..."}!`}>
       <PainelLateral secoes={secoesComContador} secaoAtiva={secao} aoSelecionarSecao={setSecao}>
         {secao === "hoje" && <AulasDeHoje />}
-        {secao === "atrasadas" && (
-          <Secao titulo="Atividades em atraso">
-            {avisoCarga}
-            <ListaAtividades itens={atrasadas} />
-          </Secao>
-        )}
         {secao === "atividades" && (
-          <Secao titulo="Todas as atividades">
+          <Secao titulo="Atividades">
             {avisoCarga}
-            <ListaAtividades itens={atividades} />
+            {atividadesApi !== null && <ListaAtividades itens={atividades} />}
           </Secao>
         )}
         {secao === "notas" && <Notas />}
@@ -182,7 +177,9 @@ function AulasDeHoje() {
 
   const nomeDia = horarios.dias[hoje.idx];
   return (
-    <Secao titulo={hoje.util ? `Aulas de hoje — ${nomeDia}` : "Hoje não há aulas"}>
+    <Secao
+      titulo={hoje.util ? `Aulas de hoje, ${(nomeDia ?? "").toLowerCase()}` : "Hoje não há aulas"}
+    >
       <Card>
         <CardContent className="divide-y divide-border p-0">
           {horarios.aulas.map((a) => (
@@ -196,83 +193,6 @@ function AulasDeHoje() {
         </CardContent>
       </Card>
     </Secao>
-  );
-}
-
-type Situacao = keyof typeof situacaoInfo;
-
-type AtividadeAluno = {
-  id: number;
-  titulo: string;
-  disciplina: string;
-  prazo: string;
-  situacao: Situacao;
-  descricao: string;
-};
-
-/** Converte a atividade da API no formato da lista, com a situação calculada pelo prazo. */
-function paraAtividadeAluno(a: AtividadeDTO, hoje: string): AtividadeAluno {
-  const dias = diasEntre(hoje, a.prazo);
-  let situacao: Situacao;
-  let prazo: string;
-  if (a.entregue) {
-    situacao = "entregue";
-    prazo = `Prazo ${formatarData(a.prazo)}`;
-  } else if (dias < 0) {
-    situacao = "atrasada";
-    prazo = dias === -1 ? "Prazo venceu ontem" : `Prazo venceu em ${formatarData(a.prazo)}`;
-  } else if (dias === 0) {
-    situacao = "hoje";
-    prazo = "Entregar hoje";
-  } else {
-    situacao = "proxima";
-    prazo =
-      dias === 1 ? "Entregar amanhã" : `Entregar até ${formatarData(a.prazo)} (em ${dias} dias)`;
-  }
-  return {
-    id: a.id,
-    titulo: a.title,
-    disciplina: a.disciplinaTitle,
-    prazo,
-    situacao,
-    descricao: a.content,
-  };
-}
-
-function ListaAtividades({ itens }: { itens: AtividadeAluno[] }) {
-  if (itens.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-base text-muted-foreground">
-          Nenhuma atividade aqui.
-        </CardContent>
-      </Card>
-    );
-  }
-  return (
-    <div className="grid gap-4">
-      {itens.map((a) => {
-        const info = situacaoInfo[a.situacao];
-        return (
-          <Card key={a.id}>
-            <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="text-xl">{a.titulo}</CardTitle>
-                  <CardDescription className="mt-1 text-base">
-                    {a.disciplina} · {a.prazo}
-                  </CardDescription>
-                </div>
-                <Badge className={`${info.classe} px-3 py-1 text-sm font-semibold`}>
-                  {info.texto}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="text-base text-muted-foreground">{a.descricao}</CardContent>
-          </Card>
-        );
-      })}
-    </div>
   );
 }
 
@@ -340,9 +260,11 @@ function Presenca() {
       titulo="Presença por disciplina"
       etiqueta={
         geral !== null && (
-          <Badge variant={geral >= 75 ? "secondary" : "destructive"} className="text-sm">
-            Presença geral {geral}% · mínimo 75%
-          </Badge>
+          <span
+            className={`text-base ${geral >= 75 ? "text-muted-foreground" : "font-semibold text-destructive"}`}
+          >
+            Presença geral de {geral}% (mínimo 75%)
+          </span>
         )
       }
     >
@@ -374,7 +296,7 @@ function Presenca() {
                   <span className="text-lg font-semibold text-foreground">{f.disciplinaTitle}</span>
                   <span className="text-base text-muted-foreground">
                     {f.totalFaltas} {f.totalFaltas === 1 ? "falta" : "faltas"} de {f.totalAulas}{" "}
-                    {f.totalAulas === 1 ? "aula" : "aulas"} · {pct}%
+                    {f.totalAulas === 1 ? "aula" : "aulas"}, {pct}%
                   </span>
                 </div>
                 <Progress value={pct} className="mt-2 h-3" />
@@ -434,8 +356,19 @@ function QuadroSemanal() {
   );
 }
 
+type LinhaFaltas = {
+  disciplinaId: number;
+  disciplina: string;
+  faltas: number;
+  aulas: number | null;
+  presenca: number | null;
+  dias: string[];
+};
+
+// Faltas por disciplina numa tabela, no mesmo formato do boletim: uma linha por matéria e
+// uma linha de total no fim. Junta a frequência (aulas e presença) com as faltas registradas.
 function FaltasBackend() {
-  const [faltas, setFaltas] = useState<FaltaDTO[] | null>(null);
+  const [linhas, setLinhas] = useState<LinhaFaltas[] | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -443,7 +376,11 @@ function FaltasBackend() {
     setCarregando(true);
     setErro(null);
     try {
-      setFaltas(await getMinhasFaltas());
+      const [faltas, frequencia] = await Promise.all([
+        getMinhasFaltas(),
+        getMinhaFrequencia().catch((): FrequenciaDTO[] => []),
+      ]);
+      setLinhas(montarLinhas(faltas, frequencia));
     } catch (e) {
       setErro(e instanceof ApiError ? e.message : "Erro ao buscar as faltas.");
     } finally {
@@ -455,34 +392,131 @@ function FaltasBackend() {
     void buscar();
   }, []);
 
+  const totalFaltas = linhas?.reduce((s, l) => s + l.faltas, 0) ?? 0;
+  const totalAulas = linhas?.reduce((s, l) => s + (l.aulas ?? 0), 0) ?? 0;
+  const presencaGeral =
+    totalAulas > 0 ? Math.round(((totalAulas - totalFaltas) / totalAulas) * 100) : null;
+
   return (
-    <Secao titulo="Faltas registradas">
-      <Card>
-        <CardContent className="space-y-4 p-6">
+    <Secao titulo="Faltas por disciplina">
+      <div className="space-y-4">
+        <div className="flex justify-end">
           <Button
             onClick={buscar}
             disabled={carregando}
             variant="outline"
             className="min-h-11 text-base"
           >
+            <RefreshCw
+              className={`size-5 ${carregando ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
             {carregando ? "Atualizando..." : "Atualizar"}
           </Button>
-          {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
-          {faltas && faltas.length === 0 && (
-            <p className="text-base text-muted-foreground">Nenhuma falta registrada.</p>
-          )}
-          {faltas && faltas.length > 0 && (
-            <ul className="divide-y divide-border text-base">
-              {faltas.map((f) => (
-                <li key={f.id} className="py-2">
-                  Falta #{f.id} — disciplina {f.disciplinaId}, {f.quantidade}{" "}
-                  {f.quantidade === 1 ? "falta" : "faltas"} em {f.data}
-                </li>
+        </div>
+        {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
+        {linhas && linhas.length === 0 && (
+          <p className="text-base text-muted-foreground">Nenhuma aula ou falta registrada ainda.</p>
+        )}
+        {linhas && linhas.length > 0 && (
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-base font-semibold text-foreground">
+                  Disciplina
+                </TableHead>
+                <TableHead className="text-center text-base font-semibold text-foreground">
+                  Faltas
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-center text-base font-semibold text-foreground">
+                  Aulas registradas
+                </TableHead>
+                <TableHead className="bg-primary/5 text-center text-base font-semibold text-foreground">
+                  Presença
+                </TableHead>
+                <TableHead className="text-base font-semibold text-foreground">
+                  Dias com falta
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {linhas.map((l) => (
+                <TableRow key={l.disciplinaId}>
+                  <TableCell className="text-base font-semibold text-foreground">
+                    {l.disciplina}
+                  </TableCell>
+                  <TableCell className="text-center text-base font-semibold tabular-nums text-foreground">
+                    {l.faltas}
+                  </TableCell>
+                  <TableCell className="text-center text-base tabular-nums text-muted-foreground">
+                    {l.aulas ?? "–"}
+                  </TableCell>
+                  <TableCell className="bg-primary/5 text-center">
+                    <PercentualPresenca valor={l.presenca} />
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {l.dias.length > 0 ? l.dias.join(", ") : "Nenhuma"}
+                  </TableCell>
+                </TableRow>
               ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableCell className="text-base font-semibold text-foreground">Total</TableCell>
+                <TableCell className="text-center text-base font-semibold tabular-nums text-foreground">
+                  {totalFaltas}
+                </TableCell>
+                <TableCell className="text-center text-base tabular-nums text-muted-foreground">
+                  {totalAulas}
+                </TableCell>
+                <TableCell className="bg-primary/5 text-center">
+                  <PercentualPresenca valor={presencaGeral} />
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  Mínimo de 75% de presença
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </Secao>
   );
+}
+
+function PercentualPresenca({ valor }: { valor: number | null }) {
+  if (valor === null) return <span className="text-base text-muted-foreground">–</span>;
+  return (
+    <span
+      className={`text-base font-semibold tabular-nums ${valor < 75 ? "text-destructive" : "text-success"}`}
+    >
+      {valor}%
+    </span>
+  );
+}
+
+function montarLinhas(faltas: FaltaDTO[], frequencia: FrequenciaDTO[]): LinhaFaltas[] {
+  const linhas = new Map<number, LinhaFaltas>();
+  for (const f of frequencia) {
+    linhas.set(f.disciplinaId, {
+      disciplinaId: f.disciplinaId,
+      disciplina: f.disciplinaTitle,
+      faltas: 0,
+      aulas: f.totalAulas,
+      presenca: Math.round(f.percentualPresenca),
+      dias: [],
+    });
+  }
+  for (const f of [...faltas].sort((a, b) => a.data.localeCompare(b.data))) {
+    const linha = linhas.get(f.disciplinaId) ?? {
+      disciplinaId: f.disciplinaId,
+      disciplina: `Disciplina ${f.disciplinaId}`,
+      faltas: 0,
+      aulas: null,
+      presenca: null,
+      dias: [],
+    };
+    linha.faltas += f.quantidade;
+    linha.dias.push(formatarData(f.data));
+    linhas.set(f.disciplinaId, linha);
+  }
+  return [...linhas.values()].sort((a, b) => a.disciplina.localeCompare(b.disciplina, "pt-BR"));
 }
