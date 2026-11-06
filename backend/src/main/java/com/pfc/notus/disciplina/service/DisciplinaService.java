@@ -50,6 +50,16 @@ public class DisciplinaService {
     }
 
     @Transactional
+    public DisciplinaDTO update(Long id, DisciplinaDTO dto) {
+        Disciplina entity = disciplinaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + id));
+        entity.setTitle(dto.title());
+        entity.setDescription(dto.description());
+        entity = disciplinaRepository.save(entity);
+        return toDTO(entity);
+    }
+
+    @Transactional
     public void delete(Long id) {
         if (!disciplinaRepository.existsById(id)) {
             throw new ResourceNotFoundException("Disciplina não encontrada com o id: " + id);

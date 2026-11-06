@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface ComunicadoRepository extends JpaRepository<Comunicado, Long> {
 
-    List<Comunicado> findAllByOrderByEnviadoEmDesc();
+    List<Comunicado> findByAnoLetivoOrderByEnviadoEmDesc(String anoLetivo);
 
-    List<Comunicado> findByPublicoInOrderByEnviadoEmDesc(Collection<PublicoComunicado> publicos);
+    List<Comunicado> findByPublicoInAndAnoLetivoOrderByEnviadoEmDesc(Collection<PublicoComunicado> publicos, String anoLetivo);
 }

@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface AtividadeRepository extends JpaRepository<Atividade, Long> {
 
-    List<Atividade> findByTurmaIdOrderByPrazoAsc(Long turmaId);
+    List<Atividade> findByTurmaIdAndAnoLetivoOrderByPrazoAsc(Long turmaId, String anoLetivo);
 }

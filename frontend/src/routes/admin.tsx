@@ -64,6 +64,9 @@ import {
   deleteLecionamento,
   deleteTurma,
   getDisciplinas,
+  criarDisciplina,
+  atualizarDisciplina,
+  deletarDisciplina,
   getLecionamentos,
   getProfessores,
   getStudents,
@@ -104,7 +107,14 @@ export const Route = createFileRoute("/admin")({
 });
 
 type SecaoId =
-  "dashboard" | "graficos" | "alunos" | "professores" | "turmas" | "usuarios" | "comunicados";
+  | "dashboard"
+  | "graficos"
+  | "alunos"
+  | "professores"
+  | "turmas"
+  | "disciplinas"
+  | "usuarios"
+  | "comunicados";
 
 type ModoAlunos =
   { tipo: "lista" } | { tipo: "cadastro" } | { tipo: "ficha"; aluno: StudentMinDTO };
@@ -136,6 +146,11 @@ const itens: SecaoPainel<SecaoId>[] = [
     icon: School,
   },
   {
+    id: "disciplinas",
+    label: "Disciplinas",
+    icon: BookOpen,
+  },
+  {
     id: "usuarios",
     label: "Excluir usuários",
     icon: UserX,
@@ -153,6 +168,7 @@ const titulos: Record<SecaoId, string> = {
   alunos: "Alunos",
   professores: "Professores",
   turmas: "Turmas",
+  disciplinas: "Disciplinas",
   usuarios: "Excluir usuários",
   comunicados: "Comunicados",
 };
@@ -200,6 +216,7 @@ function PainelAdmin() {
           {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
           {secao === "professores" && <Professores />}
           {secao === "turmas" && <Turmas />}
+          {secao === "disciplinas" && <Disciplinas />}
           {secao === "usuarios" && <ExcluirUsuarios />}
           {secao === "comunicados" && <Comunicados />}
         </Secao>
@@ -1772,6 +1789,217 @@ function FormComunicado({
         <Send className="size-5" aria-hidden="true" />
         {enviando ? "Enviando..." : "Enviar comunicado"}
       </Button>
+    </form>
+  );
+}
+
+function Disciplinas() {
+  const [versao, setVersao] = useState(0);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [criando, setCriando] = useState(false);
+  const [deletando, setDeletando] = useState<number | null>(null);
+  const carga = useCarga<DisciplinaDTO[]>(getDisciplinas, versao);
+  const atualizar = () => setVersao((v) => v + 1);
+
+  async function criar(dados: { title: string; description: string }) {
+    const criada = await criarDisciplina(dados);
+    toast.success(`Disciplina ${criada.title} criada.`);
+    setCriando(false);
+    atualizar();
+  }
+
+  async function atualizar_disciplina(id: number, dados: { title: string; description: string }) {
+    const atualizada = await atualizarDisciplina(id, dados);
+    toast.success(`Disciplina ${atualizada.title} atualizada.`);
+    setEditandoId(null);
+    atualizar();
+  }
+
+  async function deletar(id: number) {
+    await deletarDisciplina(id);
+    toast.success("Disciplina deletada.");
+    setDeletando(null);
+    atualizar();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end gap-3">
+        <Button className="min-h-12 text-base" onClick={() => setCriando(true)} disabled={criando}>
+          <Plus className="size-5" aria-hidden="true" />
+          Nova disciplina
+        </Button>
+        <Button
+          variant="outline"
+          className="min-h-12 text-base"
+          onClick={atualizar}
+          disabled={carga.estado === "carregando"}
+        >
+          <RefreshCw
+            className={`size-5 ${carga.estado === "carregando" ? "animate-spin" : ""}`}
+            aria-hidden="true"
+          />
+          Atualizar
+        </Button>
+      </div>
+
+      {criando && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Nova disciplina</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <FormularioDisciplina
+              textoBotao="Criar disciplina"
+              onSalvar={criar}
+              onCancelar={() => setCriando(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {carga.estado === "carregando" && (
+        <p className="text-base text-muted-foreground">Carregando…</p>
+      )}
+      {carga.estado === "erro" && <MensagemErro carga={carga} />}
+      {carga.estado === "ok" && (
+        <div className="space-y-3">
+          {carga.dados.length === 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-base text-muted-foreground">
+                  Nenhuma disciplina cadastrada ainda.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            carga.dados.map((disciplina) => (
+              <Card key={disciplina.id}>
+                <CardContent className="p-6">
+                  {editandoId === disciplina.id ? (
+                    <FormularioDisciplina
+                      inicial={{ title: disciplina.title, description: disciplina.description || "" }}
+                      textoBotao="Salvar disciplina"
+                      onSalvar={(dados) => atualizar_disciplina(disciplina.id, dados)}
+                      onCancelar={() => setEditandoId(null)}
+                    />
+                  ) : (
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-lg font-semibold text-foreground">
+                          {disciplina.title}
+                        </p>
+                        {disciplina.description && (
+                          <p className="text-base text-muted-foreground">{disciplina.description}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditandoId(disciplina.id)}
+                        >
+                          <Pencil className="size-4" aria-hidden="true" />
+                          Editar
+                        </Button>
+                        <ConfirmarAcao
+                          titulo="Excluir disciplina"
+                          descricao={`Tem certeza que deseja excluir a disciplina "${disciplina.title}"? Esta ação não pode ser desfeita.`}
+                          textoConfirmar="Excluir"
+                          onConfirmar={() => deletar(disciplina.id)}
+                        >
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={deletando === disciplina.id}
+                          >
+                            <Trash2 className="size-4" aria-hidden="true" />
+                            Excluir
+                          </Button>
+                        </ConfirmarAcao>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FormularioDisciplina({
+  inicial,
+  textoBotao,
+  onSalvar,
+  onCancelar,
+}: {
+  inicial?: { title: string; description: string };
+  textoBotao: string;
+  onSalvar: (dados: { title: string; description: string }) => Promise<void>;
+  onCancelar: () => void;
+}) {
+  const id = useId();
+  const [title, setTitle] = useState(inicial?.title ?? "");
+  const [description, setDescription] = useState(inicial?.description ?? "");
+  const [salvando, setSalvando] = useState(false);
+  const valido = title.trim() !== "" && description.trim() !== "";
+
+  async function enviar(e: FormEvent) {
+    e.preventDefault();
+    if (!valido) return;
+    setSalvando(true);
+    try {
+      await onSalvar({ title: title.trim(), description: description.trim() });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao salvar a disciplina.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={enviar} className="space-y-4">
+      <div className="space-y-2">
+        <label htmlFor={`${id}-titulo`} className="block text-base font-semibold text-foreground">
+          Nome da disciplina
+        </label>
+        <Input
+          id={`${id}-titulo`}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Ex.: Matemática"
+          className="h-11 text-base"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label
+          htmlFor={`${id}-descricao`}
+          className="block text-base font-semibold text-foreground"
+        >
+          Descrição
+        </label>
+        <Textarea
+          id={`${id}-descricao`}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Ex.: Disciplina de matemática"
+          className="text-base"
+          rows={3}
+          required
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button type="submit" className="min-h-11 text-base" disabled={!valido || salvando}>
+          {salvando ? "Salvando..." : textoBotao}
+        </Button>
+        <Button type="button" variant="outline" className="min-h-11 text-base" onClick={onCancelar}>
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }
