@@ -128,11 +128,14 @@ public class FaltaService {
         List<FrequenciaDisciplinaDTO> resultado = new ArrayList<>();
 
         for (Student aluno : alunos) {
+            // Sem turma não há aulas registradas para o aluno, então não há percentual a mostrar.
+            if (aluno.getTurma() == null) continue;
+            Long turmaId = aluno.getTurma().getId();
             Map<Long, Integer> faltasPorDisciplina = faltaRepository.findByAlunoId(aluno.getId()).stream()
                     .collect(Collectors.groupingBy(f -> f.getDisciplina().getId(), Collectors.summingInt(FaltaDomain::getQuantidade)));
 
             for (Disciplina disciplina : disciplinas) {
-                long totalAulas = aulaRegistroRepository.countByDisciplinaId(disciplina.getId());
+                long totalAulas = aulaRegistroRepository.countByTurmaIdAndDisciplinaId(turmaId, disciplina.getId());
                 if (totalAulas == 0) continue;
 
                 long totalFaltas = faltasPorDisciplina.getOrDefault(disciplina.getId(), 0);

@@ -45,8 +45,8 @@ public class DisciplinaController {
     @PreAuthorize("hasAnyRole('ADMIN','PROFESSOR')")
     @PostMapping("/{id}/aulas")
     public ResponseEntity<Void> registrarAula(@PathVariable Long id, @RequestBody @Valid AulaRequestDTO req, Authentication authentication) {
-        studentAccessGuardService.assertCanTeachDisciplina(id, authentication.getName());
-        disciplinaService.registrarAula(id, req.data());
+        studentAccessGuardService.assertCanTeachTurma(req.turmaId(), id, authentication.getName());
+        disciplinaService.registrarAula(id, req.turmaId(), req.data());
         return ResponseEntity.noContent().build();
     }
 

@@ -4,5 +4,5 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
-public record AulaRequestDTO(@NotNull LocalDate data) {
+public record AulaRequestDTO(@NotNull LocalDate data, @NotNull Long turmaId) {
 }

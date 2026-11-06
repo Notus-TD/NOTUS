@@ -511,6 +511,9 @@ function BotaoAnonimizar({
 
 const nomeProfessor = (l: LecionamentoDTO) => l.professorName ?? l.professorEmail;
 
+// Igual ao back: cada disciplina pode ter até dois professores na mesma turma.
+const MAX_PROFESSORES_POR_DISCIPLINA = 2;
+
 function Professores() {
   const [versao, setVersao] = useState(0);
   const [cadastrando, setCadastrando] = useState(false);
@@ -743,11 +746,28 @@ function VincularProfessor({
   const [disciplinaId, setDisciplinaId] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  // Cada disciplina tem um só professor por turma: as já ocupadas aparecem desabilitadas.
-  const ocupadas = new Map(
-    lecionamentos.filter((l) => String(l.turmaId) === turmaId).map((l) => [l.disciplinaId, l]),
-  );
-  const valido = professorId !== "" && turmaId !== "" && disciplinaId !== "";
+  // Cada disciplina tem até dois professores por turma: com dois, ou se o professor escolhido
+  // já leciona nela, a disciplina aparece desabilitada.
+  const professoresPorDisciplina = new Map<number, LecionamentoDTO[]>();
+  for (const l of lecionamentos) {
+    if (String(l.turmaId) !== turmaId) continue;
+    professoresPorDisciplina.set(l.disciplinaId, [
+      ...(professoresPorDisciplina.get(l.disciplinaId) ?? []),
+      l,
+    ]);
+  }
+  const indisponivel = (id: number) => {
+    const atuais = professoresPorDisciplina.get(id) ?? [];
+    return (
+      atuais.length >= MAX_PROFESSORES_POR_DISCIPLINA ||
+      atuais.some((l) => String(l.professorId) === professorId)
+    );
+  };
+  const valido =
+    professorId !== "" &&
+    turmaId !== "" &&
+    disciplinaId !== "" &&
+    !indisponivel(Number(disciplinaId));
 
   async function vincular(e: FormEvent) {
     e.preventDefault();
@@ -832,10 +852,11 @@ function VincularProfessor({
               </SelectTrigger>
               <SelectContent>
                 {disciplinas.map((d) => {
-                  const ocupada = ocupadas.get(d.id);
+                  const atuais = professoresPorDisciplina.get(d.id) ?? [];
+                  const nomes = atuais.map(nomeProfessor).join(" e ");
                   return (
-                    <SelectItem key={d.id} value={String(d.id)} disabled={!!ocupada}>
-                      {ocupada ? `${d.title} (${nomeProfessor(ocupada)})` : d.title}
+                    <SelectItem key={d.id} value={String(d.id)} disabled={indisponivel(d.id)}>
+                      {nomes ? `${d.title} (${nomes})` : d.title}
                     </SelectItem>
                   );
                 })}

@@ -596,5 +596,5 @@ export const getMinhaFrequencia = () => getJson<FrequenciaDTO[]>("/falta/me/freq
 export const getFaltasByStudent = (studentId: number) =>
   getJson<FaltaDTO[]>(`/falta/student/${studentId}`);
 
-export const registrarAula = (disciplinaId: number, data: string) =>
-  sendJson<void>("POST", `/disciplina/${disciplinaId}/aulas`, { data });
+export const registrarAula = (disciplinaId: number, turmaId: number, data: string) =>
+  sendJson<void>("POST", `/disciplina/${disciplinaId}/aulas`, { data, turmaId });

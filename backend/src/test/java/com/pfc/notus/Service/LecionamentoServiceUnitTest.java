@@ -79,7 +79,7 @@ class LecionamentoServiceUnitTest {
         @Nested
         class Sucesso {
 
-            @DisplayName("Deve criar o vínculo e retornar o DTO correspondente")
+            @DisplayName("Deve criar o vínculo mesmo com outro professor na disciplina e turma (até dois)")
             @Test
             void test1() {
                 var turma = criarTurma(1L);
@@ -90,8 +90,10 @@ class LecionamentoServiceUnitTest {
                 when(turmaRepository.findById(turma.getId())).thenReturn(Optional.of(turma));
                 when(disciplinaRepository.findById(disciplina.getId())).thenReturn(Optional.of(disciplina));
                 when(userRepository.findById(professor.getId())).thenReturn(Optional.of(professor));
-                when(lecionamentoRepository.existsByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId()))
+                when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(professor.getId(), turma.getId(), disciplina.getId()))
                         .thenReturn(false);
+                when(lecionamentoRepository.countByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId()))
+                        .thenReturn(1L);
 
                 var entitySalva = new Lecionamento(turma, disciplina, professor);
                 ReflectionTestUtils.setField(entitySalva, "id", 10L);
@@ -143,7 +145,7 @@ class LecionamentoServiceUnitTest {
                 verify(lecionamentoRepository, never()).save(any());
             }
 
-            @DisplayName("Quando a disciplina já tiver professor na turma, retornar ConflictException")
+            @DisplayName("Quando a disciplina já tiver dois professores na turma, retornar ConflictException")
             @Test
             void test4() {
                 var turma = criarTurma(1L);
@@ -154,12 +156,35 @@ class LecionamentoServiceUnitTest {
                 when(turmaRepository.findById(turma.getId())).thenReturn(Optional.of(turma));
                 when(disciplinaRepository.findById(disciplina.getId())).thenReturn(Optional.of(disciplina));
                 when(userRepository.findById(professor.getId())).thenReturn(Optional.of(professor));
-                when(lecionamentoRepository.existsByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId()))
+                when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(professor.getId(), turma.getId(), disciplina.getId()))
+                        .thenReturn(false);
+                when(lecionamentoRepository.countByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId()))
+                        .thenReturn(2L);
+
+                assertThatThrownBy(() -> lecionamentoService.create(dto))
+                        .isInstanceOf(ConflictException.class)
+                        .hasMessage("Esta disciplina já tem 2 professores nesta turma.");
+
+                verify(lecionamentoRepository, never()).save(any());
+            }
+
+            @DisplayName("Quando o professor já lecionar a disciplina na turma, retornar ConflictException")
+            @Test
+            void test5() {
+                var turma = criarTurma(1L);
+                var disciplina = criarDisciplina(2L);
+                var professor = criarProfessor(3L, true);
+                var dto = new LecionamentoRequestDTO(turma.getId(), disciplina.getId(), professor.getId());
+
+                when(turmaRepository.findById(turma.getId())).thenReturn(Optional.of(turma));
+                when(disciplinaRepository.findById(disciplina.getId())).thenReturn(Optional.of(disciplina));
+                when(userRepository.findById(professor.getId())).thenReturn(Optional.of(professor));
+                when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(professor.getId(), turma.getId(), disciplina.getId()))
                         .thenReturn(true);
 
                 assertThatThrownBy(() -> lecionamentoService.create(dto))
                         .isInstanceOf(ConflictException.class)
-                        .hasMessage("Esta disciplina já tem professor nesta turma.");
+                        .hasMessage("Este professor já leciona esta disciplina nesta turma.");
 
                 verify(lecionamentoRepository, never()).save(any());
             }
