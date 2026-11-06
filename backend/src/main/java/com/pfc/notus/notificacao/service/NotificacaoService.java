@@ -93,8 +93,8 @@ public class NotificacaoService {
 
         String chave = "FALTA:%d:%d:%s".formatted(aluno.getId(), falta.getDisciplina().getId(), falta.getData());
         List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.FALTA,
-                primeiroNome(responsavel.getName()),
-                primeiroNome(aluno.getFullName()),
+                responsavel.getName(),
+                aluno.getFullName(),
                 falta.getDisciplina().getTitle(),
                 falta.getData().format(DATA_BR),
                 String.valueOf(totalFaltasNaDisciplina));
@@ -115,8 +115,8 @@ public class NotificacaoService {
 
         String chave = "NOTA_FINAL:%d:%s".formatted(boletim.getId(), boletim.getLancadoEm());
         List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.NOTA_FINAL,
-                primeiroNome(responsavel.getName()),
-                primeiroNome(aluno.getFullName()),
+                responsavel.getName(),
+                aluno.getFullName(),
                 boletim.getDisciplina().getTitle(),
                 boletim.getBimestre().getDescricao(),
                 String.format(PT_BR, "%.1f", boletim.getNotaFinal()));
@@ -152,8 +152,8 @@ public class NotificacaoService {
             Responsible responsavel = aluno.getResponsible();
             String chave = "ATIVIDADE:%d:%d".formatted(atividadeId, responsavel.getId());
             List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.ATIVIDADE,
-                    primeiroNome(responsavel.getName()),
-                    primeiroNome(aluno.getFullName()),
+                    responsavel.getName(),
+                    aluno.getFullName(),
                     disciplina,
                     titulo,
                     prazo == null ? "sem prazo" : prazo.format(DATA_BR));
@@ -176,7 +176,7 @@ public class NotificacaoService {
 
             String chave = "COMUNICADO:%d:%d".formatted(comunicadoId, responsavel.getId());
             List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.COMUNICADO,
-                    primeiroNome(responsavel.getName()), comunicado.getTitulo());
+                    responsavel.getName(), comunicado.getTitulo());
             criar(TipoNotificacao.COMUNICADO, responsavel, null, REF_COMUNICADO, comunicadoId, chave, variaveis);
         }
     }
@@ -198,7 +198,7 @@ public class NotificacaoService {
                     return new AvisoDTO(n.getId(), n.getTipo(), templateRegistry.titulo(n.getTemplate()),
                             templateRegistry.renderizarParaPortal(n.getTemplate(), variaveis),
                             aluno == null ? null : aluno.getId(),
-                            aluno == null ? null : primeiroNome(aluno.getFullName()),
+                            aluno == null ? null : aluno.getFullName(),
                             n.getCriadoEm());
                 })
                 .toList();
@@ -274,11 +274,6 @@ public class NotificacaoService {
         if (responsavel.getTermsAcceptedAt() == null) return "Responsável ainda não aceitou os termos";
         if (aluno != null && aluno.getStatusMatricula() != StatusMatricula.ATIVA) return "Matrícula do aluno não está ativa";
         return null;
-    }
-
-    private static String primeiroNome(String nomeCompleto) {
-        if (nomeCompleto == null || nomeCompleto.isBlank()) return nomeCompleto;
-        return nomeCompleto.trim().split("\\s+")[0];
     }
 
     private boolean elegivel(Responsible responsavel, Student aluno) {
