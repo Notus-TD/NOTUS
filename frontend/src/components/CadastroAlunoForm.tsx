@@ -396,11 +396,11 @@ export function CadastroAlunoForm({
             <Plus className="size-5" aria-hidden="true" />
             Adicionar aluno
           </Button>
-          <p className="text-base text-muted-foreground">
-            {alunos.length >= MAX_ALUNOS
-              ? `Limite de ${MAX_ALUNOS} alunos por cadastro.`
-              : "Use para cadastrar irmãos sob o mesmo responsável."}
-          </p>
+          {alunos.length >= MAX_ALUNOS && (
+            <p className="text-base text-muted-foreground">
+              Limite de {MAX_ALUNOS} alunos por cadastro.
+            </p>
+          )}
         </div>
 
         {errosCampo.length > 0 && (
