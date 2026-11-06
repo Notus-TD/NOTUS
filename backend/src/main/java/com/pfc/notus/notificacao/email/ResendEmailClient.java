@@ -135,14 +135,13 @@ public class ResendEmailClient implements NotificadorPort {
 
     /**
      * Corpo do POST /emails, com a versão em texto e a versão em HTML (logo anexada como imagem
-     * embutida). Com o redirecionamento ativo, troca o destinatário e mostra o original.
+     * embutida). Com o redirecionamento ativo (só em desenvolvimento), troca apenas o destinatário:
+     * assunto e texto ficam iguais aos que o destinatário real receberia.
      */
     Map<String, Object> montarCorpo(String email, String assunto, String texto, EmailHtml.Botao botao) {
         String destino = email;
         if (properties.redirecionamentoAtivo()) {
             destino = properties.redirecionarPara().trim();
-            assunto = "[para " + email + "] " + assunto;
-            texto = "(E-mail de teste: no sistema, o destinatário é " + email + ".)\n\n" + texto;
         }
         Map<String, Object> corpo = new HashMap<>();
         corpo.put("from", properties.remetente());

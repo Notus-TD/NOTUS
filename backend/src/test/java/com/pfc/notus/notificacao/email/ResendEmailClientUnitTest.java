@@ -25,13 +25,13 @@ class ResendEmailClientUnitTest {
     }
 
     @Test
-    void comRedirecionamentoTudoVaiParaOEnderecoDeTesteComOOriginalNoAssunto() {
+    void comRedirecionamentoSoTrocaODestinatario() {
         Map<String, Object> corpo = cliente(" teste@exemplo.com ").montarCorpo("marta@gmail.com", "NOTUS: aviso de falta", "Olá.", null);
 
         assertEquals(List.of("teste@exemplo.com"), corpo.get("to"));
-        assertEquals("[para marta@gmail.com] NOTUS: aviso de falta", corpo.get("subject"));
-        assertTrue(((String) corpo.get("text")).contains("o destinatário é marta@gmail.com"));
-        assertTrue(((String) corpo.get("text")).endsWith("Olá."));
+        // Assunto e texto ficam iguais aos do destinatário real.
+        assertEquals("NOTUS: aviso de falta", corpo.get("subject"));
+        assertEquals("Olá.", corpo.get("text"));
     }
 
     @Test

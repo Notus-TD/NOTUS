@@ -46,6 +46,7 @@ O perfil `supabase` usa o PostgreSQL hospedado no Supabase. As tabelas ficam no 
 | Variável | Obrigatória | Padrão |
 |---|---|---|
 | `SUPABASE_DB_PASSWORD` | sim | — (senha do banco, definida no painel do Supabase) |
+| `JWT_SECRET` | sim | — (chave que assina os tokens de login; pelo menos 32 caracteres aleatórios, ex.: `openssl rand -base64 48`) |
 | `SUPABASE_DB_URL` | não | conexão direta do projeto (`db.jvznbyhigagxgbihnpmx.supabase.co:5432`) |
 | `SUPABASE_DB_USER` | não | `postgres` |
 | `SUPABASE_DDL_AUTO` | não | `update` |
@@ -56,6 +57,7 @@ O perfil `supabase` usa o PostgreSQL hospedado no Supabase. As tabelas ficam no 
 cd backend
 $env:SPRING_PROFILES_ACTIVE = "supabase"
 $env:SUPABASE_DB_PASSWORD = "<senha do banco>"
+$env:JWT_SECRET = "<chave aleatória com 32+ caracteres>"
 $env:SUPABASE_DDL_AUTO = "create"
 ./mvnw spring-boot:run
 ```

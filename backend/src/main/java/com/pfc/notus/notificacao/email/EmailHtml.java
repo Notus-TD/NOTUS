@@ -28,14 +28,11 @@ public final class EmailHtml {
     public static String montar(String texto, Botao botao, boolean comLogo) {
         List<String> corpo = new ArrayList<>();
         List<String> rodape = new ArrayList<>();
-        String aviso = null;
 
         for (String bloco : texto.split("\\n\\s*\\n")) {
             String limpo = bloco.strip();
             if (limpo.isEmpty()) continue;
-            if (limpo.startsWith("(E-mail de teste")) {
-                aviso = limpo;
-            } else if (limpo.startsWith("Para não receber") || limpo.startsWith("Mensagem automática")) {
+            if (limpo.startsWith("Para não receber") || limpo.startsWith("Mensagem automática")) {
                 rodape.add(limpo);
             } else {
                 corpo.add(semLink(limpo, botao));
@@ -60,11 +57,6 @@ public final class EmailHtml {
                     .append(";font-size:20px;font-weight:700;color:").append(AZUL).append(";\">NOTUS</td></tr></table>");
         } else {
             html.append("<div style=\"font-size:20px;font-weight:700;color:").append(AZUL).append(";\">NOTUS</div>");
-        }
-
-        if (aviso != null) {
-            html.append("<p style=\"margin:20px 0 0 0;padding:10px 12px;background:#fff7e6;border-radius:8px;font-size:13px;color:")
-                    .append(TEXTO_SUAVE).append(";\">").append(paragrafo(aviso)).append("</p>");
         }
 
         html.append("</td></tr><tr><td style=\"padding:8px 32px 8px 32px;font-family:").append(FONTE).append(";\">");
