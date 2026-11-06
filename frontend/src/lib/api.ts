@@ -596,10 +596,13 @@ export type ComunicadoDTO = {
   autorEmail: string;
 };
 export type ComunicadoRequest = { titulo: string; texto: string; publico: PublicoComunicado };
+export type RecadoProfessorRequest = { titulo: string; texto: string; turmaId: number };
 export const getComunicados = () => getJson<ComunicadoDTO[]>("/comunicado");
 export const getComunicadosParaMim = () => getJson<ComunicadoDTO[]>("/comunicado/me");
 export const publicarComunicado = (dto: ComunicadoRequest) =>
   sendJson<ComunicadoDTO>("POST", "/comunicado", dto);
+export const publicarRecado = (dto: RecadoProfessorRequest) =>
+  sendJson<ComunicadoDTO>("POST", "/comunicado/recado", dto);
 
 // Atividades de um aluno com a situação da entrega (responsável acompanhando os filhos).
 export const getAtividadesDoAluno = (studentId: number) =>

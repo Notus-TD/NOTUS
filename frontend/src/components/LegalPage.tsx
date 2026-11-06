@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
+import { MarcaNotus } from "@/components/AppShell";
 import { getSession, homeForRoles, type Session } from "@/lib/auth";
 
 // Versões anteriores ficam arquivadas em components/legal-historico/.
@@ -69,14 +70,7 @@ export function LegalPage({ titulo, children }: { titulo: string; children: Reac
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <span className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
-              N
-            </span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              NOTUS
-            </span>
-          </span>
+          <MarcaNotus />
           <Link
             to={session ? homeForRoles(session.roles) : "/login"}
             className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-base font-medium text-foreground transition-colors hover:bg-accent"

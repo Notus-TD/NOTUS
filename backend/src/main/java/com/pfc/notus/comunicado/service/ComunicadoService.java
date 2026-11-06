@@ -4,12 +4,17 @@ import com.pfc.notus.comunicado.domain.Comunicado;
 import com.pfc.notus.comunicado.domain.PublicoComunicado;
 import com.pfc.notus.comunicado.dto.ComunicadoDTO;
 import com.pfc.notus.comunicado.dto.ComunicadoRequest;
+import com.pfc.notus.comunicado.dto.RecadoProfessorRequest;
 import com.pfc.notus.comunicado.repository.ComunicadoRepository;
 import com.pfc.notus.config.AuditMarker;
+import com.pfc.notus.exception.ResourceNotFoundException;
+import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
 import com.pfc.notus.notificacao.event.ComunicadoPublicadoEvent;
+import com.pfc.notus.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -27,10 +32,15 @@ public class ComunicadoService {
     private static final Logger log = LoggerFactory.getLogger(ComunicadoService.class);
 
     private final ComunicadoRepository comunicadoRepository;
+    private final LecionamentoRepository lecionamentoRepository;
+    private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    public ComunicadoService(ComunicadoRepository comunicadoRepository, ApplicationEventPublisher eventPublisher) {
+    public ComunicadoService(ComunicadoRepository comunicadoRepository, LecionamentoRepository lecionamentoRepository,
+                            UserRepository userRepository, ApplicationEventPublisher eventPublisher) {
         this.comunicadoRepository = comunicadoRepository;
+        this.lecionamentoRepository = lecionamentoRepository;
+        this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -45,6 +55,24 @@ public class ComunicadoService {
             eventPublisher.publishEvent(new ComunicadoPublicadoEvent(comunicado.getId()));
         }
         return ComunicadoDTO.from(comunicado);
+    }
+
+    /** Recado do professor para uma turma específica - responsáveis dos alunos da turma recebem e-mail */
+    @Transactional
+    public ComunicadoDTO publicarRecado(RecadoProfessorRequest request, String autorEmail) {
+        var professor = userRepository.findByEmail(autorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Professor não encontrado"));
+
+        if (!lecionamentoRepository.existsByProfessorIdAndTurmaId(professor.getId(), request.turmaId())) {
+            throw new AccessDeniedException("Você não pode publicar recado para esta turma");
+        }
+
+        Comunicado recado = comunicadoRepository.save(new Comunicado(
+                request.titulo().trim(), request.texto().trim(), autorEmail,
+                LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), request.turmaId()));
+        log.info(AuditMarker.AUDIT, "Recado {} publicado para turma {} por professor {}", recado.getId(), request.turmaId(), autorEmail);
+        eventPublisher.publishEvent(new ComunicadoPublicadoEvent(recado.getId()));
+        return ComunicadoDTO.from(recado);
     }
 
     @Transactional(readOnly = true)

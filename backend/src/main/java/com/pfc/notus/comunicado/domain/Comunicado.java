@@ -33,15 +33,37 @@ public class Comunicado {
     @Column(nullable = false)
     private String autorEmail;
 
+    @Column(length = 20)
+    private String tipoRemetente; // ADMIN ou PROFESSOR
+
+    @Column
+    private Long turmaId; // Null para comunicados do admin, preenchido para recados do professor
+
     public Comunicado(String titulo, String texto, PublicoComunicado publico, String autorEmail, LocalDateTime enviadoEm) {
         this.titulo = titulo;
         this.texto = texto;
         this.publico = publico;
         this.autorEmail = autorEmail;
         this.enviadoEm = enviadoEm;
+        this.tipoRemetente = "ADMIN";
+        this.turmaId = null;
+    }
+
+    public Comunicado(String titulo, String texto, String autorEmail, LocalDateTime enviadoEm, Long turmaId) {
+        this.titulo = titulo;
+        this.texto = texto;
+        this.autorEmail = autorEmail;
+        this.enviadoEm = enviadoEm;
+        this.tipoRemetente = "PROFESSOR";
+        this.turmaId = turmaId;
+        this.publico = PublicoComunicado.RESPONSAVEIS; // Professor só manda para responsáveis
     }
 
     public boolean incluiResponsaveis() {
         return publico == PublicoComunicado.TODOS || publico == PublicoComunicado.RESPONSAVEIS;
+    }
+
+    public boolean ehRecadoProfessor() {
+        return "PROFESSOR".equals(tipoRemetente);
     }
 }

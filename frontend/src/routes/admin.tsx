@@ -8,7 +8,7 @@ import {
   EyeOff,
   Link2,
   LayoutDashboard,
-  Megaphone,
+  Mail,
   Pencil,
   Plus,
   MailPlus,
@@ -143,7 +143,7 @@ const itens: SecaoPainel<SecaoId>[] = [
   {
     id: "comunicados",
     label: "Comunicados",
-    icon: Megaphone,
+    icon: Mail,
   },
 ];
 
@@ -1781,10 +1781,13 @@ function Comunicados() {
   const carga = useCarga<ComunicadoDTO[]>(getComunicados, versao);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Novo comunicado</CardTitle>
+          <CardDescription className="text-base">
+            Publique um aviso para alunos, responsáveis, professores ou para toda a escola.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <FormComunicado aoEnviar={() => setVersao((v) => v + 1)} />
@@ -1792,7 +1795,7 @@ function Comunicados() {
       </Card>
 
       <div>
-        <h2 className="mb-3 font-display text-xl font-bold text-foreground">Enviados</h2>
+        <h3 className="mb-4 font-display text-xl font-bold text-foreground">Comunicados enviados</h3>
         {carga.estado === "carregando" && (
           <p className="text-base text-muted-foreground">Carregando…</p>
         )}
@@ -1801,22 +1804,23 @@ function Comunicados() {
           <p className="text-base text-muted-foreground">Nenhum comunicado enviado ainda.</p>
         )}
         {carga.estado === "ok" && carga.dados.length > 0 && (
-          <div className="divide-y divide-border border-y border-border">
+          <div className="grid gap-4">
             {carga.dados.map((c) => (
-              <Card key={c.id} className="py-5">
-                <CardHeader className="mb-2">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <CardTitle className="text-lg">{c.titulo}</CardTitle>
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Para {rotuloPublico[c.publico].toLowerCase()}
-                    </span>
+              <section
+                key={c.id}
+                aria-label={c.titulo}
+                className="rounded-xl border border-border bg-card p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-foreground">{c.titulo}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Para <span className="font-medium">{rotuloPublico[c.publico].toLowerCase()}</span> • Enviado em {new Date(c.enviadoEm).toLocaleString("pt-BR")} por {c.autorEmail}
+                    </p>
                   </div>
-                  <CardDescription>
-                    Enviado em {new Date(c.enviadoEm).toLocaleString("pt-BR")} por {c.autorEmail}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-base text-muted-foreground">{c.texto}</CardContent>
-              </Card>
+                </div>
+                <p className="mt-3 text-base text-muted-foreground">{c.texto}</p>
+              </section>
             ))}
           </div>
         )}
