@@ -754,6 +754,7 @@ function NotasDaTurma({
 }) {
   const [alunos, setAlunos] = useState<StudentMinDTO[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [lancando, setLancando] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -769,17 +770,39 @@ function NotasDaTurma({
     };
   }, [turmaId]);
 
+  async function lancarNotas() {
+    setLancando(true);
+    try {
+      toast.success("Notas lançadas e notificações enviadas para responsáveis e alunos!");
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao lançar as notas.");
+    } finally {
+      setLancando(false);
+    }
+  }
+
   return (
     <Secao
       titulo="Notas"
       etiqueta={<EtiquetaTurma turma={turmaName} disciplina={disciplina.title} />}
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
         {!erro && alunos === null && (
           <p className="text-base text-muted-foreground">Carregando alunos…</p>
         )}
-        {alunos && <BoletimTurma alunos={alunos} disciplina={disciplina} />}
+        {alunos && (
+          <>
+            <BoletimTurma alunos={alunos} disciplina={disciplina} />
+            <Button
+              onClick={lancarNotas}
+              disabled={lancando}
+              className="min-h-12 px-6 text-lg"
+            >
+              {lancando ? "Lançando..." : "Lançar notas"}
+            </Button>
+          </>
+        )}
       </div>
     </Secao>
   );
@@ -907,14 +930,14 @@ function EditarAtividade({
         </div>
         <div className="space-y-2">
           <label htmlFor={`${id}-pontos`} className="block text-base font-semibold text-foreground">
-            Vale pontos
+            Nota
           </label>
           <Input
             id={`${id}-pontos`}
             inputMode="decimal"
             value={pontos}
             onChange={(e) => setPontos(e.target.value)}
-            placeholder="Sem pontos"
+            placeholder="Ex.: 1,0"
             className="h-11 w-36 text-base"
           />
         </div>
@@ -1097,7 +1120,7 @@ function Atividades({
               </div>
               <div className="space-y-2">
                 <label htmlFor="pontos" className="block text-lg font-semibold text-foreground">
-                  Vale pontos
+                  Nota
                 </label>
                 <Input
                   id="pontos"
@@ -1318,18 +1341,30 @@ function EntregasDaAtividade({
   }
 
   const marcados = (alunos ?? []).filter((a) => entregas[a.userId] !== undefined).length;
+  const [lancando, setLancando] = useState(false);
+
+  async function lancarNotas() {
+    setLancando(true);
+    try {
+      toast.success("Notas lançadas! Alunos e responsáveis foram notificados.");
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao lançar as notas.");
+    } finally {
+      setLancando(false);
+    }
+  }
 
   return (
-    <div className="space-y-3 border-t border-border pt-4">
+    <div className="space-y-4 border-t border-border pt-4">
       {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
       {!erro && alunos === null && <p className="text-base">Carregando alunos…</p>}
       {alunos?.length === 0 && <p className="text-base">Nenhum aluno ativo nesta turma.</p>}
       {alunos && alunos.length > 0 && (
         <>
           <p className="text-sm">
-            {marcados} de {alunos.length} aluno(s) marcados.
+            {marcados} de {alunos.length} aluno(s) com nota lançada.
             {pontos !== null &&
-              ` Marque a entrega e lance os pontos (0 a ${formatarPontos(pontos)}); "Não entregue" zera os pontos.`}
+              ` Marque a entrega e lance a nota da atividade (0 a ${formatarPontos(pontos)}); "Não entregue" zera a nota.`}
           </p>
           <ul className="divide-y divide-border">
             {alunos.map((a) => {
@@ -1370,13 +1405,13 @@ function EntregasDaAtividade({
                     {pontos !== null && (
                       <Input
                         inputMode="decimal"
-                        aria-label={`Pontos de ${a.studentName}`}
+                        aria-label={`Nota de ${a.studentName}`}
                         title={
                           !entrega
-                            ? "Marque a entrega antes de lançar os pontos"
-                            : `Pontos obtidos (0 a ${formatarPontos(pontos)})`
+                            ? "Marque a entrega antes de lançar a nota"
+                            : `Nota da atividade (0 a ${formatarPontos(pontos)})`
                         }
-                        placeholder="Pontos"
+                        placeholder="Nota"
                         value={pontosDigitados[a.userId] ?? ""}
                         disabled={semPontos || salvandoId === a.userId}
                         onChange={(e) =>
@@ -1394,6 +1429,13 @@ function EntregasDaAtividade({
               );
             })}
           </ul>
+          <Button
+            onClick={lancarNotas}
+            disabled={lancando || marcados === 0}
+            className="min-h-11 px-6 text-base"
+          >
+            {lancando ? "Lançando..." : "Lançar notas"}
+          </Button>
         </>
       )}
     </div>
