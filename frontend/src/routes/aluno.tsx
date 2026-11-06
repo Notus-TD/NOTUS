@@ -5,10 +5,9 @@ import {
   CheckCircle2,
   Clock,
   BarChart3,
-  CalendarClock,
-  CalendarDays,
   ClipboardList,
   RefreshCw,
+  UserCheck,
   UserX,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -27,7 +26,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { aluno, horarios } from "@/data/notus";
 import {
   ApiError,
   getMeuPerfil,
@@ -47,28 +45,21 @@ export const Route = createFileRoute("/aluno")({
       { title: "Painel do Aluno · NOTUS" },
       {
         name: "description",
-        content:
-          "Atividades com prazo, notas recentes, quadro de horários e presença por disciplina.",
+        content: "Atividades com prazo, notas e presença por disciplina.",
       },
       { property: "og:title", content: "Painel do Aluno · NOTUS" },
       {
         property: "og:description",
-        content:
-          "Veja o que entregar, suas notas, seus horários e sua frequência em cada disciplina.",
+        content: "Veja o que entregar, suas notas e sua frequência em cada disciplina.",
       },
     ],
   }),
   component: PainelAluno,
 });
 
-type SecaoId = "hoje" | "atividades" | "notas" | "presenca" | "semana" | "faltas";
+type SecaoId = "atividades" | "notas" | "presenca" | "faltas";
 
 const secoes: SecaoPainel<SecaoId>[] = [
-  {
-    id: "hoje",
-    label: "Aulas de hoje",
-    icon: CalendarClock,
-  },
   {
     // Uma aba só: a lista mostra a situação de cada atividade (atrasada, para entregar,
     // entregue) e tem filtro; o número ao lado conta as atrasadas.
@@ -84,12 +75,7 @@ const secoes: SecaoPainel<SecaoId>[] = [
   {
     id: "presenca",
     label: "Presença por disciplina",
-    icon: UserX,
-  },
-  {
-    id: "semana",
-    label: "Quadro semanal",
-    icon: CalendarDays,
+    icon: UserCheck,
   },
   {
     id: "faltas",
@@ -98,14 +84,8 @@ const secoes: SecaoPainel<SecaoId>[] = [
   },
 ];
 
-function diaDeHoje() {
-  const idx = new Date().getDay() - 1; // 0 = segunda ... 4 = sexta
-  const util = idx >= 0 && idx <= 4;
-  return { idx: util ? idx : 0, util };
-}
-
 function PainelAluno() {
-  const [secao, setSecao] = useState<SecaoId>("hoje");
+  const [secao, setSecao] = useState<SecaoId>("atividades");
   const [primeiroNome, setPrimeiroNome] = useState<string | null>(null);
 
   useEffect(() => {
@@ -154,7 +134,6 @@ function PainelAluno() {
   return (
     <AppShell role="ROLE_ALUNO" titulo={`Olá, ${primeiroNome ?? "..."}!`}>
       <PainelLateral secoes={secoesComContador} secaoAtiva={secao} aoSelecionarSecao={setSecao}>
-        {secao === "hoje" && <AulasDeHoje />}
         {secao === "atividades" && (
           <Secao titulo="Atividades">
             {avisoCarga}
@@ -163,36 +142,9 @@ function PainelAluno() {
         )}
         {secao === "notas" && <Notas />}
         {secao === "presenca" && <Presenca />}
-        {secao === "semana" && <QuadroSemanal />}
         {secao === "faltas" && <FaltasBackend />}
       </PainelLateral>
     </AppShell>
-  );
-}
-
-function AulasDeHoje() {
-  const [hoje, setHoje] = useState<{ idx: number; util: boolean } | null>(null);
-  useEffect(() => setHoje(diaDeHoje()), []);
-  if (!hoje) return null;
-
-  const nomeDia = horarios.dias[hoje.idx];
-  return (
-    <Secao
-      titulo={hoje.util ? `Aulas de hoje, ${(nomeDia ?? "").toLowerCase()}` : "Hoje não há aulas"}
-    >
-      <Card>
-        <CardContent className="divide-y divide-border p-0">
-          {horarios.aulas.map((a) => (
-            <div key={a.hora} className="flex items-center gap-4 px-6 py-4">
-              <span className="w-20 shrink-0 font-display text-xl font-bold text-primary">
-                {a.hora}
-              </span>
-              <span className="text-lg text-foreground">{a.grade[hoje.idx]}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </Secao>
   );
 }
 
@@ -303,53 +255,6 @@ function Presenca() {
               </div>
             );
           })}
-        </CardContent>
-      </Card>
-    </Secao>
-  );
-}
-
-function QuadroSemanal() {
-  return (
-    <Secao titulo="Quadro de horários">
-      <Card>
-        <CardContent className="overflow-x-auto p-0">
-          <table className="w-full min-w-[640px] border-collapse text-left">
-            <caption className="sr-only">Horário semanal de aulas</caption>
-            <thead>
-              <tr className="border-b border-border bg-secondary">
-                <th
-                  scope="col"
-                  className="px-4 py-3 text-base font-semibold text-secondary-foreground"
-                >
-                  Hora
-                </th>
-                {horarios.dias.map((d) => (
-                  <th
-                    key={d}
-                    scope="col"
-                    className="px-4 py-3 text-base font-semibold text-secondary-foreground"
-                  >
-                    {d}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {horarios.aulas.map((a) => (
-                <tr key={a.hora} className="border-b border-border last:border-0">
-                  <th scope="row" className="px-4 py-3 text-base font-semibold text-foreground">
-                    {a.hora}
-                  </th>
-                  {a.grade.map((m, i) => (
-                    <td key={i} className="px-4 py-3 text-base text-muted-foreground">
-                      {m}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </CardContent>
       </Card>
     </Secao>
