@@ -8,7 +8,6 @@ import {
   ClipboardList,
   RefreshCw,
   UserCheck,
-  UserX,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { BoletimMatriz } from "@/components/BoletimMatriz";
@@ -45,19 +44,19 @@ export const Route = createFileRoute("/aluno")({
       { title: "Painel do Aluno · NOTUS" },
       {
         name: "description",
-        content: "Atividades com prazo, notas e presença por disciplina.",
+        content: "Atividades com prazo, notas e frequência.",
       },
       { property: "og:title", content: "Painel do Aluno · NOTUS" },
       {
         property: "og:description",
-        content: "Veja o que entregar, suas notas e sua frequência em cada disciplina.",
+        content: "Veja suas atividades, notas e frequência em cada disciplina.",
       },
     ],
   }),
   component: PainelAluno,
 });
 
-type SecaoId = "atividades" | "notas" | "presenca" | "faltas";
+type SecaoId = "atividades" | "notas" | "frequencia";
 
 const secoes: SecaoPainel<SecaoId>[] = [
   {
@@ -73,14 +72,9 @@ const secoes: SecaoPainel<SecaoId>[] = [
     icon: BarChart3,
   },
   {
-    id: "presenca",
-    label: "Presença por disciplina",
+    id: "frequencia",
+    label: "Frequência",
     icon: UserCheck,
-  },
-  {
-    id: "faltas",
-    label: "Faltas registradas",
-    icon: UserX,
   },
 ];
 
@@ -141,8 +135,7 @@ function PainelAluno() {
           </Secao>
         )}
         {secao === "notas" && <Notas />}
-        {secao === "presenca" && <Presenca />}
-        {secao === "faltas" && <FaltasBackend />}
+        {secao === "frequencia" && <Frequencia />}
       </PainelLateral>
     </AppShell>
   );
@@ -182,85 +175,6 @@ function Notas() {
   );
 }
 
-function Presenca() {
-  const [frequencia, setFrequencia] = useState<FrequenciaDTO[] | null>(null);
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  async function buscar() {
-    setCarregando(true);
-    setErro(null);
-    try {
-      setFrequencia(await getMinhaFrequencia());
-    } catch (e) {
-      setErro(e instanceof ApiError ? e.message : "Erro ao carregar a frequência.");
-    } finally {
-      setCarregando(false);
-    }
-  }
-
-  useEffect(() => {
-    void buscar();
-  }, []);
-
-  const geral = frequencia?.length
-    ? Math.round(frequencia.reduce((s, f) => s + f.percentualPresenca, 0) / frequencia.length)
-    : null;
-
-  return (
-    <Secao
-      titulo="Presença por disciplina"
-      etiqueta={
-        geral !== null && (
-          <span
-            className={`text-base ${geral >= 75 ? "text-muted-foreground" : "font-semibold text-destructive"}`}
-          >
-            Presença geral de {geral}% (mínimo 75%)
-          </span>
-        )
-      }
-    >
-      <Card>
-        <CardContent className="space-y-5 p-6">
-          <Button
-            onClick={buscar}
-            disabled={carregando}
-            variant="outline"
-            className="min-h-11 text-base"
-          >
-            {carregando ? "Atualizando..." : "Atualizar"}
-          </Button>
-          {erro && <p className="text-base font-semibold text-destructive">{erro}</p>}
-          {!erro && frequencia === null && (
-            <p className="text-base text-muted-foreground">Carregando…</p>
-          )}
-          {frequencia && frequencia.length === 0 && (
-            <p className="text-base text-muted-foreground">
-              Nenhuma aula registrada ainda pelo professor — a presença aparece aqui assim que a
-              chamada começar.
-            </p>
-          )}
-          {frequencia?.map((f) => {
-            const pct = Math.round(f.percentualPresenca);
-            return (
-              <div key={f.disciplinaId}>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-lg font-semibold text-foreground">{f.disciplinaTitle}</span>
-                  <span className="text-base text-muted-foreground">
-                    {f.totalFaltas} {f.totalFaltas === 1 ? "falta" : "faltas"} de {f.totalAulas}{" "}
-                    {f.totalAulas === 1 ? "aula" : "aulas"}, {pct}%
-                  </span>
-                </div>
-                <Progress value={pct} className="mt-2 h-3" />
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
-    </Secao>
-  );
-}
-
 type LinhaFaltas = {
   disciplinaId: number;
   disciplina: string;
@@ -270,9 +184,9 @@ type LinhaFaltas = {
   dias: string[];
 };
 
-// Faltas por disciplina numa tabela, no mesmo formato do boletim: uma linha por matéria e
-// uma linha de total no fim. Junta a frequência (aulas e presença) com as faltas registradas.
-function FaltasBackend() {
+// Frequência e faltas por disciplina: mostra um gráfico de barras da presença geral
+// e uma tabela detalhada com aulas, faltas e dias com falta.
+function Frequencia() {
   const [linhas, setLinhas] = useState<LinhaFaltas[] | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -287,7 +201,7 @@ function FaltasBackend() {
       ]);
       setLinhas(montarLinhas(faltas, frequencia));
     } catch (e) {
-      setErro(e instanceof ApiError ? e.message : "Erro ao buscar as faltas.");
+      setErro(e instanceof ApiError ? e.message : "Erro ao buscar a frequência.");
     } finally {
       setCarregando(false);
     }
@@ -303,7 +217,18 @@ function FaltasBackend() {
     totalAulas > 0 ? Math.round(((totalAulas - totalFaltas) / totalAulas) * 100) : null;
 
   return (
-    <Secao titulo="Faltas por disciplina">
+    <Secao
+      titulo="Frequência"
+      etiqueta={
+        presencaGeral !== null && (
+          <span
+            className={`text-base ${presencaGeral >= 75 ? "text-muted-foreground" : "font-semibold text-destructive"}`}
+          >
+            Presença geral de {presencaGeral}% (mínimo 75%)
+          </span>
+        )
+      }
+    >
       <div className="space-y-4">
         <div className="flex justify-end">
           <Button
@@ -359,8 +284,16 @@ function FaltasBackend() {
                   <TableCell className="bg-primary/5 text-center">
                     <PercentualPresenca valor={l.presenca} />
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {l.dias.length > 0 ? l.dias.join(", ") : "Nenhuma"}
+                  <TableCell className="max-h-28 overflow-y-auto text-sm text-muted-foreground">
+                    {l.dias.length > 0 ? (
+                      <div className="space-y-0.5">
+                        {l.dias.map((d) => (
+                          <div key={d}>{d}</div>
+                        ))}
+                      </div>
+                    ) : (
+                      "Nenhuma"
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
