@@ -107,6 +107,27 @@ public class UserService implements UserDetailsService {
         return salvo;
     }
 
+    /**
+     * Devolve o acesso a um usuário anonimizado que recebeu dados novos: conta ativa, primeiro acesso
+     * pendente (senha e termos de novo) e um convite no e-mail informado.
+     */
+    @Transactional
+    public User reativar(User user, String email) {
+        String emailLimpo = email.trim();
+        if (userRepository.findByEmail(emailLimpo).isPresent()) {
+            throw new ConflictException("E-mail já cadastrado: " + emailLimpo);
+        }
+        user.setEmail(emailLimpo);
+        user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+        user.setFirstLogin(true);
+        user.setTermsAcceptedAt(null);
+        user.setAtivo(true);
+        user.setAnonimizadoEm(null);
+        User salvo = userRepository.save(user);
+        senhaService.gerarLink(salvo, TipoTokenSenha.CONVITE);
+        return salvo;
+    }
+
     /** Novo link de convite para quem ainda não ativou o acesso (o anterior deixa de valer). */
     @Transactional
     public void reenviarConvite(Long userId, String requesterEmail) {

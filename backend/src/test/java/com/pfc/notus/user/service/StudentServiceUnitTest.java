@@ -1,8 +1,11 @@
 package com.pfc.notus.user.service;
 
 import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.domain.enums.StatusMatricula;
+import com.pfc.notus.user.dto.ReativacaoAlunoRequest;
 import com.pfc.notus.user.dto.ResponsibleRequest;
 import com.pfc.notus.user.dto.StudentRegistrationResponse;
 import com.pfc.notus.user.dto.StudentRequest;
@@ -14,11 +17,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -90,5 +95,56 @@ class StudentServiceUnitTest {
 
         assertThrows(ConflictException.class, () -> studentService.createStudents(RESPONSAVEL, alunos));
         verify(userService, never()).register(any(), any());
+    }
+
+    private static Student anonimizado() {
+        Student s = new Student();
+        s.setId(2026000050L);
+        s.setMatricula(20260050L);
+        s.setStatusMatricula(StatusMatricula.FINALIZADA);
+        s.setAtivo(false);
+        s.setAnonimizadoEm(LocalDateTime.of(2026, 6, 1, 10, 0));
+        return s;
+    }
+
+    private static ReativacaoAlunoRequest reativacao(String emailAluno) {
+        return new ReativacaoAlunoRequest(RESPONSAVEL, " Lucas Pereira ", emailAluno, LocalDate.of(2014, 3, 10));
+    }
+
+    @Test
+    void reativarDevolveOsDadosEAtivaAMatricula() {
+        Student student = anonimizado();
+        Responsible responsible = new Responsible();
+        when(studentRepository.findById(2026000050L)).thenReturn(Optional.of(student));
+        when(responsibleService.findOrCreateResponsible(RESPONSAVEL)).thenReturn(responsible);
+
+        studentService.reativar(2026000050L, reativacao("lucas@escola.com"), "admin@notus.com");
+
+        assertEquals("Lucas Pereira", student.getFullName());
+        assertEquals(LocalDate.of(2014, 3, 10), student.getBirthDate());
+        assertSame(responsible, student.getResponsible());
+        assertEquals(StatusMatricula.ATIVA, student.getStatusMatricula());
+        assertEquals(20260050L, student.getMatricula());
+        verify(userService).reativar(student, "lucas@escola.com");
+    }
+
+    @Test
+    void reativarRecusaAlunoQueNaoFoiAnonimizado() {
+        Student student = anonimizado();
+        student.setAnonimizadoEm(null);
+        when(studentRepository.findById(2026000050L)).thenReturn(Optional.of(student));
+
+        assertThrows(ConflictException.class,
+                () -> studentService.reativar(2026000050L, reativacao("lucas@escola.com"), "admin@notus.com"));
+        verify(userService, never()).reativar(any(), any());
+    }
+
+    @Test
+    void reativarRecusaEmailDoAlunoIgualAoDoResponsavel() {
+        when(studentRepository.findById(2026000050L)).thenReturn(Optional.of(anonimizado()));
+
+        assertThrows(RegraNegocioException.class,
+                () -> studentService.reativar(2026000050L, reativacao("Roberto@gmail.com"), "admin@notus.com"));
+        verify(responsibleService, never()).findOrCreateResponsible(any());
     }
 }

@@ -8,9 +8,10 @@ import { ApiError, cadastrarAlunos, type StudentRegistrationResponse } from "@/l
 import {
   emailValido,
   formatarTelefone,
-  idadeEm,
   somenteDigitos,
-  telefoneValido,
+  validarNascimento,
+  validarNome,
+  validarResponsavel,
 } from "@/lib/validacao";
 
 const responsavelInicial = {
@@ -37,26 +38,6 @@ const MAX_ALUNOS = 10;
 let proximaChave = 0;
 const novoAluno = (): Aluno => ({ ...alunoVazio, chave: proximaChave++ });
 
-function validarNome(v: string): string | undefined {
-  if (v.length < 3) return "Informe o nome completo.";
-  if (!v.includes(" ")) return "Informe nome e sobrenome.";
-  return;
-}
-
-function validarResponsavel(chave: keyof Responsavel, valor: string): string | undefined {
-  const v = valor.trim();
-  switch (chave) {
-    case "nome":
-      return validarNome(v);
-    case "email":
-      if (!emailValido(v)) return "Informe um e-mail válido (ex.: nome@dominio.com).";
-      return;
-    case "telefone":
-      if (!telefoneValido(v)) return "Informe DDD + número (10 ou 11 dígitos).";
-      return;
-  }
-}
-
 // `alunos` é a lista inteira do formulário: matrícula e e-mail não podem se repetir entre os cards.
 function validarAluno(
   chave: CampoAluno,
@@ -81,14 +62,8 @@ function validarAluno(
       if (!/^\d{4,12}$/.test(v)) return "Informe só números (4 a 12 dígitos).";
       if (repetido) return "Outro aluno deste cadastro já usa esta matrícula.";
       return;
-    case "nascimento": {
-      const idade = idadeEm(v);
-      if (idade === null) return "Informe a data de nascimento.";
-      if (idade < 0) return "A data de nascimento não pode ser no futuro.";
-      if (idade < 3) return "O aluno precisa ter pelo menos 3 anos.";
-      if (idade > 25) return "Confira a data: idade acima de 25 anos.";
-      return;
-    }
+    case "nascimento":
+      return validarNascimento(v);
   }
 }
 

@@ -332,6 +332,8 @@ export type StudentMinDTO = {
   // Turma atual do aluno; vazios se ele ainda não tem turma.
   turmaId: number | null;
   turmaName: string | null;
+  // Dados pessoais apagados: o nome vem vazio e a matrícula, finalizada.
+  anonimizado?: boolean;
 };
 export type TurmaDTO = {
   id: number;
@@ -549,6 +551,15 @@ export type UsuarioDTO = {
 export const getUsuarios = () => getJson<UsuarioDTO[]>("/users");
 export const reenviarConvite = (userId: number) =>
   sendJson<void>("POST", `/users/${userId}/reenviar-convite`);
+export type ReativacaoAlunoRequest = {
+  responsible: { name: string; email: string; phone: string };
+  fullName: string;
+  educationalEmail: string;
+  birthDate: string;
+};
+export const reativarAluno = (userId: number, dto: ReativacaoAlunoRequest) =>
+  sendJson<void>("PUT", `/students/${userId}/reativar`, dto);
+
 export const anonymizeUser = (userId: number, confirmacao: string) =>
   sendJson<void>("PUT", `/users/me/anonymize/${userId}`, { confirmacao });
 
