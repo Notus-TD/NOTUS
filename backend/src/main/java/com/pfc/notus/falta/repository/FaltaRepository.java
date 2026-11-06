@@ -9,9 +9,9 @@ import java.util.List;
 @Repository
 public interface FaltaRepository extends JpaRepository<FaltaDomain, Long> {
 
-    List<FaltaDomain> findByAlunoId(Long alunoId);
+    List<FaltaDomain> findByAlunoIdAndAnoLetivo(Long alunoId, String anoLetivo);
 
-    List<FaltaDomain> findByAlunoIdIn(List<Long> alunoIds);
+    List<FaltaDomain> findByAlunoIdInAndAnoLetivo(List<Long> alunoIds, String anoLetivo);
 
-    List<FaltaDomain> findByDisciplinaId(Long disciplinaId);
+    List<FaltaDomain> findByDisciplinaIdAndAnoLetivo(Long disciplinaId, String anoLetivo);
 }

@@ -12,8 +12,8 @@ import org.springframework.data.repository.query.Param;
 @Repository
 public interface AulaRegistroRepository extends JpaRepository<AulaRegistro, Long> {
 
-    boolean existsByTurmaIdAndDisciplinaIdAndData(Long turmaId, Long disciplinaId, LocalDate data);
+    boolean existsByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(Long turmaId, Long disciplinaId, LocalDate data, String anoLetivo);
 
-    @Query("select a.data from AulaRegistro a where a.turma.id = :turmaId and a.disciplina.id = :disciplinaId")
-    Set<LocalDate> findDatasByTurmaIdAndDisciplinaId(@Param("turmaId") Long turmaId, @Param("disciplinaId") Long disciplinaId);
+    @Query("select a.data from AulaRegistro a where a.turma.id = :turmaId and a.disciplina.id = :disciplinaId and a.anoLetivo = :anoLetivo")
+    Set<LocalDate> findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(@Param("turmaId") Long turmaId, @Param("disciplinaId") Long disciplinaId, @Param("anoLetivo") String anoLetivo);
 }

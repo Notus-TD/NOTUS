@@ -36,6 +36,13 @@ public class DisciplinaController {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<DisciplinaDTO> update(@PathVariable Long id, @RequestBody @Valid DisciplinaDTO dto){
+        DisciplinaDTO updated = disciplinaService.update(id, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping ("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){
         disciplinaService.delete(id);

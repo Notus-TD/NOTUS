@@ -497,6 +497,11 @@ export type TurmaComDisciplinasDTO = {
 export const getMinhasTurmas = () => getJson<TurmaComDisciplinasDTO[]>("/turma/me");
 
 export const getDisciplinas = () => getJson<DisciplinaDTO[]>("/disciplina");
+export const criarDisciplina = (dto: { title: string; description: string }) =>
+  sendJson<DisciplinaDTO>("POST", "/disciplina", dto);
+export const atualizarDisciplina = (id: number, dto: { title: string; description: string }) =>
+  sendJson<DisciplinaDTO>("PUT", `/disciplina/${id}`, dto);
+export const deletarDisciplina = (id: number) => sendJson<void>("DELETE", `/disciplina/${id}`);
 export const getAtividades = () => getJson<AtividadeDTO[]>("/atividade");
 export const getAtividadesDaTurma = (turmaId: number) =>
   getJson<AtividadeDTO[]>(`/atividade/turma/${turmaId}`);
