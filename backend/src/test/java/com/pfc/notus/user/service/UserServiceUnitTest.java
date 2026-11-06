@@ -292,4 +292,34 @@ class UserServiceUnitTest {
         assertThrows(RegraNegocioException.class, () -> userService.reenviarConvite(3L, ADMIN));
         verify(senhaService, never()).gerarLink(any(), eq(TipoTokenSenha.CONVITE));
     }
+
+    @Test
+    void reativarDevolveOAcessoEEnviaConvite() {
+        Student student = new Student();
+        student.setAtivo(false);
+        student.setFirstLogin(false);
+        student.setAnonimizadoEm(LocalDateTime.of(2026, 6, 1, 10, 0));
+        when(userRepository.findByEmail("lucas@escola.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("hash");
+        when(userRepository.save(student)).thenReturn(student);
+
+        userService.reativar(student, " lucas@escola.com ");
+
+        assertEquals("lucas@escola.com", student.getEmail());
+        assertEquals("hash", student.getPassword());
+        assertTrue(student.isAtivo());
+        assertTrue(student.isFirstLogin());
+        assertNull(student.getAnonimizadoEm());
+        assertNull(student.getTermsAcceptedAt());
+        verify(senhaService).gerarLink(student, TipoTokenSenha.CONVITE);
+    }
+
+    @Test
+    void reativarRecusaEmailJaCadastrado() {
+        Student student = new Student();
+        when(userRepository.findByEmail("ana@escola.com")).thenReturn(Optional.of(new Student()));
+
+        assertThrows(ConflictException.class, () -> userService.reativar(student, "ana@escola.com"));
+        verify(senhaService, never()).gerarLink(any(), any());
+    }
 }

@@ -77,7 +77,8 @@ export function VisaoGeralAdmin({
               </p>
             ) : (
               <ul className="divide-y divide-border">
-                {[...alunos.dados]
+                {alunos.dados
+                  .filter((a) => !a.anonimizado)
                   .reverse()
                   .slice(0, 5)
                   .map((a) => (

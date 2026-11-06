@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PainelLateral, Secao, type SecaoPainel } from "@/components/PainelLateral";
 import { CadastroAlunoForm } from "@/components/CadastroAlunoForm";
+import { ReativarAlunoForm } from "@/components/ReativarAlunoForm";
 import { CadastroProfessorForm } from "@/components/CadastroProfessorForm";
 import { DashboardAdmin } from "@/components/DashboardAdmin";
 import { VisaoGeralAdmin } from "@/components/VisaoGeralAdmin";
@@ -165,7 +166,12 @@ const titulosAlunos: Record<ModoAlunos["tipo"], string> = {
 function PainelAdmin() {
   const [secao, setSecao] = useState<SecaoId>("dashboard");
   const [modo, setModo] = useState<ModoAlunos>({ tipo: "lista" });
-  const titulo = secao === "alunos" ? titulosAlunos[modo.tipo] : titulos[secao];
+  const titulo =
+    secao !== "alunos"
+      ? titulos[secao]
+      : modo.tipo === "ficha" && modo.aluno.anonimizado
+        ? "Reativar aluno"
+        : titulosAlunos[modo.tipo];
 
   function irParaAlunos(novoModo: ModoAlunos) {
     setModo(novoModo);
@@ -233,7 +239,11 @@ function ListaAlunos({
             className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="min-w-0">
-              <p className="truncate text-lg font-semibold text-foreground">{s.studentName}</p>
+              <p
+                className={`truncate text-lg font-semibold ${s.anonimizado ? "text-muted-foreground" : "text-foreground"}`}
+              >
+                {s.anonimizado ? "Aluno anonimizado" : s.studentName}
+              </p>
               <p className="text-base text-muted-foreground">Matrícula {s.matricula}</p>
             </div>
             <span className="flex shrink-0 items-center gap-2">
@@ -250,6 +260,17 @@ function ListaAlunos({
 function Alunos({ modo, setModo }: { modo: ModoAlunos; setModo: (m: ModoAlunos) => void }) {
   const voltar = () => setModo({ tipo: "lista" });
 
+  if (modo.tipo === "ficha" && modo.aluno.anonimizado) {
+    return (
+      <div className="space-y-6">
+        <Button variant="outline" className="min-h-11 text-base" onClick={voltar}>
+          <ArrowLeft className="size-5" aria-hidden="true" />
+          Voltar para a lista
+        </Button>
+        <ReativarAlunoForm aluno={modo.aluno} aoConcluir={voltar} />
+      </div>
+    );
+  }
   if (modo.tipo === "ficha") return <FichaAluno aluno={modo.aluno} voltar={voltar} />;
   if (modo.tipo === "cadastro") {
     return (
@@ -285,10 +306,11 @@ function ListaDeAlunos({
   const filtrar = (lista: StudentMinDTO[]) =>
     [...lista]
       .reverse()
+      .sort((a, b) => Number(!!a.anonimizado) - Number(!!b.anonimizado))
       .filter(
         (s) =>
           !termo ||
-          s.studentName.toLowerCase().includes(termo) ||
+          (s.studentName ?? "").toLowerCase().includes(termo) ||
           String(s.matricula).includes(termo),
       );
 

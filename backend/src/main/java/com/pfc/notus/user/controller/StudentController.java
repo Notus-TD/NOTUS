@@ -1,5 +1,6 @@
 package com.pfc.notus.user.controller;
 
+import com.pfc.notus.user.dto.ReativacaoAlunoRequest;
 import com.pfc.notus.user.dto.StudentBatchRegistrationRequest;
 import com.pfc.notus.user.dto.StudentMinDTO;
 import com.pfc.notus.user.dto.StudentRegistrationRequest;
@@ -39,6 +40,14 @@ public class StudentController {
     public ResponseEntity<List<StudentRegistrationResponse>> createBatch(@RequestBody @Valid StudentBatchRegistrationRequest dto) {
         List<StudentRegistrationResponse> response = studentService.createStudents(dto.responsible(), dto.students());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PutMapping("/{id}/reativar")
+    public ResponseEntity<Void> reativar(@PathVariable Long id, @RequestBody @Valid ReativacaoAlunoRequest dto,
+                                         Authentication authentication) {
+        studentService.reativar(id, dto, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
