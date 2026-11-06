@@ -5,6 +5,10 @@ import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.dto.DisciplinaDTO;
 import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.RegraNegocioException;
+import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
+import com.pfc.notus.turma.domain.Turma;
+import com.pfc.notus.turma.repository.TurmaRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +25,12 @@ public class DisciplinaService {
 
     @Autowired
     private AulaRegistroRepository aulaRegistroRepository;
+
+    @Autowired
+    private TurmaRepository turmaRepository;
+
+    @Autowired
+    private LecionamentoRepository lecionamentoRepository;
 
     public List<DisciplinaDTO> getAllDisciplina() {
         return disciplinaRepository.findAll().stream().map(this::toDTO).toList();
@@ -46,12 +56,17 @@ public class DisciplinaService {
     }
 
     @Transactional
-    public void registrarAula(Long disciplinaId, LocalDate data) {
+    public void registrarAula(Long disciplinaId, Long turmaId, LocalDate data) {
         Disciplina disciplina = disciplinaRepository.findById(disciplinaId)
                 .orElseThrow(() -> new EntityNotFoundException("Disciplina não encontrada com o id: " + disciplinaId));
+        Turma turma = turmaRepository.findById(turmaId)
+                .orElseThrow(() -> new EntityNotFoundException("Turma não encontrada com o id: " + turmaId));
+        if (!lecionamentoRepository.existsByTurmaIdAndDisciplinaId(turmaId, disciplinaId)) {
+            throw new RegraNegocioException("Esta disciplina não é lecionada nesta turma.");
+        }
 
-        if (!aulaRegistroRepository.existsByDisciplinaIdAndData(disciplinaId, data)) {
-            aulaRegistroRepository.save(new AulaRegistro(data, disciplina));
+        if (!aulaRegistroRepository.existsByTurmaIdAndDisciplinaIdAndData(turmaId, disciplinaId, data)) {
+            aulaRegistroRepository.save(new AulaRegistro(data, disciplina, turma));
         }
     }
 

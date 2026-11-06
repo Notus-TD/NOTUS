@@ -26,6 +26,8 @@ import java.util.Map;
 @Service
 public class LecionamentoService {
 
+    static final int MAX_PROFESSORES_POR_DISCIPLINA = 2;
+
     @Autowired
     private LecionamentoRepository lecionamentoRepository;
 
@@ -50,8 +52,12 @@ public class LecionamentoService {
         if (!professor.hasRole("ROLE_PROFESSOR")) {
             throw new ConflictException("Usuário informado não é um professor.");
         }
-        if (lecionamentoRepository.existsByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId())) {
-            throw new ConflictException("Esta disciplina já tem professor nesta turma.");
+        if (lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(professor.getId(), turma.getId(), disciplina.getId())) {
+            throw new ConflictException("Este professor já leciona esta disciplina nesta turma.");
+        }
+        // Cada disciplina pode ter até dois professores na mesma turma.
+        if (lecionamentoRepository.countByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId()) >= MAX_PROFESSORES_POR_DISCIPLINA) {
+            throw new ConflictException("Esta disciplina já tem " + MAX_PROFESSORES_POR_DISCIPLINA + " professores nesta turma.");
         }
 
         Lecionamento entity = lecionamentoRepository.save(new Lecionamento(turma, disciplina, professor));

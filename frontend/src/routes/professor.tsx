@@ -517,7 +517,7 @@ function Chamada({
     if (!alunos || !faltasDoDia) return;
     setSalvando(true);
     try {
-      await registrarAula(disciplina.id, data);
+      await registrarAula(disciplina.id, turmaId, data);
     } catch (e) {
       setSalvando(false);
       toast.error(e instanceof ApiError ? e.message : "Erro ao registrar a aula do dia.");

@@ -96,18 +96,6 @@ public class StudentAccessGuardService {
     }
 
     @Transactional(readOnly = true)
-    public void assertCanTeachDisciplina(Long disciplinaId, String requesterEmail) {
-        User requester = findRequester(requesterEmail);
-
-        if (requester.hasRole("ROLE_ADMIN")) return;
-        if (requester.hasRole("ROLE_PROFESSOR")
-                && lecionamentoRepository.existsByProfessorIdAndDisciplinaId(requester.getId(), disciplinaId)) {
-            return;
-        }
-        throw new AccessDeniedException("Sem permissão para registrar aulas desta disciplina.");
-    }
-
-    @Transactional(readOnly = true)
     public List<Long> turmaIdsDoProfessor(String requesterEmail) {
         User requester = findRequester(requesterEmail);
         return lecionamentoRepository.findByProfessorId(requester.getId()).stream()

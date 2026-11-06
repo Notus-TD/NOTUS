@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Repository
 public interface AulaRegistroRepository extends JpaRepository<AulaRegistro, Long> {
 
-    boolean existsByDisciplinaIdAndData(Long disciplinaId, LocalDate data);
+    boolean existsByTurmaIdAndDisciplinaIdAndData(Long turmaId, Long disciplinaId, LocalDate data);
 
-    long countByDisciplinaId(Long disciplinaId);
+    long countByTurmaIdAndDisciplinaId(Long turmaId, Long disciplinaId);
 }
