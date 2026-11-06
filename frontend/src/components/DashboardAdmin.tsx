@@ -129,7 +129,7 @@ export function DashboardAdmin() {
         <Painel
           titulo="Carga dos professores"
           rotuloColuna="Professor"
-          descricao="Aulas atribuídas a cada professor (uma disciplina numa turma conta como uma)."
+          descricao="Aulas atribuídas a cada professor."
           carga={juntar(professores, lecionamentos)}
           itens={([ps, ls]) =>
             ps
