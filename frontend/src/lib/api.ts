@@ -329,6 +329,9 @@ export type StudentMinDTO = {
   matricula: number;
   studentName: string;
   matriculaStatus: StatusMatricula;
+  // Turma atual do aluno; vazios se ele ainda não tem turma.
+  turmaId: number | null;
+  turmaName: string | null;
 };
 export type TurmaDTO = {
   id: number;

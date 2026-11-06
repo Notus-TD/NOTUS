@@ -137,7 +137,7 @@ class TurmaServiceUnitTest {
                 verify(studentRepository, never()).save(any());
             }
 
-            @DisplayName("Quando o aluno já estiver em outra turma, retornar ConflictException")
+            @DisplayName("Quando o aluno estiver em outra turma, deve transferi-lo para esta (RF13 CA02)")
             @Test
             void test5() {
                 var turma = criarTurma(1L, "9º Ano A");
@@ -149,12 +149,11 @@ class TurmaServiceUnitTest {
                 when(turmaRepository.findById(turma.getId())).thenReturn(Optional.of(turma));
                 when(studentRepository.findById(aluno.getId())).thenReturn(Optional.of(aluno));
 
-                assertThatThrownBy(() -> turmaService.associarAluno(turma.getId(), dto))
-                        .isInstanceOf(ConflictException.class)
-                        .hasMessageContaining("9º Ano B");
+                TurmaAlunoResponseDTO resultado = turmaService.associarAluno(turma.getId(), dto);
 
-                assertThat(aluno.getTurma()).isEqualTo(outraTurma);
-                verify(studentRepository, never()).save(any());
+                assertThat(resultado.turmaId()).isEqualTo(turma.getId());
+                assertThat(aluno.getTurma()).isEqualTo(turma);
+                verify(studentRepository).save(aluno);
             }
 
             @DisplayName("Quando o aluno já estiver nesta turma, retornar ConflictException")

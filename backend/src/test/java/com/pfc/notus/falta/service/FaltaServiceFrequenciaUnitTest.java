@@ -18,8 +18,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -73,10 +75,14 @@ class FaltaServiceFrequenciaUnitTest {
         when(disciplinaRepository.findAll()).thenReturn(List.of(matematica, ingles));
         when(faltaRepository.findByAlunoId(aluno.getId())).thenReturn(List.of(
                 new FaltaDomain(1, LocalDate.of(2026, 3, 2), LocalDateTime.now(), aluno, null, matematica),
-                new FaltaDomain(1, LocalDate.of(2026, 3, 9), LocalDateTime.now(), aluno, null, matematica)));
-        when(aulaRegistroRepository.countByTurmaIdAndDisciplinaId(1L, 1L)).thenReturn(10L);
-        // Inglês só tem aulas em outra turma: para a turma 1 a contagem é zero.
-        when(aulaRegistroRepository.countByTurmaIdAndDisciplinaId(1L, 2L)).thenReturn(0L);
+                new FaltaDomain(1, LocalDate.of(2026, 3, 9), LocalDateTime.now(), aluno, null, matematica),
+                // Falta de uma turma anterior (data sem aula na turma atual): não conta.
+                new FaltaDomain(1, LocalDate.of(2025, 9, 1), LocalDateTime.now(), aluno, null, matematica)));
+        Set<LocalDate> dezAulas = new HashSet<>();
+        for (int dia = 2; dia <= 11; dia++) dezAulas.add(LocalDate.of(2026, 3, dia));
+        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaId(1L, 1L)).thenReturn(dezAulas);
+        // Inglês só tem aulas em outra turma: para a turma 1 não há aula.
+        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaId(1L, 2L)).thenReturn(Set.of());
 
         List<FrequenciaDisciplinaDTO> frequencia = faltaService.getFrequenciaParaUsuarioLogado(ALUNO);
 
@@ -84,7 +90,8 @@ class FaltaServiceFrequenciaUnitTest {
         assertThat(frequencia.get(0).disciplinaId()).isEqualTo(1L);
         assertThat(frequencia.get(0).totalAulas()).isEqualTo(10L);
         assertThat(frequencia.get(0).percentualPresenca()).isEqualTo(80.0);
-        verify(aulaRegistroRepository, never()).countByTurmaIdAndDisciplinaId(eq(2L), anyLong());
+        assertThat(frequencia.get(0).totalFaltas()).isEqualTo(2L);
+        verify(aulaRegistroRepository, never()).findDatasByTurmaIdAndDisciplinaId(eq(2L), anyLong());
     }
 
     @Test

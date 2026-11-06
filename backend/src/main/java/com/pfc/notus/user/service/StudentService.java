@@ -69,7 +69,7 @@ public class StudentService {
     public List<StudentMinDTO> listStudents() {
         return studentRepository.findAll().stream()
                 .filter(s -> s.getAnonimizadoEm() == null)
-                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .map(StudentMinDTO::of)
                 .toList();
     }
 
@@ -77,14 +77,14 @@ public class StudentService {
     public List<StudentMinDTO> listStudentsByTurmas(java.util.Collection<Long> turmaIds) {
         if (turmaIds.isEmpty()) return List.of();
         return studentRepository.findByTurmaIdIn(turmaIds).stream()
-                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .map(StudentMinDTO::of)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudentsByResponsible(Long responsibleId) {
         return studentRepository.findByResponsibleId(responsibleId).stream()
-                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .map(StudentMinDTO::of)
                 .toList();
     }
 
@@ -92,7 +92,7 @@ public class StudentService {
     public List<StudentMinDTO> listStudentsByTurma(Long turmaId, String sort) {
         Sort ordenacao = "matricula".equalsIgnoreCase(sort) ? Sort.by("matricula") : Sort.by("fullName");
         return studentRepository.findByTurmaId(turmaId, ordenacao).stream()
-                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .map(StudentMinDTO::of)
                 .toList();
     }
 }

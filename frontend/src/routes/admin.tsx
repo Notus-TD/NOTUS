@@ -1094,6 +1094,10 @@ function ConfirmarAcao({
   );
 }
 
+// Valores do filtro de turma de origem que não são ids de turma.
+const ORIGEM_TODAS = "todas";
+const ORIGEM_SEM_TURMA = "sem-turma";
+
 function DetalheTurma({
   turma,
   onAlterada,
@@ -1106,6 +1110,7 @@ function DetalheTurma({
   const [editando, setEditando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
   const [filtroAlunos, setFiltroAlunos] = useState("");
+  const [origem, setOrigem] = useState(ORIGEM_TODAS);
   const [ocupado, setOcupado] = useState(false);
   const detalhe = useCarga<TurmaDetalheDTO>(() => getTurma(turma.id), 0);
   const todos = useCarga<StudentMinDTO[]>(getStudents, 0);
@@ -1119,13 +1124,26 @@ function DetalheTurma({
           .filter((s) => s.matriculaStatus === "ATIVA" && !idsNaTurma.has(s.userId))
           .sort((a, b) => a.studentName.localeCompare(b.studentName, "pt-BR"))
       : [];
+  // Turmas de onde vêm os alunos disponíveis, para filtrar (ex.: trazer todo o 6º ano para o 7º).
+  const turmasDeOrigem = [
+    ...new Map(
+      disponiveis
+        .filter((s) => s.turmaId !== null)
+        .map((s) => [String(s.turmaId), s.turmaName ?? ""] as const),
+    ),
+  ].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
   const termoAlunos = normalizar(filtroAlunos.trim());
   const disponiveisFiltrados = disponiveis.filter(
     (s) =>
-      !termoAlunos ||
-      normalizar(s.studentName).includes(termoAlunos) ||
-      String(s.matricula).includes(termoAlunos),
+      (origem === ORIGEM_TODAS ||
+        (origem === ORIGEM_SEM_TURMA ? s.turmaId === null : String(s.turmaId) === origem)) &&
+      (!termoAlunos ||
+        normalizar(s.studentName).includes(termoAlunos) ||
+        String(s.matricula).includes(termoAlunos)),
   );
+  const transferidos = disponiveis.filter(
+    (s) => selecionados.has(s.userId) && s.turmaId !== null,
+  ).length;
   const todosFiltradosMarcados =
     disponiveisFiltrados.length > 0 &&
     disponiveisFiltrados.every((s) => selecionados.has(s.userId));
@@ -1192,7 +1210,10 @@ function DetalheTurma({
         }
       }
       if (adicionados > 0) {
-        toast.success(`${adicionados} aluno(s) adicionado(s) à turma ${turma.name}.`);
+        toast.success(
+          `${adicionados} aluno(s) adicionado(s) à turma ${turma.name}` +
+            (transferidos > 0 ? `, ${transferidos} vindo(s) de outra turma.` : "."),
+        );
       }
       if (primeiroErro) toast.error(`Alguns alunos não foram adicionados: ${primeiroErro}`);
       setSelecionados(new Set());
@@ -1280,6 +1301,20 @@ function DetalheTurma({
                       </p>
                     ) : (
                       <>
+                        <Select value={origem} onValueChange={setOrigem}>
+                          <SelectTrigger className="h-12 text-lg" aria-label="Turma de origem">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={ORIGEM_TODAS}>Todos os alunos</SelectItem>
+                            <SelectItem value={ORIGEM_SEM_TURMA}>Sem turma</SelectItem>
+                            {turmasDeOrigem.map(([id, nome]) => (
+                              <SelectItem key={id} value={id}>
+                                Alunos do {nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <div className="relative">
                           <Search
                             className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
@@ -1317,7 +1352,8 @@ function DetalheTurma({
                                     {s.studentName}
                                   </span>
                                   <span className="block text-sm text-muted-foreground">
-                                    Matrícula {s.matricula}
+                                    Matrícula {s.matricula} ·{" "}
+                                    {s.turmaName ? `No ${s.turmaName}` : "Sem turma"}
                                   </span>
                                 </span>
                               </label>
@@ -1330,6 +1366,13 @@ function DetalheTurma({
                           )}
                         </ul>
                       </>
+                    )}
+                    {transferidos > 0 && (
+                      <p className="text-base text-muted-foreground">
+                        {transferidos === 1
+                          ? "1 aluno selecionado já está em outra turma e será transferido para esta."
+                          : `${transferidos} alunos selecionados já estão em outra turma e serão transferidos para esta.`}
+                      </p>
                     )}
                     <Button
                       type="submit"
