@@ -10,7 +10,9 @@ spring:
 
 security:
   jwt:
-    secret: my-secret
+    # Obrigatória fora do ambiente local: um valor aleatório com pelo menos 32 caracteres
+    # (ex.: openssl rand -base64 48). Sem ela a aplicação não sobe.
+    secret: ${JWT_SECRET}
     expiration: 3600000
 
 # Origens que podem chamar a API pelo navegador. Inclui a rede local (192.168.x.x) para testes
@@ -60,16 +62,17 @@ app:
   senha:
     logar-link: true
 
+# Chave só para rodar localmente; em produção (perfil supabase) use a variável JWT_SECRET.
+security:
+  jwt:
+    secret: ${JWT_SECRET:notus-chave-local-de-desenvolvimento-nao-usar-em-producao}
+
 ---
 
 spring:
   config:
     activate:
       on-profile: dev
-
-app:
-  senha:
-    logar-link: true
 
   datasource:
     url: jdbc:postgresql://localhost:5433/notusdb
@@ -79,6 +82,14 @@ app:
   jpa:
     hibernate:
       ddl-auto: update
+
+app:
+  senha:
+    logar-link: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:notus-chave-local-de-desenvolvimento-nao-usar-em-producao}
 
 ---
 

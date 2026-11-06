@@ -355,12 +355,12 @@ INSERT INTO tb_atividade (title, content, bimestre, prazo, publicada_em, pontos,
 INSERT INTO tb_entrega (status, pontos_obtidos, atividade_id, student_id) VALUES ('ENTREGUE', 1.0, 1, 2026000001);
 INSERT INTO tb_entrega (status, pontos_obtidos, atividade_id, student_id) VALUES ('ATRASADA', 0.5, 1, 2026000007);
 
-INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id) VALUES ('Prova 1', 8.5, 'PRIMEIRO', 2026000001, 1);
-INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id) VALUES ('Trabalho em grupo', 9.0, 'PRIMEIRO', 2026000001, 1);
-INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id) VALUES ('Prova 1', 7.0, 'PRIMEIRO', 2026000001, 2);
-INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id) VALUES ('Prova 2', 6.5, 'SEGUNDO', 2026000001, 1);
+INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id, ano_letivo) VALUES ('Prova 1', 8.5, 'PRIMEIRO', 2026000001, 1, '2026');
+INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id, ano_letivo) VALUES ('Trabalho em grupo', 9.0, 'PRIMEIRO', 2026000001, 1, '2026');
+INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id, ano_letivo) VALUES ('Prova 1', 7.0, 'PRIMEIRO', 2026000001, 2, '2026');
+INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id, ano_letivo) VALUES ('Prova 2', 6.5, 'SEGUNDO', 2026000001, 1, '2026');
 
-INSERT INTO tb_boletim (bimestre, nota_final, lancado_em, student_id, disciplina_id, lancado_por_id) VALUES ('PRIMEIRO', 9.0, '2026-04-30T18:00:00', 2026000001, 1, 2026000002);
+INSERT INTO tb_boletim (bimestre, nota_final, lancado_em, student_id, disciplina_id, lancado_por_id, ano_letivo) VALUES ('PRIMEIRO', 9.0, '2026-04-30T18:00:00', 2026000001, 1, 2026000002, '2026');
 
 INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-02', 1, 1);
 INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-09', 1, 1);

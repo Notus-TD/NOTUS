@@ -1,5 +1,6 @@
 package com.pfc.notus.nota.service;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -46,7 +47,8 @@ public class NotaService {
     @Transactional(readOnly = true)
     public List<NotaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
-        return notaRepository.findByStudentIdOrderByIdAsc(studentId).stream()
+        Student aluno = buscarAluno(studentId);
+        return notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(studentId, AnoLetivo.doAluno(aluno)).stream()
                 .map(NotaMapper::toDto)
                 .toList();
     }

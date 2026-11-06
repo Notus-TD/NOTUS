@@ -4,7 +4,9 @@ import com.pfc.notus.disciplina.domain.AulaRegistro;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.RegraNegocioException;
+import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.turma.repository.TurmaRepository;
@@ -14,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -22,6 +25,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -95,5 +99,35 @@ class DisciplinaServiceUnitTest {
         assertThatThrownBy(() -> disciplinaService.registrarAula(1L, 7L, DIA))
                 .isInstanceOf(RegraNegocioException.class);
         verify(aulaRegistroRepository, never()).save(any());
+    }
+
+    @Test
+    void excluir_deveRecusarDisciplinaComProfessoresVinculados() {
+        when(disciplinaRepository.existsById(1L)).thenReturn(true);
+        when(lecionamentoRepository.existsByDisciplinaId(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> disciplinaService.delete(1L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("professores vinculados");
+        verify(disciplinaRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void excluir_deveVirarConflitoQuandoHaNotasOuFaltas() {
+        when(disciplinaRepository.existsById(1L)).thenReturn(true);
+        when(lecionamentoRepository.existsByDisciplinaId(1L)).thenReturn(false);
+        doThrow(new DataIntegrityViolationException("fk")).when(disciplinaRepository).flush();
+
+        assertThatThrownBy(() -> disciplinaService.delete(1L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("não pode ser excluída");
+    }
+
+    @Test
+    void excluir_disciplinaInexistenteDeveSer404() {
+        when(disciplinaRepository.existsById(9L)).thenReturn(false);
+
+        assertThatThrownBy(() -> disciplinaService.delete(9L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

@@ -676,9 +676,8 @@ function Professores() {
                               >
                                 {l.disciplinaTitle} no {l.turmaName}
                                 <ConfirmarAcao
-                                  titulo={`Remover ${l.disciplinaTitle} do ${l.turmaName}?`}
-                                  descricao={`${p.fullName} deixa de lecionar essa disciplina nessa turma. As notas e faltas já lançadas continuam no sistema.`}
-                                  textoConfirmar="Remover vínculo"
+                                  titulo="Tem certeza que deseja desvincular esse professor?"
+                                  textoConfirmar="Desvincular"
                                   onConfirmar={() => void remover(l)}
                                 >
                                   <button

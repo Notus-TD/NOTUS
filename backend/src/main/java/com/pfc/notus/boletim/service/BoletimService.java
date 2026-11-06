@@ -1,5 +1,6 @@
 package com.pfc.notus.boletim.service;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
@@ -105,10 +106,12 @@ public class BoletimService {
                         e -> (float) e.getValue().stream().mapToDouble(Float::doubleValue).average().orElseThrow()));
     }
 
+    /** Boletim do ano letivo atual do aluno (o da turma dele): notas de anos anteriores não entram. */
     private List<BoletimDisciplinaDTO> montarBoletim(Long studentId) {
-        List<Nota> notas = notaRepository.findByStudentIdOrderByIdAsc(studentId);
-        List<Boletim> boletins = boletimRepository.findByStudentId(studentId);
-        List<Entrega> pontuadas = entregasPontuadas(studentId);
+        String ano = anoLetivoDoAluno(studentId);
+        List<Nota> notas = notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(studentId, ano);
+        List<Boletim> boletins = boletimRepository.findByStudentIdAndAnoLetivo(studentId, ano);
+        List<Entrega> pontuadas = entregasPontuadas(studentId, ano);
 
         Map<Long, Disciplina> disciplinas = new HashMap<>();
         notas.forEach(n -> disciplinas.putIfAbsent(n.getDisciplina().getId(), n.getDisciplina()));
@@ -146,7 +149,8 @@ public class BoletimService {
         User lancadoPor = userRepository.findByEmail(requesterEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + requesterEmail));
 
-        Boletim entity = boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(student.getId(), disciplina.getId(), dto.bimestre())
+        Boletim entity = boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                        student.getId(), disciplina.getId(), dto.bimestre(), AnoLetivo.doAluno(student))
                 .orElseGet(() -> new Boletim(student, disciplina, dto.bimestre()));
         Float notaAnterior = entity.getNotaFinal();
         boolean mudou = notaAnterior == null || !notaAnterior.equals(dto.notaFinal());
@@ -174,7 +178,8 @@ public class BoletimService {
     }
 
     private Float mediaCalculada(Long studentId, Long disciplinaId, Bimestre bimestre) {
-        OptionalDouble media = notaRepository.findByStudentIdAndDisciplinaIdAndBimestre(studentId, disciplinaId, bimestre).stream()
+        OptionalDouble media = notaRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                        studentId, disciplinaId, bimestre, anoLetivoDoAluno(studentId)).stream()
                 .mapToDouble(Nota::getRate)
                 .average();
         return media.isPresent() ? (float) media.getAsDouble() : null;
@@ -182,16 +187,24 @@ public class BoletimService {
 
     private Float pontosAtividades(Long studentId, Long disciplinaId, Bimestre bimestre) {
         Celula celula = new Celula(disciplinaId, bimestre);
-        List<Entrega> daCelula = entregasPontuadas(studentId).stream()
+        List<Entrega> daCelula = entregasPontuadas(studentId, anoLetivoDoAluno(studentId)).stream()
                 .filter(e -> celulaDaEntrega(e).equals(celula))
                 .toList();
         return daCelula.isEmpty() ? null : (float) daCelula.stream().mapToDouble(Entrega::getPontosObtidos).sum();
     }
 
-    private List<Entrega> entregasPontuadas(Long studentId) {
+    /** Pontos de atividades das turmas do mesmo ano letivo (as de um ano anterior não somam). */
+    private List<Entrega> entregasPontuadas(Long studentId, String ano) {
         return entregaRepository.findByStudentId(studentId).stream()
                 .filter(e -> e.getPontosObtidos() != null)
+                .filter(e -> ano.equals(e.getAtividade().getTurma().getSchoolYear().trim()))
                 .toList();
+    }
+
+    private String anoLetivoDoAluno(Long studentId) {
+        Student aluno = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        return AnoLetivo.doAluno(aluno);
     }
 
     private static Celula celulaDaEntrega(Entrega entrega) {

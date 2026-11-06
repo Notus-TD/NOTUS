@@ -8,6 +8,9 @@ import com.pfc.notus.notificacao.service.TemplateRegistry;
 import com.pfc.notus.notificacao.util.EmailUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -15,8 +18,12 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,9 +33,14 @@ public class ResendEmailClient implements NotificadorPort {
 
     private static final Logger log = LoggerFactory.getLogger(ResendEmailClient.class);
 
+    private static final String LOGO = "email/notus-marca.png";
+
     private final ResendProperties properties;
     private final TemplateRegistry templateRegistry;
     private final RestClient restClient;
+    private final String urlPortal;
+    /** Logo em Base64, anexada a cada e-mail e mostrada no topo do HTML (nula se o arquivo faltar). */
+    private final String logoBase64;
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record RespostaEnvio(String id) {
@@ -38,9 +50,13 @@ public class ResendEmailClient implements NotificadorPort {
     record RespostaErro(String name, String message) {
     }
 
-    public ResendEmailClient(ResendProperties properties, TemplateRegistry templateRegistry) {
+    @Autowired
+    public ResendEmailClient(ResendProperties properties, TemplateRegistry templateRegistry,
+                             @Value("${app.frontend-url}") String frontendUrl) {
         this.properties = properties;
         this.templateRegistry = templateRegistry;
+        this.urlPortal = frontendUrl.replaceAll("/+$", "") + "/login";
+        this.logoBase64 = carregarLogo();
 
         HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
@@ -61,16 +77,31 @@ public class ResendEmailClient implements NotificadorPort {
         }
     }
 
+    ResendEmailClient(ResendProperties properties, TemplateRegistry templateRegistry) {
+        this(properties, templateRegistry, "http://localhost:5173");
+    }
+
+    private static String carregarLogo() {
+        try (InputStream in = new ClassPathResource(LOGO).getInputStream()) {
+            return Base64.getEncoder().encodeToString(in.readAllBytes());
+        } catch (IOException e) {
+            log.warn("Logo dos e-mails não encontrada ({}): os e-mails vão sem a imagem.", LOGO);
+            return null;
+        }
+    }
+
+    /** Avisos aos responsáveis: o botão do e-mail abre o portal. */
     @Override
     public ResultadoEnvio enviar(String email, String template, List<String> variaveis) {
         if (email == null || email.isBlank()) {
             return ResultadoEnvio.definitivo("Responsável sem e-mail cadastrado");
         }
-        return enviarTexto(email, templateRegistry.assunto(template), templateRegistry.renderizar(template, variaveis));
+        return enviarTexto(email, templateRegistry.assunto(template), templateRegistry.renderizar(template, variaveis),
+                new EmailHtml.Botao("Abrir o portal", urlPortal));
     }
 
     /** Envio de texto livre, usado pelos e-mails transacionais (links de senha). Nunca lança exceção. */
-    public ResultadoEnvio enviarTexto(String email, String assunto, String texto) {
+    public ResultadoEnvio enviarTexto(String email, String assunto, String texto, EmailHtml.Botao botao) {
         if (!properties.credenciaisConfiguradas()) {
             return ResultadoEnvio.definitivo("Resend sem API key configurada (RESEND_API_KEY)");
         }
@@ -78,7 +109,7 @@ public class ResendEmailClient implements NotificadorPort {
             return ResultadoEnvio.definitivo("Destinatário sem e-mail");
         }
 
-        Map<String, Object> corpo = montarCorpo(email, assunto, texto);
+        Map<String, Object> corpo = montarCorpo(email, assunto, texto, botao);
 
         try {
             RespostaEnvio resposta = restClient.post()
@@ -102,20 +133,31 @@ public class ResendEmailClient implements NotificadorPort {
         }
     }
 
-    /** Corpo do POST /emails; com o redirecionamento ativo, troca o destinatário e mostra o original. */
-    Map<String, Object> montarCorpo(String email, String assunto, String texto) {
+    /**
+     * Corpo do POST /emails, com a versão em texto e a versão em HTML (logo anexada como imagem
+     * embutida). Com o redirecionamento ativo, troca o destinatário e mostra o original.
+     */
+    Map<String, Object> montarCorpo(String email, String assunto, String texto, EmailHtml.Botao botao) {
         String destino = email;
         if (properties.redirecionamentoAtivo()) {
             destino = properties.redirecionarPara().trim();
             assunto = "[para " + email + "] " + assunto;
             texto = "(E-mail de teste: no sistema, o destinatário é " + email + ".)\n\n" + texto;
         }
-        return Map.of(
-                "from", properties.remetente(),
-                "to", List.of(destino),
-                "subject", assunto,
-                "text", texto
-        );
+        Map<String, Object> corpo = new HashMap<>();
+        corpo.put("from", properties.remetente());
+        corpo.put("to", List.of(destino));
+        corpo.put("subject", assunto);
+        corpo.put("text", texto);
+        corpo.put("html", EmailHtml.montar(texto, botao, logoBase64 != null));
+        if (logoBase64 != null) {
+            corpo.put("attachments", List.of(Map.of(
+                    "filename", "notus.png",
+                    "content", logoBase64,
+                    "content_type", "image/png",
+                    "content_id", EmailHtml.CID_LOGO)));
+        }
+        return corpo;
     }
 
     /** 429 (limite de envio) e 5xx: tenta de novo no próximo ciclo. O resto (401, 403, 422...) é definitivo. */

@@ -21,6 +21,7 @@ import { RodapeSite } from "@/components/LegalPage";
 import { ApiError, login } from "@/lib/api";
 import { getSession, homeForRoles } from "@/lib/auth";
 import { emailValido } from "@/lib/validacao";
+import { MarcaNotus } from "@/components/AppShell";
 
 const CHAVE_EMAIL_LEMBRADO = "notus.ultimoEmail";
 
@@ -160,21 +161,21 @@ function LoginPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <span className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
-              N
-            </span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              NOTUS
-            </span>
-          </span>
+          <MarcaNotus />
           <span className="hidden text-base text-muted-foreground sm:block">
             Colégio Notus · 2026
           </span>
         </div>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4 py-12">
+      <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
+        <img
+          src="/notus-logo.png"
+          alt="NOTUS"
+          width={480}
+          height={442}
+          className="mb-8 h-auto w-40 sm:w-48"
+        />
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
           {modo === "recuperar" ? (
             <EsqueciSenhaForm emailInicial={email.trim()} aoVoltar={() => setModo("entrar")} />

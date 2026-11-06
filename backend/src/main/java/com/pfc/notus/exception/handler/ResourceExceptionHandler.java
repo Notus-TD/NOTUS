@@ -7,6 +7,7 @@ import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.exception.dto.StandardError;
 import com.pfc.notus.exception.dto.ValidationError;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -22,6 +23,16 @@ public class ResourceExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<StandardError> handleConflict(ConflictException e, HttpServletRequest request) {
         return buildStandardResponse(HttpStatus.CONFLICT, e, request);
+    }
+
+    /**
+     * Rede de segurança: uma operação que esbarra numa regra do banco (ex.: excluir algo que ainda
+     * tem registros ligados) vira 409 com uma mensagem clara, em vez de erro interno (500).
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<StandardError> handleIntegridade(DataIntegrityViolationException e, HttpServletRequest request) {
+        return buildStandardResponse(HttpStatus.CONFLICT,
+                new ConflictException("Não foi possível concluir: existem registros ligados a este item."), request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

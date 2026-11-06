@@ -15,6 +15,7 @@ import {
   type TipoTokenSenha,
 } from "@/lib/api";
 import { clearSession } from "@/lib/auth";
+import { MarcaNotus } from "@/components/AppShell";
 
 export const Route = createFileRoute("/redefinir-senha")({
   validateSearch: (search: Record<string, unknown>): { token?: string } =>
@@ -65,14 +66,7 @@ function RedefinirSenhaPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center px-4 py-4 sm:px-6">
-          <span className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
-              N
-            </span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              NOTUS
-            </span>
-          </span>
+          <MarcaNotus />
         </div>
       </header>
 

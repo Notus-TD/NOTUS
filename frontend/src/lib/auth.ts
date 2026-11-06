@@ -11,7 +11,11 @@ export type Session = {
 
 const STORAGE_KEY = "notus.session";
 
-function decodeClaims(token: string): { roles: Role[]; userId: number | null; firstLogin: boolean } {
+function decodeClaims(token: string): {
+  roles: Role[];
+  userId: number | null;
+  firstLogin: boolean;
+} {
   try {
     const payload = token.split(".")[1] ?? "";
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));

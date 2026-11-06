@@ -9,6 +9,7 @@ import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.dto.NotaRequestDTO;
 import com.pfc.notus.nota.repository.NotaRepository;
+import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
@@ -213,7 +214,11 @@ class NotaServiceUnitTest {
     void deveListarAsNotasDoAlunoDepoisDeValidarOAcesso() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
-        when(notaRepository.findByStudentIdOrderByIdAsc(10L))
+        Turma turma = new Turma("9º Ano A", "2026");
+        aluno.setTurma(turma);
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        // Só as notas do ano letivo da turma atual do aluno.
+        when(notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(10L, "2026"))
                 .thenReturn(List.of(criarNota(100L, aluno, matematica), criarNota(101L, aluno, matematica)));
 
         List<NotaDTO> resultado = notaService.getByStudent(10L, PROFESSOR);
