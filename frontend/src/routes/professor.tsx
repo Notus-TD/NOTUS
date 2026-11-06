@@ -1010,10 +1010,6 @@ function Atividades({
                 </label>
                 <Input
                   id="pontos"
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.1}
                   inputMode="decimal"
                   value={pontos}
                   onChange={(e) => setPontos(e.target.value)}
@@ -1282,10 +1278,6 @@ function EntregasDaAtividade({
                     </div>
                     {pontos !== null && (
                       <Input
-                        type="number"
-                        min={0}
-                        max={pontos}
-                        step={0.1}
                         inputMode="decimal"
                         aria-label={`Pontos de ${a.studentName}`}
                         title={
