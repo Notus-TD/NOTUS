@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   Home,
+  Mail,
   Pencil,
   Trash2,
   Users,
@@ -49,6 +50,7 @@ import {
   marcarEntrega,
   publicarAtividade,
   atualizarAtividade,
+  publicarRecado,
   registrarAula,
   type AtividadeDTO,
   type Bimestre,
@@ -82,7 +84,7 @@ export const Route = createFileRoute("/professor")({
   component: PainelProfessor,
 });
 
-type SecaoId = "inicio" | "chamada" | "notas" | "atividades";
+type SecaoId = "inicio" | "chamada" | "notas" | "atividades" | "comunicados";
 
 const secoes: SecaoPainel<SecaoId>[] = [
   {
@@ -105,9 +107,91 @@ const secoes: SecaoPainel<SecaoId>[] = [
     label: "Atividades",
     icon: ClipboardList,
   },
+  {
+    id: "comunicados",
+    label: "Comunicados",
+    icon: Mail,
+  },
 ];
 
 type DisciplinaRef = { id: number; title: string };
+
+function Comunicados({
+  turmaId,
+  turmaName,
+}: {
+  turmaId: number;
+  turmaName: string;
+}) {
+  const [titulo, setTitulo] = useState("");
+  const [corpo, setCorpo] = useState("");
+  const [publicando, setPublicando] = useState(false);
+
+  async function publicar() {
+    if (!titulo.trim() || !corpo.trim()) {
+      toast.error("Preencha o título e o texto do comunicado.");
+      return;
+    }
+    setPublicando(true);
+    try {
+      await publicarRecado({
+        titulo: titulo.trim(),
+        texto: corpo.trim(),
+        turmaId,
+      });
+      setTitulo("");
+      setCorpo("");
+      toast.success(`Comunicado publicado para o ${turmaName}.`);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao publicar o comunicado.");
+    } finally {
+      setPublicando(false);
+    }
+  }
+
+  return (
+    <Secao titulo="Comunicados" etiqueta={<span className="text-base text-muted-foreground">{turmaName}</span>}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Novo comunicado</CardTitle>
+          <CardDescription className="text-base">
+            Publique uma mensagem para os alunos do {turmaName}. Seus responsáveis também receberão uma notificação.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="comunicado-titulo" className="block text-lg font-semibold text-foreground">
+              Título
+            </label>
+            <Input
+              id="comunicado-titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ex.: Aviso sobre as aulas"
+              className="h-12 text-lg"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="comunicado-corpo" className="block text-lg font-semibold text-foreground">
+              Texto
+            </label>
+            <Textarea
+              id="comunicado-corpo"
+              rows={5}
+              value={corpo}
+              onChange={(e) => setCorpo(e.target.value)}
+              placeholder="Digite a mensagem que deseja enviar..."
+              className="text-lg"
+            />
+          </div>
+          <Button onClick={publicar} disabled={publicando} className="min-h-12 px-6 text-lg">
+            {publicando ? "Publicando..." : "Publicar comunicado"}
+          </Button>
+        </CardContent>
+      </Card>
+    </Secao>
+  );
+}
 
 function EtiquetaTurma({ turma, disciplina }: { turma: string; disciplina: string }) {
   return (
@@ -273,6 +357,13 @@ function PainelProfessor() {
             turmaId={turmaAtual.turmaId}
             turmaName={turmaAtual.turmaName}
             disciplina={disciplina}
+          />
+        )}
+        {turmaAtual && secao === "comunicados" && (
+          <Comunicados
+            key={`${turmaAtual.turmaId}`}
+            turmaId={turmaAtual.turmaId}
+            turmaName={turmaAtual.turmaName}
           />
         )}
       </PainelLateral>

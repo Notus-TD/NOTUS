@@ -180,3 +180,29 @@
     font-family: var(--font-display);
   }
 }
+
+/* Scrollbar customizada para a sidebar do painel lateral */
+.painel-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+
+.painel-scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.painel-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.painel-scrollable::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.painel-scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--sidebar-primary);
+  background-clip: padding-box;
+}

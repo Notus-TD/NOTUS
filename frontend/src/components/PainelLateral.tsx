@@ -35,7 +35,7 @@ export function PainelLateral<Id extends string>({
         <div className="hidden h-18 shrink-0 items-center border-b border-border px-6 lg:flex">
           <MarcaNotus />
         </div>
-        <div className="space-y-3 p-4 lg:flex-1 lg:overflow-y-auto">
+        <div className="painel-scrollable space-y-3 p-4 lg:flex-1 lg:overflow-y-auto">
           {topo}
 
           <nav aria-label="Seções do painel" className="space-y-1">

@@ -2,6 +2,7 @@ package com.pfc.notus.comunicado.controller;
 
 import com.pfc.notus.comunicado.dto.ComunicadoDTO;
 import com.pfc.notus.comunicado.dto.ComunicadoRequest;
+import com.pfc.notus.comunicado.dto.RecadoProfessorRequest;
 import com.pfc.notus.comunicado.service.ComunicadoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,13 @@ public class ComunicadoController {
     @PostMapping
     public ResponseEntity<ComunicadoDTO> publicar(@Valid @RequestBody ComunicadoRequest request, Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED).body(comunicadoService.publicar(request, authentication.getName()));
+    }
+
+    /** Recado do professor para uma turma específica */
+    @PreAuthorize("hasRole('PROFESSOR')")
+    @PostMapping("/recado")
+    public ResponseEntity<ComunicadoDTO> publicarRecado(@Valid @RequestBody RecadoProfessorRequest request, Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(comunicadoService.publicarRecado(request, authentication.getName()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
