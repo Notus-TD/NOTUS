@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/blocos";
 import { Input } from "@/components/ui/input";
 import { ApiError, cadastrarAlunos, type StudentRegistrationResponse } from "@/lib/api";
-import { emailValido, formatarTelefone, idadeEm, somenteDigitos, telefoneValido } from "@/lib/validacao";
-
+import {
+  emailValido,
+  formatarTelefone,
+  idadeEm,
+  somenteDigitos,
+  telefoneValido,
+} from "@/lib/validacao";
 
 const responsavelInicial = {
   nome: "",
@@ -129,7 +134,9 @@ function rotuloDoCampo(fieldName: string): string {
 
 const idCampoAluno = (indice: number, campo: CampoAluno) => `aluno-${indice}-${campo}`;
 
-export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegistrationResponse[]) => void } = {}) {
+export function CadastroAlunoForm({
+  onSucesso,
+}: { onSucesso?: (r: StudentRegistrationResponse[]) => void } = {}) {
   const [responsavel, setResponsavel] = useState<Responsavel>(responsavelInicial);
   const [alunos, setAlunos] = useState<Aluno[]>(() => [novoAluno()]);
   const [enviando, setEnviando] = useState(false);
@@ -170,7 +177,10 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
     },
     onBlur: () => {
       setTocados((t) => ({ ...t, [`responsavel.${chave}`]: true }));
-      setErrosResponsavel((atual) => ({ ...atual, [chave]: validarResponsavel(chave, responsavel[chave]) }));
+      setErrosResponsavel((atual) => ({
+        ...atual,
+        [chave]: validarResponsavel(chave, responsavel[chave]),
+      }));
     },
     erro: errosResponsavel[chave],
   });
@@ -182,7 +192,12 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
         ...atual,
         [a.chave]: {
           ...atual[a.chave],
-          [chave]: validarAluno(chave, a, responsavel, alunos.map((x) => (x.chave === a.chave ? a : x))),
+          [chave]: validarAluno(
+            chave,
+            a,
+            responsavel,
+            alunos.map((x) => (x.chave === a.chave ? a : x)),
+          ),
         },
       }));
     return {
@@ -215,7 +230,9 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
     setResultado(null);
 
     const errosResp = validarTudoResponsavel(responsavel);
-    const errosPorAluno = Object.fromEntries(alunos.map((a) => [a.chave, validarTudoAluno(a, responsavel, alunos)]));
+    const errosPorAluno = Object.fromEntries(
+      alunos.map((a) => [a.chave, validarTudoAluno(a, responsavel, alunos)]),
+    );
     setErrosResponsavel(errosResp);
     setErrosAlunos(errosPorAluno);
     setTocados({
@@ -226,7 +243,9 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
     });
 
     const primeiroResp = Object.keys(errosResp)[0];
-    const indiceAlunoComErro = alunos.findIndex((a) => Object.keys(errosPorAluno[a.chave] ?? {}).length > 0);
+    const indiceAlunoComErro = alunos.findIndex(
+      (a) => Object.keys(errosPorAluno[a.chave] ?? {}).length > 0,
+    );
     if (primeiroResp || indiceAlunoComErro >= 0) {
       toast.error("Corrija os campos destacados antes de enviar.");
       const id = primeiroResp
@@ -281,12 +300,31 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Responsável</CardTitle>
-            <CardDescription className="text-base">Quem responde pelo aluno na escola.</CardDescription>
+            <CardDescription className="text-base">
+              Quem responde pelo aluno na escola.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <Campo id="responsavel-nome" rotulo="Nome completo" autoComplete="off" {...propsResponsavel("nome")} />
-            <Campo id="responsavel-email" rotulo="E-mail" type="email" autoComplete="off" {...propsResponsavel("email")} />
-            <Campo id="responsavel-telefone" rotulo="Telefone" inputMode="tel" placeholder="(11) 99999-0000" {...propsResponsavel("telefone")} />
+            <Campo
+              id="responsavel-nome"
+              rotulo="Nome completo"
+              autoComplete="off"
+              {...propsResponsavel("nome")}
+            />
+            <Campo
+              id="responsavel-email"
+              rotulo="E-mail"
+              type="email"
+              autoComplete="off"
+              {...propsResponsavel("email")}
+            />
+            <Campo
+              id="responsavel-telefone"
+              rotulo="Telefone"
+              inputMode="tel"
+              placeholder="(11) 99999-0000"
+              {...propsResponsavel("telefone")}
+            />
           </CardContent>
         </Card>
 
@@ -294,9 +332,12 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
           <Card key={aluno.chave}>
             <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
               <div className="space-y-1.5">
-                <CardTitle className="text-xl">{alunos.length > 1 ? `Aluno ${indice + 1}` : "Aluno"}</CardTitle>
+                <CardTitle className="text-xl">
+                  {alunos.length > 1 ? `Aluno ${indice + 1}` : "Aluno"}
+                </CardTitle>
                 <CardDescription className="text-base">
-                  O aluno usa o telefone do responsável. Se o e-mail do responsável já estiver cadastrado, o aluno é vinculado a ele.
+                  O aluno usa o telefone do responsável. Se o e-mail do responsável já estiver
+                  cadastrado, o aluno é vinculado a ele.
                 </CardDescription>
               </div>
               {alunos.length > 1 && (
@@ -313,10 +354,33 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
               )}
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <Campo id={idCampoAluno(indice, "nome")} rotulo="Nome completo" autoComplete="off" {...propsAluno(aluno, "nome")} />
-              <Campo id={idCampoAluno(indice, "email")} rotulo="E-mail escolar" type="email" autoComplete="off" {...propsAluno(aluno, "email")} />
-              <Campo id={idCampoAluno(indice, "matricula")} rotulo="Matrícula" inputMode="numeric" placeholder="20260001" {...propsAluno(aluno, "matricula")} />
-              <Campo id={idCampoAluno(indice, "nascimento")} rotulo="Data de nascimento" type="date" max={new Date().toISOString().slice(0, 10)} {...propsAluno(aluno, "nascimento")} />
+              <Campo
+                id={idCampoAluno(indice, "nome")}
+                rotulo="Nome completo"
+                autoComplete="off"
+                {...propsAluno(aluno, "nome")}
+              />
+              <Campo
+                id={idCampoAluno(indice, "email")}
+                rotulo="E-mail escolar"
+                type="email"
+                autoComplete="off"
+                {...propsAluno(aluno, "email")}
+              />
+              <Campo
+                id={idCampoAluno(indice, "matricula")}
+                rotulo="Matrícula"
+                inputMode="numeric"
+                placeholder="20260001"
+                {...propsAluno(aluno, "matricula")}
+              />
+              <Campo
+                id={idCampoAluno(indice, "nascimento")}
+                rotulo="Data de nascimento"
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                {...propsAluno(aluno, "nascimento")}
+              />
             </CardContent>
           </Card>
         ))}
@@ -357,12 +421,16 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
         )}
 
         <Button type="submit" disabled={enviando} className="min-h-12 px-6 text-lg">
-          {enviando ? "Cadastrando..." : alunos.length > 1 ? `Cadastrar ${alunos.length} alunos` : "Cadastrar aluno"}
+          {enviando
+            ? "Cadastrando..."
+            : alunos.length > 1
+              ? `Cadastrar ${alunos.length} alunos`
+              : "Cadastrar aluno"}
         </Button>
       </form>
 
       {resultado && (
-        <Card className="border-primary">
+        <Card>
           <CardHeader>
             <CardTitle className="text-xl">Cadastro concluído</CardTitle>
             <CardDescription className="text-base">Dados confirmados.</CardDescription>
@@ -375,9 +443,6 @@ export function CadastroAlunoForm({ onSucesso }: { onSucesso?: (r: StudentRegist
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-base text-muted-foreground">
-              Quem foi cadastrado agora recebe por e-mail um link para criar a senha. Se o e-mail não chegar, a pessoa pode usar "Esqueci minha senha" no login.
-            </p>
           </CardContent>
         </Card>
       )}

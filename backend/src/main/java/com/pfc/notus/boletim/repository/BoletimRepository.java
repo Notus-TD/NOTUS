@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface BoletimRepository extends JpaRepository<Boletim, Long> {
 
-    List<Boletim> findByStudentId(Long studentId);
+    List<Boletim> findByStudentIdAndAnoLetivo(Long studentId, String anoLetivo);
 
-    Optional<Boletim> findByStudentIdAndDisciplinaIdAndBimestre(Long studentId, Long disciplinaId, Bimestre bimestre);
+    Optional<Boletim> findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(Long studentId, Long disciplinaId, Bimestre bimestre, String anoLetivo);
 }

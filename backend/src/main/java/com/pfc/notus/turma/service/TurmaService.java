@@ -14,6 +14,7 @@ import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.dto.StudentMinDTO;
 import com.pfc.notus.user.repository.StudentRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,7 +95,12 @@ public class TurmaService {
             throw new ConflictException("A turma possui professores associados. Remova os vínculos antes de excluí-la.");
         }
 
-        turmaRepository.delete(turma);
+        try {
+            turmaRepository.delete(turma);
+            turmaRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflictException("A turma tem aulas ou atividades registradas e não pode ser excluída.");
+        }
     }
 
     @Transactional

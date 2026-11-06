@@ -2,6 +2,7 @@ package com.pfc.notus.config;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
@@ -13,6 +14,8 @@ import java.util.Date;
 @Service
 public class JwtTokenProvider {
 
+    private static final int TAMANHO_MINIMO_SEGREDO = 32;
+
     @Value("${security.jwt.secret}")
     private String secret;
 
@@ -21,8 +24,20 @@ public class JwtTokenProvider {
 
     private Algorithm algorithm;
 
-    public String createToken(Long id, String username, Collection<? extends GrantedAuthority> roles, boolean fistLogin) {
+    /**
+     * Prepara a assinatura na subida da aplicação. Recusa chave vazia ou curta: com uma chave
+     * fraca ou pública, qualquer um conseguiria gerar um token válido (inclusive de admin).
+     */
+    @PostConstruct
+    void iniciar() {
+        if (secret == null || secret.isBlank() || secret.length() < TAMANHO_MINIMO_SEGREDO) {
+            throw new IllegalStateException("Defina a variável JWT_SECRET com pelo menos "
+                    + TAMANHO_MINIMO_SEGREDO + " caracteres aleatórios.");
+        }
         algorithm = Algorithm.HMAC256(secret);
+    }
+
+    public String createToken(Long id, String username, Collection<? extends GrantedAuthority> roles, boolean fistLogin) {
         Date expiry = new Date(System.currentTimeMillis() + expiration);
 
         return JWT.create()

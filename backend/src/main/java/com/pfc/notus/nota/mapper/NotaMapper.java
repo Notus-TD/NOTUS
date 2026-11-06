@@ -1,5 +1,6 @@
 package com.pfc.notus.nota.mapper;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
@@ -12,6 +13,7 @@ public class NotaMapper {
         Nota nota = new Nota(dto.descricao().trim(), dto.rate(), dto.bimestre());
         nota.setStudent(student);
         nota.setDisciplina(disciplina);
+        nota.setAnoLetivo(AnoLetivo.doAluno(student));
         return nota;
     }
 

@@ -9,6 +9,7 @@ import { TermsReaderDialog } from "@/components/TermsReaderDialog";
 import { ApiError, completeOnboarding } from "@/lib/api";
 import { clearSession, getSession, homeForRoles, markOnboardingComplete } from "@/lib/auth";
 import { RodapeSite } from "@/components/LegalPage";
+import { MarcaNotus } from "@/components/AppShell";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -85,14 +86,7 @@ function OnboardingPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <span className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
-              N
-            </span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              NOTUS
-            </span>
-          </span>
+          <MarcaNotus />
           <Button variant="outline" className="min-h-11 text-base" onClick={sair}>
             <LogOut className="size-5" aria-hidden="true" />
             Sair
@@ -163,18 +157,14 @@ function OnboardingPage() {
               <ul className="mt-2 space-y-1 text-sm">
                 <li>
                   <TermsReaderDialog documento="termos" onConfirm={() => setTermosLidos(true)} />
-                  {termosLidos && (
-                    <span className="ml-2 font-medium text-success">✓ Lidos</span>
-                  )}
+                  {termosLidos && <span className="ml-2 font-medium text-success">✓ Lidos</span>}
                 </li>
                 <li>
                   <TermsReaderDialog
                     documento="privacidade"
                     onConfirm={() => setPoliticaLida(true)}
                   />
-                  {politicaLida && (
-                    <span className="ml-2 font-medium text-success">✓ Lida</span>
-                  )}
+                  {politicaLida && <span className="ml-2 font-medium text-success">✓ Lida</span>}
                 </li>
               </ul>
               {ehResponsavel && (

@@ -15,10 +15,8 @@ const perfil: Record<Role, { label: string; icon: typeof GraduationCap }> = {
 export function MarcaNotus({ className = "" }: { className?: string }) {
   return (
     <span className={`flex items-center gap-3 ${className}`}>
-      <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
-        N
-      </span>
-      <span className="font-display text-xl font-bold tracking-tight text-foreground">NOTUS</span>
+      <img src="/notus-marca.png" alt="" width={40} height={40} className="size-10 shrink-0" />
+      <span className="font-display text-xl font-bold tracking-tight text-primary">NOTUS</span>
     </span>
   );
 }

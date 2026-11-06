@@ -26,6 +26,7 @@ import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -86,9 +87,14 @@ class BoletimServiceUnitTest {
     @InjectMocks
     private BoletimService boletimService;
 
+    private static final String ANO = "2026";
+
     private Student criarAluno(Long id) {
         Student aluno = new Student("Ana Aluna", "ana.aluna@gmail.com", 20260001L, LocalDate.of(2012, 5, 10), null);
         ReflectionTestUtils.setField(aluno, "id", id);
+        Turma turma = new Turma("9º Ano A", ANO);
+        ReflectionTestUtils.setField(turma, "id", 99L);
+        aluno.setTurma(turma);
         return aluno;
     }
 
@@ -124,13 +130,14 @@ class BoletimServiceUnitTest {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
         Disciplina portugues = criarDisciplina(6L, "Português");
-        when(notaRepository.findByStudentIdOrderByIdAsc(10L)).thenReturn(List.of(
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(10L, ANO)).thenReturn(List.of(
                 criarNota(8f, Bimestre.PRIMEIRO, aluno, matematica),
                 criarNota(9f, Bimestre.PRIMEIRO, aluno, matematica),
                 criarNota(6f, Bimestre.SEGUNDO, aluno, matematica),
                 criarNota(5f, Bimestre.TERCEIRO, aluno, matematica),
                 criarNota(7f, Bimestre.PRIMEIRO, aluno, portugues)));
-        when(boletimRepository.findByStudentId(10L))
+        when(boletimRepository.findByStudentIdAndAnoLetivo(10L, ANO))
                 .thenReturn(List.of(criarNotaFinal(1L, 10f, Bimestre.PRIMEIRO, aluno, matematica)));
 
         List<BoletimDisciplinaDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
@@ -155,6 +162,7 @@ class BoletimServiceUnitTest {
 
     private Entrega criarEntrega(float pontosObtidos, Bimestre bimestre, Student aluno, Disciplina disciplina) {
         Atividade atividade = new Atividade("Lista", "Exercícios");
+        atividade.setTurma(aluno.getTurma());
         atividade.setBimestre(bimestre);
         atividade.setDisciplina(disciplina);
         atividade.setPontos(2f);
@@ -177,10 +185,11 @@ class BoletimServiceUnitTest {
         desligado.setTurma(turma);
         desligado.setStatusMatricula(StatusMatricula.FINALIZADA);
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(studentRepository.findById(11L)).thenReturn(Optional.of(colega));
         when(studentRepository.findByTurmaId(1L, Sort.unsorted())).thenReturn(List.of(aluno, colega, desligado));
-        when(boletimRepository.findByStudentId(10L))
+        when(boletimRepository.findByStudentIdAndAnoLetivo(10L, ANO))
                 .thenReturn(List.of(criarNotaFinal(1L, 8f, Bimestre.PRIMEIRO, aluno, matematica)));
-        when(boletimRepository.findByStudentId(11L))
+        when(boletimRepository.findByStudentIdAndAnoLetivo(11L, ANO))
                 .thenReturn(List.of(criarNotaFinal(2L, 5f, Bimestre.PRIMEIRO, colega, matematica)));
 
         List<BoletimDisciplinaDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
@@ -193,9 +202,10 @@ class BoletimServiceUnitTest {
     void deveSomarOsPontosDasAtividadesANotaDoBimestreLimitandoA10() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
-        when(notaRepository.findByStudentIdOrderByIdAsc(10L))
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(10L, ANO))
                 .thenReturn(List.of(criarNota(6f, Bimestre.SEGUNDO, aluno, matematica)));
-        when(boletimRepository.findByStudentId(10L))
+        when(boletimRepository.findByStudentIdAndAnoLetivo(10L, ANO))
                 .thenReturn(List.of(criarNotaFinal(1L, 8f, Bimestre.PRIMEIRO, aluno, matematica)));
         Entrega semPontos = new Entrega(new Atividade("Recado", "Sem nota"), aluno);
         when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(
@@ -225,13 +235,13 @@ class BoletimServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
         when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
-        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.empty());
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO)).thenReturn(Optional.empty());
         when(boletimRepository.save(any(Boletim.class))).thenAnswer(invocacao -> {
             Boletim salvo = invocacao.getArgument(0);
             ReflectionTestUtils.setField(salvo, "id", 50L);
             return salvo;
         });
-        when(notaRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO))
+        when(notaRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO))
                 .thenReturn(List.of(criarNota(7f, Bimestre.PRIMEIRO, aluno, matematica), criarNota(8f, Bimestre.PRIMEIRO, aluno, matematica)));
 
         BoletimDTO resultado = boletimService.lancarNotaFinal(
@@ -253,7 +263,7 @@ class BoletimServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
         when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
-        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.of(existente));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO)).thenReturn(Optional.of(existente));
         when(boletimRepository.save(existente)).thenReturn(existente);
 
         BoletimDTO resultado = boletimService.lancarNotaFinal(
@@ -274,7 +284,7 @@ class BoletimServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
         when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
-        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.of(existente));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO)).thenReturn(Optional.of(existente));
         when(boletimRepository.save(existente)).thenReturn(existente);
 
         boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 7f), PROFESSOR);
@@ -336,5 +346,25 @@ class BoletimServiceUnitTest {
 
         assertEquals("Nota final não encontrada com o id: 99", excecao.getMessage());
         verify(boletimRepository, never()).delete(any());
+    }
+
+    @Test
+    void notaFinalDoAnoNovoNaoSobrescreveADoAnoAnterior() {
+        Student aluno = criarAluno(10L);
+        aluno.setTurma(new Turma("7º Ano A", "2027"));
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
+        // Só existe nota final do 1º bimestre de 2026; a busca é feita no ano de 2027.
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, "2027"))
+                .thenReturn(Optional.empty());
+        when(boletimRepository.save(any(Boletim.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
+
+        boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 9f), PROFESSOR);
+
+        ArgumentCaptor<Boletim> salvo = ArgumentCaptor.forClass(Boletim.class);
+        verify(boletimRepository).save(salvo.capture());
+        assertEquals("2027", salvo.getValue().getAnoLetivo());
     }
 }
