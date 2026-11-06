@@ -45,7 +45,7 @@ public class TurmaService {
 
         List<StudentMinDTO> alunos = turma.getAlunos().stream()
                 .sorted(Comparator.comparing(Student::getFullName, String.CASE_INSENSITIVE_ORDER))
-                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .map(StudentMinDTO::of)
                 .toList();
 
         List<LecionamentoDTO> lecionamentos = turma.getLecionamentos().stream()
@@ -105,12 +105,11 @@ public class TurmaService {
         if (student.getStatusMatricula() != StatusMatricula.ATIVA) {
             throw new ConflictException("O aluno não possui matrícula ativa.");
         }
-        if (student.getTurma() != null) {
-            if (student.getTurma().getId().equals(turma.getId())) {
-                throw new ConflictException("O aluno já está associado a esta turma.");
-            }
-            throw new ConflictException("O aluno já está associado à turma " + student.getTurma().getName() + ".");
+        if (student.getTurma() != null && student.getTurma().getId().equals(turma.getId())) {
+            throw new ConflictException("O aluno já está associado a esta turma.");
         }
+        // Aluno de outra turma é transferido (RF13 RN02 e CA02: uma turma por vez), por exemplo
+        // na passagem do 6º para o 7º ano.
 
         student.setTurma(turma);
         studentRepository.save(student);

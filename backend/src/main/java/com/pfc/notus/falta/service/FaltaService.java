@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -131,14 +132,19 @@ public class FaltaService {
             // Sem turma não há aulas registradas para o aluno, então não há percentual a mostrar.
             if (aluno.getTurma() == null) continue;
             Long turmaId = aluno.getTurma().getId();
-            Map<Long, Integer> faltasPorDisciplina = faltaRepository.findByAlunoId(aluno.getId()).stream()
-                    .collect(Collectors.groupingBy(f -> f.getDisciplina().getId(), Collectors.summingInt(FaltaDomain::getQuantidade)));
+            List<FaltaDomain> faltas = faltaRepository.findByAlunoId(aluno.getId());
 
             for (Disciplina disciplina : disciplinas) {
-                long totalAulas = aulaRegistroRepository.countByTurmaIdAndDisciplinaId(turmaId, disciplina.getId());
+                Set<LocalDate> datasDasAulas = aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaId(turmaId, disciplina.getId());
+                long totalAulas = datasDasAulas.size();
                 if (totalAulas == 0) continue;
 
-                long totalFaltas = faltasPorDisciplina.getOrDefault(disciplina.getId(), 0);
+                // Só contam as faltas em aulas da turma atual: as de uma turma anterior (aluno
+                // transferido ou que passou de ano) não entram no percentual de agora.
+                long totalFaltas = faltas.stream()
+                        .filter(f -> f.getDisciplina().getId().equals(disciplina.getId()) && datasDasAulas.contains(f.getData()))
+                        .mapToInt(FaltaDomain::getQuantidade)
+                        .sum();
                 double percentual = Math.max(0, totalAulas - totalFaltas) / (double) totalAulas * 100;
 
                 resultado.add(new FrequenciaDisciplinaDTO(
