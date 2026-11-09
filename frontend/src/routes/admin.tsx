@@ -3,6 +3,7 @@ import { useEffect, useId, useState, type FormEvent, type ReactNode } from "reac
 import {
   ArrowLeft,
   BarChart3,
+  Bell,
   BookOpen,
   ChevronRight,
   EyeOff,
@@ -42,6 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/blocos";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -58,7 +60,7 @@ import {
   ApiError,
   anonymizeUser,
   reenviarConvite,
-  associarAlunoTurma,
+  associarAlunosTurmaLote,
   createLecionamento,
   createTurma,
   deleteLecionamento,
@@ -77,12 +79,21 @@ import {
   updateTurma,
   getComunicados,
   publicarComunicado,
+  getNotificacoes,
+  reenviarNotificacao,
+  getStudentDetalhe,
+  updateStudent,
+  updateResponsible,
   type ComunicadoDTO,
   type PublicoComunicado,
   type DisciplinaDTO,
   type LecionamentoDTO,
+  type NotificacaoDTO,
   type ProfessorDTO,
+  type StatusNotificacao,
+  type StudentDetalheDTO,
   type StudentMinDTO,
+  type TipoNotificacao,
   type TurmaDetalheDTO,
   type TurmaDTO,
   type TurmaRequestDTO,
@@ -91,6 +102,14 @@ import {
 } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { normalizar } from "@/lib/busca";
+import {
+  emailValido,
+  formatarTelefone,
+  somenteDigitos,
+  telefoneValido,
+  validarNascimento,
+  validarNome,
+} from "@/lib/validacao";
 import { useCarga, MensagemErro } from "@/hooks/use-carga";
 
 export const Route = createFileRoute("/admin")({
@@ -114,7 +133,8 @@ type SecaoId =
   | "turmas"
   | "disciplinas"
   | "usuarios"
-  | "comunicados";
+  | "comunicados"
+  | "notificacoes";
 
 type ModoAlunos =
   { tipo: "lista" } | { tipo: "cadastro" } | { tipo: "ficha"; aluno: StudentMinDTO };
@@ -160,6 +180,11 @@ const itens: SecaoPainel<SecaoId>[] = [
     label: "Comunicados",
     icon: Mail,
   },
+  {
+    id: "notificacoes",
+    label: "Notificações",
+    icon: Bell,
+  },
 ];
 
 const titulos: Record<SecaoId, string> = {
@@ -171,6 +196,7 @@ const titulos: Record<SecaoId, string> = {
   disciplinas: "Disciplinas",
   usuarios: "Excluir usuários",
   comunicados: "Comunicados",
+  notificacoes: "Notificações",
 };
 
 const titulosAlunos: Record<ModoAlunos["tipo"], string> = {
@@ -219,6 +245,7 @@ function PainelAdmin() {
           {secao === "disciplinas" && <Disciplinas />}
           {secao === "usuarios" && <ExcluirUsuarios />}
           {secao === "comunicados" && <Comunicados />}
+          {secao === "notificacoes" && <Notificacoes />}
         </Secao>
       </PainelLateral>
     </AppShell>
@@ -386,30 +413,6 @@ function ListaDeAlunos({
       </Card>
     </div>
   );
-}
-
-function fichaExemplo(aluno: StudentMinDTO) {
-  const partes = aluno.studentName.trim().split(/\s+/);
-  const primeiro = partes[0] ?? "aluno";
-  const ultimo = partes[partes.length - 1] ?? "";
-  const slug = (t: string) =>
-    t
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
-  const mes = (aluno.userId % 12) + 1;
-  const dia = (aluno.userId % 27) + 1;
-
-  return {
-    email: `${slug(primeiro)}.${slug(ultimo)}@notus.com`,
-    nascimento: `2013-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`,
-    turma: `${6 + (aluno.userId % 4)}º ano ${["A", "B", "C"][aluno.userId % 3]}`,
-    responsavel: {
-      nome: `Responsável de ${primeiro}`,
-      telefone: `(11) 9${String(aluno.userId).slice(-4)}-${String(aluno.matricula).slice(-4)}`,
-      email: `resp.${slug(primeiro)}@gmail.com`,
-    },
-  };
 }
 
 function BotaoReenviarConvite({ userId, nome }: { userId: number; nome: string }) {
@@ -1237,23 +1240,11 @@ function DetalheTurma({
     const ids = disponiveis.filter((s) => selecionados.has(s.userId)).map((s) => s.userId);
     if (ids.length === 0) return;
     executar(async () => {
-      let adicionados = 0;
-      let primeiroErro: string | null = null;
-      for (const id of ids) {
-        try {
-          await associarAlunoTurma(turma.id, id);
-          adicionados++;
-        } catch (err) {
-          primeiroErro ??= err instanceof ApiError ? err.message : "Erro desconhecido.";
-        }
-      }
-      if (adicionados > 0) {
-        toast.success(
-          `${adicionados} aluno(s) adicionado(s) à turma ${turma.name}` +
-            (transferidos > 0 ? `, ${transferidos} vindo(s) de outra turma.` : "."),
-        );
-      }
-      if (primeiroErro) toast.error(`Alguns alunos não foram adicionados: ${primeiroErro}`);
+      await associarAlunosTurmaLote(turma.id, ids);
+      toast.success(
+        `${ids.length} aluno(s) adicionado(s) à turma ${turma.name}` +
+          (transferidos > 0 ? `, ${transferidos} vindo(s) de outra turma.` : "."),
+      );
       setSelecionados(new Set());
       onAlterada();
     }, "Erro ao adicionar os alunos à turma.");
@@ -1622,8 +1613,14 @@ function ExcluirUsuarios() {
 }
 
 function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => void }) {
-  const ex = fichaExemplo(aluno);
-  const nascimento = new Date(`${ex.nascimento}T00:00:00`).toLocaleDateString("pt-BR");
+  const [versao, setVersao] = useState(0);
+  const [editando, setEditando] = useState(false);
+  const detalhe = useCarga<StudentDetalheDTO>(() => getStudentDetalhe(aluno.userId), versao);
+
+  function salvou() {
+    setEditando(false);
+    setVersao((v) => v + 1);
+  }
 
   return (
     <div className="space-y-6">
@@ -1632,55 +1629,241 @@ function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => voi
         Voltar para a lista
       </Button>
 
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
-          <div>
-            <CardTitle className="font-display text-2xl">{aluno.studentName}</CardTitle>
-            <CardDescription className="text-base">
-              Matrícula {aluno.matricula}, registro {aluno.userId}
-            </CardDescription>
-          </div>
-          <BadgeStatus status={aluno.matriculaStatus} />
-        </CardHeader>
-        <CardContent className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          <Dado rotulo="E-mail escolar" valor={ex.email} />
-          <Dado rotulo="Data de nascimento" valor={nascimento} />
-          <Dado rotulo="Turma" valor={ex.turma} />
-        </CardContent>
-      </Card>
+      {detalhe.estado === "carregando" && (
+        <p className="text-base text-muted-foreground">Carregando…</p>
+      )}
+      {detalhe.estado === "erro" && <MensagemErro carga={detalhe} />}
+      {detalhe.estado === "ok" && !editando && (
+        <>
+          <Card>
+            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="font-display text-2xl">{detalhe.dados.fullName}</CardTitle>
+                <CardDescription className="text-base">
+                  Matrícula {detalhe.dados.matricula}, registro {detalhe.dados.userId}
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <BadgeStatus status={detalhe.dados.matriculaStatus} />
+                <Button
+                  variant="outline"
+                  className="min-h-9 text-sm"
+                  onClick={() => setEditando(true)}
+                >
+                  <Pencil className="size-4" aria-hidden="true" />
+                  Editar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+              <Dado rotulo="E-mail escolar" valor={detalhe.dados.educationalEmail} />
+              <Dado
+                rotulo="Data de nascimento"
+                valor={new Date(`${detalhe.dados.birthDate}T00:00:00`).toLocaleDateString("pt-BR")}
+              />
+              <Dado rotulo="Turma" valor={detalhe.dados.turmaName ?? "Sem turma"} />
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Responsável</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+              <Dado rotulo="Nome" valor={detalhe.dados.responsibleName ?? "—"} />
+              <Dado rotulo="Telefone" valor={formatarTelefone(detalhe.dados.responsiblePhone ?? "")} />
+              <Dado rotulo="E-mail" valor={detalhe.dados.responsibleEmail ?? "—"} />
+            </CardContent>
+          </Card>
+
+          <p className="text-sm text-muted-foreground">Dados do aluno cadastrados na escola.</p>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl text-destructive">Zona de risco</CardTitle>
+              <CardDescription className="text-base">
+                Apaga nome, e-mail, nascimento e senha do aluno, encerra a matrícula e tira o vínculo
+                com a turma e o responsável. Ficam só o registro e a matrícula, ligados ao histórico
+                escolar. Ação irreversível, usada para atender pedidos de exclusão de dados (LGPD).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BotaoAnonimizar
+                userId={detalhe.dados.userId}
+                nome={detalhe.dados.fullName}
+                codigo={String(detalhe.dados.matricula)}
+                rotuloCodigo="a matrícula"
+                aoConcluir={voltar}
+              />
+            </CardContent>
+          </Card>
+        </>
+      )}
+      {detalhe.estado === "ok" && editando && (
+        <FormularioEdicaoAluno
+          detalhe={detalhe.dados}
+          onSalvo={salvou}
+          onCancelar={() => setEditando(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** RF01 Alterar: edita os dados cadastrais do aluno e, se houver, do responsável (só o admin acessa esta tela). */
+function FormularioEdicaoAluno({
+  detalhe,
+  onSalvo,
+  onCancelar,
+}: {
+  detalhe: StudentDetalheDTO;
+  onSalvo: () => void;
+  onCancelar: () => void;
+}) {
+  const [nome, setNome] = useState(detalhe.fullName);
+  const [email, setEmail] = useState(detalhe.educationalEmail);
+  const [matricula, setMatricula] = useState(String(detalhe.matricula));
+  const [nascimento, setNascimento] = useState(detalhe.birthDate);
+  const [respNome, setRespNome] = useState(detalhe.responsibleName ?? "");
+  const [respEmail, setRespEmail] = useState(detalhe.responsibleEmail ?? "");
+  const [respTelefone, setRespTelefone] = useState(formatarTelefone(detalhe.responsiblePhone ?? ""));
+  type ErrosEdicao = {
+    nome?: string;
+    email?: string;
+    matricula?: string;
+    nascimento?: string;
+    respNome?: string;
+    respEmail?: string;
+    respTelefone?: string;
+  };
+  const [erros, setErros] = useState<ErrosEdicao>({});
+  const [salvando, setSalvando] = useState(false);
+
+  function validar(): ErrosEdicao {
+    const novosErros: ErrosEdicao = {};
+    const erroNome = validarNome(nome.trim());
+    if (erroNome) novosErros.nome = erroNome;
+    if (!emailValido(email)) novosErros.email = "Informe um e-mail válido (ex.: nome@dominio.com).";
+    if (!/^\d+$/.test(matricula.trim())) novosErros.matricula = "Informe só números.";
+    const erroNascimento = validarNascimento(nascimento);
+    if (erroNascimento) novosErros.nascimento = erroNascimento;
+    if (detalhe.responsibleId !== null) {
+      const erroRespNome = validarNome(respNome.trim());
+      if (erroRespNome) novosErros.respNome = erroRespNome;
+      if (!emailValido(respEmail)) novosErros.respEmail = "Informe um e-mail válido.";
+      if (!telefoneValido(respTelefone)) novosErros.respTelefone = "Informe DDD + número (10 ou 11 dígitos).";
+    }
+    return novosErros;
+  }
+
+  async function salvar(e: FormEvent) {
+    e.preventDefault();
+    const novosErros = validar();
+    setErros(novosErros);
+    if (Object.keys(novosErros).length > 0) return;
+
+    setSalvando(true);
+    try {
+      await updateStudent(detalhe.userId, {
+        fullName: nome.trim(),
+        educationalEmail: email.trim(),
+        matricula: Number(matricula.trim()),
+        birthDate: nascimento,
+      });
+      if (detalhe.responsibleId !== null) {
+        await updateResponsible(detalhe.responsibleId, {
+          name: respNome.trim(),
+          email: respEmail.trim(),
+          phone: somenteDigitos(respTelefone),
+        });
+      }
+      toast.success("Cadastro atualizado.");
+      onSalvo();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao salvar as alterações.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={salvar} className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Responsável</CardTitle>
+          <CardTitle className="text-xl">Dados do aluno</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          <Dado rotulo="Nome" valor={ex.responsavel.nome} />
-          <Dado rotulo="Telefone" valor={ex.responsavel.telefone} />
-          <Dado rotulo="E-mail" valor={ex.responsavel.email} />
-        </CardContent>
-      </Card>
-
-      <p className="text-sm text-muted-foreground">Dados do aluno cadastrados na escola.</p>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl text-destructive">Zona de risco</CardTitle>
-          <CardDescription className="text-base">
-            Apaga nome, e-mail, nascimento e senha do aluno, encerra a matrícula e tira o vínculo
-            com a turma e o responsável. Ficam só o registro e a matrícula, ligados ao histórico
-            escolar. Ação irreversível, usada para atender pedidos de exclusão de dados (LGPD).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <BotaoAnonimizar
-            userId={aluno.userId}
-            nome={aluno.studentName}
-            codigo={String(aluno.matricula)}
-            rotuloCodigo="a matrícula"
-            aoConcluir={voltar}
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CampoTexto rotulo="Nome completo" valor={nome} onChange={setNome} erro={erros.nome} />
+          <CampoTexto rotulo="E-mail escolar" valor={email} onChange={setEmail} erro={erros.email} />
+          <CampoTexto rotulo="Matrícula" valor={matricula} onChange={setMatricula} erro={erros.matricula} />
+          <CampoTexto
+            rotulo="Data de nascimento"
+            tipo="date"
+            valor={nascimento}
+            onChange={setNascimento}
+            erro={erros.nascimento}
           />
         </CardContent>
       </Card>
+
+      {detalhe.responsibleId !== null && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Responsável</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <CampoTexto rotulo="Nome" valor={respNome} onChange={setRespNome} erro={erros.respNome} />
+            <CampoTexto rotulo="E-mail" valor={respEmail} onChange={setRespEmail} erro={erros.respEmail} />
+            <CampoTexto
+              rotulo="Telefone"
+              valor={respTelefone}
+              onChange={(v) => setRespTelefone(formatarTelefone(v))}
+              erro={erros.respTelefone}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex gap-3">
+        <Button type="submit" className="min-h-11 text-base" disabled={salvando}>
+          {salvando ? "Salvando…" : "Salvar alterações"}
+        </Button>
+        <Button type="button" variant="outline" className="min-h-11 text-base" onClick={onCancelar}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function CampoTexto({
+  rotulo,
+  valor,
+  onChange,
+  erro,
+  tipo = "text",
+}: {
+  rotulo: string;
+  valor: string;
+  onChange: (v: string) => void;
+  erro?: string | undefined;
+  tipo?: string;
+}) {
+  const id = useId();
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className="block text-base font-semibold text-foreground">
+        {rotulo}
+      </label>
+      <Input
+        id={id}
+        type={tipo}
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-11 text-base"
+        aria-invalid={!!erro}
+      />
+      {erro && <p className="text-sm font-medium text-destructive">{erro}</p>}
     </div>
   );
 }
@@ -2053,6 +2236,177 @@ function Comunicados() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* RF12: acompanhar e reenviar notificações automáticas (falta, nota final, atividade, comunicado). */
+const rotuloTipoNotificacao: Record<TipoNotificacao, string> = {
+  FALTA: "Falta",
+  ATIVIDADE: "Atividade",
+  NOTA_FINAL: "Nota final",
+  COMUNICADO: "Comunicado",
+};
+
+const rotuloStatusNotificacao: Record<StatusNotificacao, string> = {
+  PENDENTE: "Pendente",
+  ENVIANDO: "Enviando",
+  ENVIADA: "Enviada",
+  ENTREGUE: "Entregue",
+  LIDA: "Lida",
+  FALHA: "Falha",
+  CANCELADA: "Cancelada",
+};
+
+const variantePorStatus: Record<StatusNotificacao, "default" | "secondary" | "destructive" | "outline"> = {
+  PENDENTE: "secondary",
+  ENVIANDO: "secondary",
+  ENVIADA: "default",
+  ENTREGUE: "default",
+  LIDA: "default",
+  FALHA: "destructive",
+  CANCELADA: "outline",
+};
+
+function Notificacoes() {
+  const [versao, setVersao] = useState(0);
+  const [filtroTipo, setFiltroTipo] = useState<TipoNotificacao | "TODOS">("TODOS");
+  const [filtroStatus, setFiltroStatus] = useState<StatusNotificacao | "TODOS">("TODOS");
+  const [reenviando, setReenviando] = useState<number | null>(null);
+  const carga = useCarga<NotificacaoDTO[]>(
+    () =>
+      getNotificacoes({
+        tipo: filtroTipo === "TODOS" ? undefined : filtroTipo,
+        status: filtroStatus === "TODOS" ? undefined : filtroStatus,
+      }),
+    versao,
+  );
+
+  async function reenviar(id: number) {
+    setReenviando(id);
+    try {
+      await reenviarNotificacao(id);
+      toast.success("Notificação recolocada na fila de envio.");
+      setVersao((v) => v + 1);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao reenviar a notificação.");
+    } finally {
+      setReenviando(null);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="min-w-48">
+          <label className="mb-1 block text-sm font-medium text-muted-foreground">Tipo</label>
+          <Select
+            value={filtroTipo}
+            onValueChange={(v) => {
+              setFiltroTipo(v as TipoNotificacao | "TODOS");
+              setVersao((n) => n + 1);
+            }}
+          >
+            <SelectTrigger className="min-h-11 text-base">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="TODOS">Todos</SelectItem>
+              {(Object.keys(rotuloTipoNotificacao) as TipoNotificacao[]).map((t) => (
+                <SelectItem key={t} value={t}>
+                  {rotuloTipoNotificacao[t]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="min-w-48">
+          <label className="mb-1 block text-sm font-medium text-muted-foreground">Situação</label>
+          <Select
+            value={filtroStatus}
+            onValueChange={(v) => {
+              setFiltroStatus(v as StatusNotificacao | "TODOS");
+              setVersao((n) => n + 1);
+            }}
+          >
+            <SelectTrigger className="min-h-11 text-base">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="TODOS">Todas</SelectItem>
+              {(Object.keys(rotuloStatusNotificacao) as StatusNotificacao[]).map((s) => (
+                <SelectItem key={s} value={s}>
+                  {rotuloStatusNotificacao[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          variant="ghost"
+          className="min-h-11 text-base text-muted-foreground"
+          onClick={() => setVersao((v) => v + 1)}
+        >
+          <RefreshCw className="size-5" aria-hidden="true" />
+          Atualizar
+        </Button>
+      </div>
+
+      {carga.estado === "carregando" && (
+        <p className="text-base text-muted-foreground">Carregando…</p>
+      )}
+      {carga.estado === "erro" && <MensagemErro carga={carga} />}
+      {carga.estado === "ok" && carga.dados.length === 0 && (
+        <p className="text-base text-muted-foreground">Nenhuma notificação encontrada.</p>
+      )}
+      {carga.estado === "ok" && carga.dados.length > 0 && (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 text-muted-foreground">
+                <th className="px-4 py-3 font-medium">Tipo</th>
+                <th className="px-4 py-3 font-medium">Responsável</th>
+                <th className="px-4 py-3 font-medium">Aluno</th>
+                <th className="px-4 py-3 font-medium">Situação</th>
+                <th className="px-4 py-3 font-medium">Tentativas</th>
+                <th className="px-4 py-3 font-medium">Criada em</th>
+                <th className="px-4 py-3 font-medium" />
+              </tr>
+            </thead>
+            <tbody>
+              {carga.dados.map((n) => (
+                <tr key={n.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3 text-foreground">{rotuloTipoNotificacao[n.tipo]}</td>
+                  <td className="px-4 py-3 text-foreground">{n.responsavelNome}</td>
+                  <td className="px-4 py-3 text-foreground">{n.studentNome ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={variantePorStatus[n.status]}>
+                      {rotuloStatusNotificacao[n.status]}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-foreground">{n.tentativas}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {new Date(n.criadoEm).toLocaleString("pt-BR")}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {n.status === "FALHA" && (
+                      <Button
+                        variant="outline"
+                        className="min-h-9 text-sm"
+                        disabled={reenviando === n.id}
+                        onClick={() => reenviar(n.id)}
+                      >
+                        <Send className="size-4" aria-hidden="true" />
+                        Reenviar
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

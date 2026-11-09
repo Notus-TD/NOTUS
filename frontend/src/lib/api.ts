@@ -202,6 +202,29 @@ export type StudentBatchRegistrationRequest = {
   students: StudentRequest[];
 };
 
+export type StudentDetalheDTO = {
+  userId: number;
+  fullName: string;
+  educationalEmail: string;
+  matricula: number;
+  birthDate: string;
+  matriculaStatus: "ATIVA" | "FINALIZADA";
+  turmaId: number | null;
+  turmaName: string | null;
+  responsibleId: number | null;
+  responsibleName: string | null;
+  responsibleEmail: string | null;
+  responsiblePhone: string | null;
+};
+export const getStudentDetalhe = (studentId: number) =>
+  getJson<StudentDetalheDTO>(`/students/${studentId}`);
+export const updateStudent = (studentId: number, dto: StudentRequest) =>
+  sendJson<StudentDetalheDTO>("PUT", `/students/${studentId}`, dto);
+
+export type ResponsibleDTO = { id: number; name: string; email: string; phone: string };
+export const updateResponsible = (responsibleId: number, dto: ResponsibleRequest) =>
+  sendJson<ResponsibleDTO>("PUT", `/responsibles/${responsibleId}`, dto);
+
 type StandardError = {
   status: number;
   message: string;
@@ -485,6 +508,8 @@ export type TurmaAlunoResponseDTO = {
 };
 export const associarAlunoTurma = (turmaId: number, studentId: number) =>
   sendJson<TurmaAlunoResponseDTO>("POST", `/turma/${turmaId}/alunos`, { studentId });
+export const associarAlunosTurmaLote = (turmaId: number, studentIds: number[]) =>
+  sendJson<TurmaAlunoResponseDTO[]>("POST", `/turma/${turmaId}/alunos/lote`, { studentIds });
 export const removerAlunoTurma = (turmaId: number, studentId: number) =>
   sendJson<void>("DELETE", `/turma/${turmaId}/alunos/${studentId}`);
 
@@ -570,13 +595,42 @@ export const anonymizeUser = (userId: number, confirmacao: string) =>
 
 export type StatusNotificacao =
   "PENDENTE" | "ENVIANDO" | "ENVIADA" | "ENTREGUE" | "LIDA" | "FALHA" | "CANCELADA";
+export type TipoNotificacao = "FALTA" | "ATIVIDADE" | "NOTA_FINAL" | "COMUNICADO";
 export type NotificacaoDTO = {
   id: number;
-  tipo: "FALTA" | "ATIVIDADE" | "NOTA_FINAL" | "COMUNICADO";
+  tipo: TipoNotificacao;
   status: StatusNotificacao;
+  responsavelId: number;
+  responsavelNome: string;
+  email: string;
+  studentId: number | null;
+  studentNome: string | null;
+  template: string;
+  tentativas: number;
+  erro: string | null;
   criadoEm: string;
+  enviadoEm: string | null;
+  proximaTentativaEm: string | null;
 };
-export const getNotificacoes = () => getJson<NotificacaoDTO[]>("/notificacao");
+export type NotificacaoFiltro = {
+  tipo?: TipoNotificacao | undefined;
+  status?: StatusNotificacao | undefined;
+  responsavelId?: number | undefined;
+  de?: string | undefined;
+  ate?: string | undefined;
+};
+export const getNotificacoes = (filtro?: NotificacaoFiltro) => {
+  const params = new URLSearchParams();
+  if (filtro?.tipo) params.set("tipo", filtro.tipo);
+  if (filtro?.status) params.set("status", filtro.status);
+  if (filtro?.responsavelId) params.set("responsavelId", String(filtro.responsavelId));
+  if (filtro?.de) params.set("de", filtro.de);
+  if (filtro?.ate) params.set("ate", filtro.ate);
+  const query = params.toString();
+  return getJson<NotificacaoDTO[]>(`/notificacao${query ? `?${query}` : ""}`);
+};
+export const reenviarNotificacao = (id: number) =>
+  sendJson<NotificacaoDTO>("POST", `/notificacao/${id}/reenviar`);
 
 // Avisos do responsável (faltas, notas e atividades dos filhos), com o texto do e-mail.
 export type AvisoDTO = {
