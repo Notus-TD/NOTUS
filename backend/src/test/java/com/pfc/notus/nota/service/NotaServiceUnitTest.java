@@ -1,6 +1,7 @@
 package com.pfc.notus.nota.service;
 
 import com.pfc.notus.boletim.domain.Bimestre;
+import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -53,6 +55,9 @@ class NotaServiceUnitTest {
 
     @Mock
     private StudentAccessGuardService studentAccessGuardService;
+
+    @Mock
+    private BoletimRepository boletimRepository;
 
     @InjectMocks
     private NotaService notaService;
@@ -208,6 +213,35 @@ class NotaServiceUnitTest {
 
         verify(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
         verify(notaRepository).delete(nota);
+    }
+
+    @Test
+    void deveRecusarLancamentoQuandoBimestreJaTemNotaFinal() {
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(criarAluno(10L)));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(criarDisciplina(5L, "Matemática")));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                eq(10L), eq(5L), eq(Bimestre.PRIMEIRO), anyString()))
+                .thenReturn(Optional.of(new com.pfc.notus.boletim.domain.Boletim()));
+
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> notaService.save(pedido(8.5f), PROFESSOR));
+
+        assertEquals("Este bimestre já tem nota final lançada no boletim. Remova a nota final para reabrir e corrigir as notas.",
+                excecao.getMessage());
+        verify(notaRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRecusarExclusaoQuandoBimestreJaTemNotaFinal() {
+        Nota nota = criarNota(100L, criarAluno(10L), criarDisciplina(5L, "Matemática"));
+        when(notaRepository.findById(100L)).thenReturn(Optional.of(nota));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                eq(10L), eq(5L), eq(Bimestre.PRIMEIRO), anyString()))
+                .thenReturn(Optional.of(new com.pfc.notus.boletim.domain.Boletim()));
+
+        assertThrows(RegraNegocioException.class, () -> notaService.delete(100L, PROFESSOR));
+
+        verify(notaRepository, never()).delete(any());
     }
 
     @Test

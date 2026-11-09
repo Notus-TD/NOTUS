@@ -1,6 +1,8 @@
 package com.pfc.notus.user.service;
 
+import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.user.domain.Responsible;
+import com.pfc.notus.user.dto.ResponsibleDTO;
 import com.pfc.notus.user.dto.ResponsibleRequest;
 import com.pfc.notus.user.repository.ResponsibleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,5 +31,17 @@ public class ResponsibleService {
                 dto.name(), dto.email(), dto.phone());
 
         return (Responsible) userService.register(responsible, "ROLE_RESPONSAVEL");
+    }
+
+    /** Altera os dados cadastrais de um responsável já ativo (RF01). Só o administrador pode chamar. */
+    @Transactional
+    public ResponsibleDTO updateResponsible(Long responsibleId, ResponsibleRequest dto) {
+        Responsible responsible = responsibleRepository.findById(responsibleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Responsável não encontrado com o id: " + responsibleId));
+        userService.atualizarEmail(responsible, dto.email());
+        responsible.setName(dto.name().trim());
+        responsible.setPhone(dto.phone());
+        responsibleRepository.save(responsible);
+        return ResponsibleDTO.of(responsible);
     }
 }

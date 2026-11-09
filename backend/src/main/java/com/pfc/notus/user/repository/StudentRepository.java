@@ -17,6 +17,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     Optional<Object> findByMatricula(@NotNull Long matricula);
 
+    boolean existsByMatriculaAndIdNot(Long matricula, Long id);
+
     List<Student> findByResponsibleId(Long responsibleId);
 
     List<Student> findByTurmaId(Long turmaId, Sort sort);

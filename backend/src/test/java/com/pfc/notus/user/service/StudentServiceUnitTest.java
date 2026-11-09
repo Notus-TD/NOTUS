@@ -147,4 +147,36 @@ class StudentServiceUnitTest {
                 () -> studentService.reativar(2026000050L, reativacao("Roberto@gmail.com"), "admin@notus.com"));
         verify(responsibleService, never()).findOrCreateResponsible(any());
     }
+
+    private static Student alunoAtivo(Long id) {
+        Student s = new Student("Lucas Pereira", "lucas@escola.com", 20260100L, LocalDate.of(2014, 3, 10), null);
+        s.setId(id);
+        return s;
+    }
+
+    @Test
+    void updateStudentAtualizaNomeEmailMatriculaENascimento() {
+        Student student = alunoAtivo(10L);
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(student));
+        when(studentRepository.existsByMatriculaAndIdNot(20260200L, 10L)).thenReturn(false);
+
+        var atualizado = studentService.updateStudent(10L,
+                aluno("Lucas P. Souza", "lucas.souza@escola.com", 20260200L));
+
+        assertEquals("Lucas P. Souza", atualizado.fullName());
+        assertEquals(20260200L, atualizado.matricula());
+        verify(userService).atualizarEmail(student, "lucas.souza@escola.com");
+        verify(studentRepository).save(student);
+    }
+
+    @Test
+    void updateStudentRecusaMatriculaJaUsadaPorOutroAluno() {
+        Student student = alunoAtivo(10L);
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(student));
+        when(studentRepository.existsByMatriculaAndIdNot(20260200L, 10L)).thenReturn(true);
+
+        assertThrows(ConflictException.class,
+                () -> studentService.updateStudent(10L, aluno("Lucas P. Souza", "lucas.souza@escola.com", 20260200L)));
+        verify(studentRepository, never()).save(any());
+    }
 }

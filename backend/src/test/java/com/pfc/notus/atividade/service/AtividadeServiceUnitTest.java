@@ -285,7 +285,7 @@ class AtividadeServiceUnitTest {
 
         when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
         when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(entrega, naoEntregue));
-        when(atividadeRepository.findByTurmaIdOrderByPrazoAsc(1L)).thenReturn(List.of(entregue, pendente));
+        when(atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(1L, "2026")).thenReturn(List.of(entregue, pendente));
 
         List<AtividadeDTO> resultado = atividadeService.getMinhas(ALUNO);
 

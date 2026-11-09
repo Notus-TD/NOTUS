@@ -5,6 +5,7 @@ import com.pfc.notus.lecionamento.dto.TurmaComDisciplinasDTO;
 import com.pfc.notus.Service.LecionamentoService;
 import com.pfc.notus.turma.dto.TurmaAlunoRequestDTO;
 import com.pfc.notus.turma.dto.TurmaAlunoResponseDTO;
+import com.pfc.notus.turma.dto.TurmaAlunosLoteRequestDTO;
 import com.pfc.notus.turma.dto.TurmaDTO;
 import com.pfc.notus.turma.dto.TurmaDetalheDTO;
 import com.pfc.notus.turma.dto.TurmaRequestDTO;
@@ -87,6 +88,13 @@ public class TurmaController {
     public ResponseEntity<TurmaAlunoResponseDTO> associarAluno(@PathVariable Long turmaId, @RequestBody @Valid TurmaAlunoRequestDTO dto) {
         TurmaAlunoResponseDTO associado = turmaService.associarAluno(turmaId, dto);
         return ResponseEntity.ok(associado);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{turmaId}/alunos/lote")
+    public ResponseEntity<List<TurmaAlunoResponseDTO>> associarAlunosLote(@PathVariable Long turmaId, @RequestBody @Valid TurmaAlunosLoteRequestDTO dto) {
+        List<TurmaAlunoResponseDTO> associados = turmaService.associarAlunosLote(turmaId, dto);
+        return ResponseEntity.ok(associados);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

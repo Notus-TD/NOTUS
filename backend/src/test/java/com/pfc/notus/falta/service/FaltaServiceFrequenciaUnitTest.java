@@ -73,16 +73,16 @@ class FaltaServiceFrequenciaUnitTest {
         Disciplina ingles = disciplina(2L, "Inglês");
         when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
         when(disciplinaRepository.findAll()).thenReturn(List.of(matematica, ingles));
-        when(faltaRepository.findByAlunoId(aluno.getId())).thenReturn(List.of(
+        when(faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), "2026")).thenReturn(List.of(
                 new FaltaDomain(1, LocalDate.of(2026, 3, 2), LocalDateTime.now(), aluno, null, matematica),
                 new FaltaDomain(1, LocalDate.of(2026, 3, 9), LocalDateTime.now(), aluno, null, matematica),
                 // Falta de uma turma anterior (data sem aula na turma atual): não conta.
                 new FaltaDomain(1, LocalDate.of(2025, 9, 1), LocalDateTime.now(), aluno, null, matematica)));
         Set<LocalDate> dezAulas = new HashSet<>();
         for (int dia = 2; dia <= 11; dia++) dezAulas.add(LocalDate.of(2026, 3, dia));
-        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaId(1L, 1L)).thenReturn(dezAulas);
+        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 1L, "2026")).thenReturn(dezAulas);
         // Inglês só tem aulas em outra turma: para a turma 1 não há aula.
-        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaId(1L, 2L)).thenReturn(Set.of());
+        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 2L, "2026")).thenReturn(Set.of());
 
         List<FrequenciaDisciplinaDTO> frequencia = faltaService.getFrequenciaParaUsuarioLogado(ALUNO);
 
@@ -91,7 +91,7 @@ class FaltaServiceFrequenciaUnitTest {
         assertThat(frequencia.get(0).totalAulas()).isEqualTo(10L);
         assertThat(frequencia.get(0).percentualPresenca()).isEqualTo(80.0);
         assertThat(frequencia.get(0).totalFaltas()).isEqualTo(2L);
-        verify(aulaRegistroRepository, never()).findDatasByTurmaIdAndDisciplinaId(eq(2L), anyLong());
+        verify(aulaRegistroRepository, never()).findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(eq(2L), anyLong(), eq("2026"));
     }
 
     @Test

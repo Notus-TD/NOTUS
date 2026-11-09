@@ -1,5 +1,6 @@
 package com.pfc.notus.comunicado.service;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.comunicado.domain.Comunicado;
 import com.pfc.notus.comunicado.domain.PublicoComunicado;
 import com.pfc.notus.comunicado.dto.ComunicadoDTO;
@@ -77,7 +78,8 @@ public class ComunicadoService {
 
     @Transactional(readOnly = true)
     public List<ComunicadoDTO> listarTodos() {
-        return comunicadoRepository.findAllByOrderByEnviadoEmDesc().stream().map(ComunicadoDTO::from).toList();
+        return comunicadoRepository.findByAnoLetivoOrderByEnviadoEmDesc(AnoLetivo.atual()).stream()
+                .map(ComunicadoDTO::from).toList();
     }
 
     /** Comunicados que o usuário logado pode ver: os de toda a escola e os do seu perfil. */
@@ -91,7 +93,7 @@ public class ComunicadoService {
         if (papeis.contains("ROLE_ALUNO")) publicos.add(PublicoComunicado.ALUNOS);
         if (papeis.contains("ROLE_RESPONSAVEL")) publicos.add(PublicoComunicado.RESPONSAVEIS);
         if (papeis.contains("ROLE_PROFESSOR")) publicos.add(PublicoComunicado.PROFESSORES);
-        return comunicadoRepository.findByPublicoInOrderByEnviadoEmDesc(publicos).stream()
+        return comunicadoRepository.findByPublicoInAndAnoLetivoOrderByEnviadoEmDesc(publicos, AnoLetivo.atual()).stream()
                 .map(ComunicadoDTO::from).toList();
     }
 }

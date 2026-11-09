@@ -73,12 +73,12 @@ class ComunicadoServiceUnitTest {
     void responsavelVeComunicadosDeTodaAEscolaEOsDosResponsaveis() {
         Responsible responsavel = new Responsible("Marta", "marta@gmail.com", "11999999999");
         responsavel.addRole(new Role(3L, "ROLE_RESPONSAVEL"));
-        when(comunicadoRepository.findByPublicoInOrderByEnviadoEmDesc(any())).thenReturn(List.of());
+        when(comunicadoRepository.findByPublicoInAndAnoLetivoOrderByEnviadoEmDesc(any(), any())).thenReturn(List.of());
 
         comunicadoService.listarParaUsuario(responsavel);
 
         ArgumentCaptor<Collection<PublicoComunicado>> publicos = ArgumentCaptor.forClass(Collection.class);
-        verify(comunicadoRepository).findByPublicoInOrderByEnviadoEmDesc(publicos.capture());
+        verify(comunicadoRepository).findByPublicoInAndAnoLetivoOrderByEnviadoEmDesc(publicos.capture(), any());
         assertEquals(EnumSet.of(PublicoComunicado.TODOS, PublicoComunicado.RESPONSAVEIS), EnumSet.copyOf(publicos.getValue()));
     }
 }

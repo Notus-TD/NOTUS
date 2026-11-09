@@ -9,6 +9,7 @@ import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.dto.ReativacaoAlunoRequest;
 import com.pfc.notus.user.dto.ResponsibleRequest;
+import com.pfc.notus.user.dto.StudentDetalheDTO;
 import com.pfc.notus.user.dto.StudentMinDTO;
 import com.pfc.notus.user.dto.StudentRegistrationResponse;
 import com.pfc.notus.user.dto.StudentRequest;
@@ -97,6 +98,29 @@ public class StudentService {
         student.setStatusMatricula(StatusMatricula.ATIVA);
         userService.reativar(student, dto.educationalEmail());
         log.info(AuditMarker.AUDIT, "Aluno {} reativado por {}", student.getId(), requesterEmail);
+    }
+
+    @Transactional(readOnly = true)
+    public StudentDetalheDTO getDetalhe(Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        return StudentDetalheDTO.of(student);
+    }
+
+    /** Altera os dados cadastrais de um aluno já ativo (RF01). Só o administrador pode chamar. */
+    @Transactional
+    public StudentDetalheDTO updateStudent(Long studentId, StudentRequest dto) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        if (studentRepository.existsByMatriculaAndIdNot(dto.matricula(), studentId)) {
+            throw new ConflictException("Matrícula já cadastrada: " + dto.matricula());
+        }
+        userService.atualizarEmail(student, dto.educationalEmail());
+        student.setFullName(dto.fullName().trim());
+        student.setMatricula(dto.matricula());
+        student.setBirthDate(dto.birthDate());
+        studentRepository.save(student);
+        return StudentDetalheDTO.of(student);
     }
 
     @Transactional(readOnly = true)
