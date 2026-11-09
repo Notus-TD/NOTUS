@@ -3,6 +3,7 @@ package com.pfc.notus.atividade.service;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.entrega.domain.StatusEntrega;
@@ -70,7 +71,9 @@ public class AtividadeService {
     @Transactional
     public List<AtividadeDTO> getByTurma(Long turmaId, String requesterEmail) {
         studentAccessGuardService.assertCanViewTurma(turmaId, requesterEmail);
-        return atividadeRepository.findByTurmaIdOrderByPrazoAsc(turmaId).stream()
+        Turma turma = turmaRepository.findById(turmaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + turmaId));
+        return atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(turmaId, AnoLetivo.daTurma(turma)).stream()
                 .map(a -> toDTO(a, null))
                 .toList();
     }
@@ -104,7 +107,8 @@ public class AtividadeService {
                 .filter(e -> e.getStatus() == StatusEntrega.ENTREGUE || e.getStatus() == StatusEntrega.ATRASADA)
                 .map(e -> e.getAtividade().getId())
                 .collect(Collectors.toSet());
-        return atividadeRepository.findByTurmaIdOrderByPrazoAsc(aluno.getTurma().getId()).stream()
+        return atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(
+                        aluno.getTurma().getId(), AnoLetivo.doAluno(aluno)).stream()
                 .map(a -> toDTO(a, entregues.contains(a.getId())))
                 .toList();
     }
@@ -134,6 +138,7 @@ public class AtividadeService {
         entity.setPublicadaEm(LocalDateTime.now());
         entity.setTurma(turma);
         entity.setDisciplina(disciplina);
+        entity.setAnoLetivo(AnoLetivo.daTurma(turma));
 
         entity = atividadeRepository.save(entity);
         eventPublisher.publishEvent(new AtividadePublicadaEvent(entity.getId()));

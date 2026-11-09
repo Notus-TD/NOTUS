@@ -1,10 +1,12 @@
 package com.pfc.notus.turma.service;
 
 import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.turma.dto.TurmaAlunoRequestDTO;
 import com.pfc.notus.turma.dto.TurmaAlunoResponseDTO;
+import com.pfc.notus.turma.dto.TurmaAlunosLoteRequestDTO;
 import com.pfc.notus.turma.repository.TurmaRepository;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
@@ -19,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -172,6 +175,74 @@ class TurmaServiceUnitTest {
                         .hasMessageContaining("já está associado a esta turma");
 
                 verify(studentRepository, never()).save(any());
+            }
+        }
+    }
+
+    @DisplayName("Quando acessar método associarAlunosLote")
+    @Nested
+    class AssociarAlunosLote {
+
+        @DisplayName("Quando executar com sucesso")
+        @Nested
+        class Sucesso {
+
+            @DisplayName("Deve associar todos os alunos da lista à turma")
+            @Test
+            void test1() {
+                var turma = criarTurma(1L, "9º Ano A");
+                var aluno1 = criarAluno(2L);
+                var aluno2 = criarAluno(3L);
+                var dto = new TurmaAlunosLoteRequestDTO(List.of(aluno1.getId(), aluno2.getId()));
+
+                when(turmaRepository.findById(turma.getId())).thenReturn(Optional.of(turma));
+                when(studentRepository.findById(aluno1.getId())).thenReturn(Optional.of(aluno1));
+                when(studentRepository.findById(aluno2.getId())).thenReturn(Optional.of(aluno2));
+
+                List<TurmaAlunoResponseDTO> resultado = turmaService.associarAlunosLote(turma.getId(), dto);
+
+                assertThat(resultado).hasSize(2);
+                assertThat(aluno1.getTurma()).isEqualTo(turma);
+                assertThat(aluno2.getTurma()).isEqualTo(turma);
+                verify(studentRepository, times(1)).save(aluno1);
+                verify(studentRepository, times(1)).save(aluno2);
+            }
+        }
+
+        @DisplayName("Quando executar com falha")
+        @Nested
+        class Falha {
+
+            @DisplayName("Quando a lista tiver matrículas repetidas, retornar RegraNegocioException e não salvar nenhum")
+            @Test
+            void test2() {
+                var turma = criarTurma(1L, "9º Ano A");
+                var dto = new TurmaAlunosLoteRequestDTO(List.of(2L, 2L));
+
+                assertThatThrownBy(() -> turmaService.associarAlunosLote(turma.getId(), dto))
+                        .isInstanceOf(RegraNegocioException.class)
+                        .hasMessageContaining("repetidas");
+
+                verify(studentRepository, never()).save(any());
+                verify(turmaRepository, never()).findById(any());
+            }
+
+            @DisplayName("Quando um aluno do meio da lista falhar, nenhum deve ser salvo (tudo ou nada)")
+            @Test
+            void test3() {
+                var turma = criarTurma(1L, "9º Ano A");
+                var aluno1 = criarAluno(2L);
+                var aluno2 = criarAluno(3L);
+                aluno2.setStatusMatricula(StatusMatricula.FINALIZADA);
+                var dto = new TurmaAlunosLoteRequestDTO(List.of(aluno1.getId(), aluno2.getId()));
+
+                when(turmaRepository.findById(turma.getId())).thenReturn(Optional.of(turma));
+                when(studentRepository.findById(aluno1.getId())).thenReturn(Optional.of(aluno1));
+                when(studentRepository.findById(aluno2.getId())).thenReturn(Optional.of(aluno2));
+
+                assertThatThrownBy(() -> turmaService.associarAlunosLote(turma.getId(), dto))
+                        .isInstanceOf(ConflictException.class)
+                        .hasMessageContaining("matrícula ativa");
             }
         }
     }

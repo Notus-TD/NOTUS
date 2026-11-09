@@ -67,7 +67,7 @@ class DisciplinaServiceUnitTest {
         when(disciplinaRepository.findById(1L)).thenReturn(Optional.of(disciplina(1L)));
         when(turmaRepository.findById(7L)).thenReturn(Optional.of(turma(7L)));
         when(lecionamentoRepository.existsByTurmaIdAndDisciplinaId(7L, 1L)).thenReturn(true);
-        when(aulaRegistroRepository.existsByTurmaIdAndDisciplinaIdAndData(7L, 1L, DIA)).thenReturn(false);
+        when(aulaRegistroRepository.existsByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(7L, 1L, DIA, "2026")).thenReturn(false);
 
         disciplinaService.registrarAula(1L, 7L, DIA);
 
@@ -83,7 +83,7 @@ class DisciplinaServiceUnitTest {
         when(disciplinaRepository.findById(1L)).thenReturn(Optional.of(disciplina(1L)));
         when(turmaRepository.findById(7L)).thenReturn(Optional.of(turma(7L)));
         when(lecionamentoRepository.existsByTurmaIdAndDisciplinaId(7L, 1L)).thenReturn(true);
-        when(aulaRegistroRepository.existsByTurmaIdAndDisciplinaIdAndData(7L, 1L, DIA)).thenReturn(true);
+        when(aulaRegistroRepository.existsByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(7L, 1L, DIA, "2026")).thenReturn(true);
 
         disciplinaService.registrarAula(1L, 7L, DIA);
 

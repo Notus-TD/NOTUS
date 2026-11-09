@@ -1,5 +1,6 @@
 package com.pfc.notus.falta.service;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
@@ -67,7 +68,10 @@ public class FaltaService {
     }
 
     public List<FaltaDTO> getByStudent(Long studentId) {
-        return faltaRepository.findByAlunoId(studentId).stream().map(this::toDTO).toList();
+        Student aluno = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        return faltaRepository.findByAlunoIdAndAnoLetivo(studentId, AnoLetivo.doAluno(aluno)).stream()
+                .map(this::toDTO).toList();
     }
 
     @Transactional
@@ -84,7 +88,7 @@ public class FaltaService {
 
         entity = faltaRepository.save(entity);
 
-        int totalNaDisciplina = faltaRepository.findByAlunoId(aluno.getId()).stream()
+        int totalNaDisciplina = faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), AnoLetivo.doAluno(aluno)).stream()
                 .filter(f -> f.getDisciplina().getId().equals(disciplina.getId()))
                 .mapToInt(FaltaDomain::getQuantidade)
                 .sum();
@@ -118,8 +122,10 @@ public class FaltaService {
 
         List<Student> alunos = resolverAlunos(email);
         if (alunos.isEmpty()) return List.of();
-        List<Long> ids = alunos.stream().map(User::getId).toList();
-        return faltaRepository.findByAlunoIdIn(ids).stream().map(this::toDTO).toList();
+        return alunos.stream()
+                .flatMap(a -> faltaRepository.findByAlunoIdAndAnoLetivo(a.getId(), AnoLetivo.doAluno(a)).stream())
+                .map(this::toDTO)
+                .toList();
     }
 
     @Transactional
@@ -132,10 +138,11 @@ public class FaltaService {
             // Sem turma não há aulas registradas para o aluno, então não há percentual a mostrar.
             if (aluno.getTurma() == null) continue;
             Long turmaId = aluno.getTurma().getId();
-            List<FaltaDomain> faltas = faltaRepository.findByAlunoId(aluno.getId());
+            String anoLetivo = AnoLetivo.doAluno(aluno);
+            List<FaltaDomain> faltas = faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), anoLetivo);
 
             for (Disciplina disciplina : disciplinas) {
-                Set<LocalDate> datasDasAulas = aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaId(turmaId, disciplina.getId());
+                Set<LocalDate> datasDasAulas = aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(turmaId, disciplina.getId(), anoLetivo);
                 long totalAulas = datasDasAulas.size();
                 if (totalAulas == 0) continue;
 
@@ -163,10 +170,11 @@ public class FaltaService {
                 .map(l -> l.getTurma().getId() + ":" + l.getDisciplina().getId())
                 .collect(Collectors.toSet());
         List<Long> turmaIds = lecionamentos.stream().map(l -> l.getTurma().getId()).distinct().toList();
-        List<Long> alunoIds = studentRepository.findByTurmaIdIn(turmaIds).stream().map(User::getId).toList();
-        if (alunoIds.isEmpty()) return List.of();
+        List<Student> alunos = studentRepository.findByTurmaIdIn(turmaIds);
+        if (alunos.isEmpty()) return List.of();
 
-        return faltaRepository.findByAlunoIdIn(alunoIds).stream()
+        return alunos.stream()
+                .flatMap(a -> faltaRepository.findByAlunoIdAndAnoLetivo(a.getId(), AnoLetivo.doAluno(a)).stream())
                 .filter(f -> f.getAluno().getTurma() != null
                         && turmaDisciplina.contains(f.getAluno().getTurma().getId() + ":" + f.getDisciplina().getId()))
                 .map(this::toDTO)

@@ -2,9 +2,11 @@ package com.pfc.notus.user.controller;
 
 import com.pfc.notus.user.dto.ReativacaoAlunoRequest;
 import com.pfc.notus.user.dto.StudentBatchRegistrationRequest;
+import com.pfc.notus.user.dto.StudentDetalheDTO;
 import com.pfc.notus.user.dto.StudentMinDTO;
 import com.pfc.notus.user.dto.StudentRegistrationRequest;
 import com.pfc.notus.user.dto.StudentRegistrationResponse;
+import com.pfc.notus.user.dto.StudentRequest;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import com.pfc.notus.user.service.StudentService;
 import jakarta.validation.Valid;
@@ -40,6 +42,18 @@ public class StudentController {
     public ResponseEntity<List<StudentRegistrationResponse>> createBatch(@RequestBody @Valid StudentBatchRegistrationRequest dto) {
         List<StudentRegistrationResponse> response = studentService.createStudents(dto.responsible(), dto.students());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/{id}")
+    public ResponseEntity<StudentDetalheDTO> getDetalhe(@PathVariable Long id) {
+        return ResponseEntity.ok(studentService.getDetalhe(id));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<StudentDetalheDTO> update(@PathVariable Long id, @RequestBody @Valid StudentRequest dto) {
+        return ResponseEntity.ok(studentService.updateStudent(id, dto));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")

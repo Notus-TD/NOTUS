@@ -1,5 +1,6 @@
 package com.pfc.notus.disciplina.domain;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.turma.domain.Turma;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -34,9 +35,15 @@ public class AulaRegistro {
     @Getter
     private Turma turma;
 
+    /** Ano letivo da turma quando a aula foi registrada (ex.: "2026"). */
+    @Column(name = "ano_letivo", length = 4)
+    @Getter
+    private String anoLetivo;
+
     public AulaRegistro(LocalDate data, Disciplina disciplina, Turma turma) {
         this.data = data;
         this.disciplina = disciplina;
         this.turma = turma;
+        this.anoLetivo = AnoLetivo.daTurma(turma);
     }
 }

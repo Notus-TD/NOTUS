@@ -128,6 +128,20 @@ public class UserService implements UserDetailsService {
         return salvo;
     }
 
+    /**
+     * Troca o e-mail de um usuário já cadastrado, recusando se outro usuário já usa o novo e-mail
+     * (RF01 RN02). Não salva: quem chama decide quando persistir, junto dos outros campos alterados.
+     */
+    public void atualizarEmail(User user, String novoEmail) {
+        String emailLimpo = novoEmail.trim();
+        userRepository.findByEmail(emailLimpo).ifPresent(outro -> {
+            if (!outro.getId().equals(user.getId())) {
+                throw new ConflictException("E-mail já cadastrado: " + emailLimpo);
+            }
+        });
+        user.setEmail(emailLimpo);
+    }
+
     /** Novo link de convite para quem ainda não ativou o acesso (o anterior deixa de valer). */
     @Transactional
     public void reenviarConvite(Long userId, String requesterEmail) {

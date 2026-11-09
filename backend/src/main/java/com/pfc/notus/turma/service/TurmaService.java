@@ -4,8 +4,10 @@ import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.lecionamento.dto.LecionamentoDTO;
 import com.pfc.notus.turma.domain.Turma;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.turma.dto.TurmaAlunoRequestDTO;
 import com.pfc.notus.turma.dto.TurmaAlunoResponseDTO;
+import com.pfc.notus.turma.dto.TurmaAlunosLoteRequestDTO;
 import com.pfc.notus.turma.dto.TurmaDTO;
 import com.pfc.notus.turma.dto.TurmaDetalheDTO;
 import com.pfc.notus.turma.dto.TurmaRequestDTO;
@@ -20,7 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class TurmaService {
@@ -106,7 +110,28 @@ public class TurmaService {
     @Transactional
     public TurmaAlunoResponseDTO associarAluno(Long turmaId, TurmaAlunoRequestDTO dto) {
         Turma turma = buscarTurma(turmaId);
-        Student student = buscarAluno(dto.studentId());
+        return associarUm(turma, dto.studentId());
+    }
+
+    /**
+     * Aloca vários alunos de uma vez na mesma turma (RF13). Tudo ou nada: se um aluno da lista
+     * falhar na validação, nenhum é alocado, igual ao cadastro de alunos em lote (RF01).
+     */
+    @Transactional
+    public List<TurmaAlunoResponseDTO> associarAlunosLote(Long turmaId, TurmaAlunosLoteRequestDTO dto) {
+        Set<Long> idsUnicos = new HashSet<>(dto.studentIds());
+        if (idsUnicos.size() != dto.studentIds().size()) {
+            throw new RegraNegocioException("A lista de alunos tem matrículas repetidas.");
+        }
+
+        Turma turma = buscarTurma(turmaId);
+        return dto.studentIds().stream()
+                .map(studentId -> associarUm(turma, studentId))
+                .toList();
+    }
+
+    private TurmaAlunoResponseDTO associarUm(Turma turma, Long studentId) {
+        Student student = buscarAluno(studentId);
 
         if (student.getStatusMatricula() != StatusMatricula.ATIVA) {
             throw new ConflictException("O aluno não possui matrícula ativa.");

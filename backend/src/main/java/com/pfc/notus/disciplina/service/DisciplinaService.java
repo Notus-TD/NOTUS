@@ -1,5 +1,6 @@
 package com.pfc.notus.disciplina.service;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.AulaRegistro;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.dto.DisciplinaDTO;
@@ -85,7 +86,8 @@ public class DisciplinaService {
             throw new RegraNegocioException("Esta disciplina não é lecionada nesta turma.");
         }
 
-        if (!aulaRegistroRepository.existsByTurmaIdAndDisciplinaIdAndData(turmaId, disciplinaId, data)) {
+        if (!aulaRegistroRepository.existsByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(
+                turmaId, disciplinaId, data, AnoLetivo.daTurma(turma))) {
             aulaRegistroRepository.save(new AulaRegistro(data, disciplina, turma));
         }
     }

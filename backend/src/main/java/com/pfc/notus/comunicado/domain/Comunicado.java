@@ -1,5 +1,6 @@
 package com.pfc.notus.comunicado.domain;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -39,6 +40,10 @@ public class Comunicado {
     @Column
     private Long turmaId; // Null para comunicados do admin, preenchido para recados do professor
 
+    /** Ano letivo em que o comunicado foi publicado (ex.: "2026"). */
+    @Column(name = "ano_letivo", length = 4)
+    private String anoLetivo;
+
     public Comunicado(String titulo, String texto, PublicoComunicado publico, String autorEmail, LocalDateTime enviadoEm) {
         this.titulo = titulo;
         this.texto = texto;
@@ -47,6 +52,7 @@ public class Comunicado {
         this.enviadoEm = enviadoEm;
         this.tipoRemetente = "ADMIN";
         this.turmaId = null;
+        this.anoLetivo = AnoLetivo.atual();
     }
 
     public Comunicado(String titulo, String texto, String autorEmail, LocalDateTime enviadoEm, Long turmaId) {
@@ -57,6 +63,7 @@ public class Comunicado {
         this.tipoRemetente = "PROFESSOR";
         this.turmaId = turmaId;
         this.publico = PublicoComunicado.RESPONSAVEIS; // Professor só manda para responsáveis
+        this.anoLetivo = AnoLetivo.atual();
     }
 
     public boolean incluiResponsaveis() {
