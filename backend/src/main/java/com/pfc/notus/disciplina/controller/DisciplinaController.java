@@ -1,8 +1,5 @@
 package com.pfc.notus.disciplina.controller;
 
-import org.springframework.security.core.Authentication;
-import com.pfc.notus.user.service.StudentAccessGuardService;
-import com.pfc.notus.disciplina.dto.AulaRequestDTO;
 import com.pfc.notus.disciplina.dto.DisciplinaDTO;
 import com.pfc.notus.disciplina.service.DisciplinaService;
 import jakarta.validation.Valid;
@@ -20,9 +17,6 @@ public class DisciplinaController {
     @Autowired
     private DisciplinaService disciplinaService;
 
-    @Autowired
-    private StudentAccessGuardService studentAccessGuardService;
-    
     @GetMapping
     public List<DisciplinaDTO> getAllDisciplina(){
         return disciplinaService.getAllDisciplina();
@@ -49,12 +43,5 @@ public class DisciplinaController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','PROFESSOR')")
-    @PostMapping("/{id}/aulas")
-    public ResponseEntity<Void> registrarAula(@PathVariable Long id, @RequestBody @Valid AulaRequestDTO req, Authentication authentication) {
-        studentAccessGuardService.assertCanTeachTurma(req.turmaId(), id, authentication.getName());
-        disciplinaService.registrarAula(id, req.turmaId(), req.data());
-        return ResponseEntity.noContent().build();
-    }
 
 }

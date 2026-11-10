@@ -15,16 +15,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Envia as notificações pendentes em segundo plano, fora de qualquer requisição do usuário.
- * Cada notificação é tratada isoladamente: um erro numa não impede o envio das outras.
- *
- * O envio é imediato: quem cria uma notificação chama {@link #processarAgora()} depois do commit.
- * A rodada agendada (a cada notificacao.worker-intervalo-ms) continua como reserva, para novas
- * tentativas de falhas temporárias e para envios que ficaram presos.
- * Só um ciclo roda por vez: um pedido que chega durante um ciclo marca que é preciso mais uma
- * volta, feita logo que o ciclo atual termina. Assim nenhuma notificação é enviada em dobro.
- */
 @Component
 public class NotificacaoWorker {
 
@@ -42,14 +32,12 @@ public class NotificacaoWorker {
     private final ReentrantLock emExecucao = new ReentrantLock();
     private final AtomicBoolean pedidoPendente = new AtomicBoolean(false);
 
-    /** Rodada de reserva: novas tentativas e envios presos. */
     @Scheduled(fixedDelayString = "${notificacao.worker-intervalo-ms:600000}",
             initialDelayString = "${notificacao.worker-atraso-inicial-ms:15000}")
     public void processar() {
         executar();
     }
 
-    /** Envio imediato, chamado depois que uma notificação nova (ou reenviada) foi salva. */
     @Async
     public void processarAgora() {
         executar();
@@ -57,8 +45,6 @@ public class NotificacaoWorker {
 
     void executar() {
         pedidoPendente.set(true);
-        // Se outro ciclo está rodando, ele vê o pedido e dá mais uma volta; quem sai do lock
-        // confere de novo o pedido para não perder um que chegou no meio da saída.
         while (pedidoPendente.get() && emExecucao.tryLock()) {
             try {
                 while (pedidoPendente.getAndSet(false)) {
@@ -73,7 +59,6 @@ public class NotificacaoWorker {
     private void ciclo() {
         LocalDateTime inicioCiclo = LocalDateTime.now();
         try {
-            // Repete os lotes até a fila esvaziar; cada notificação é pega no máximo uma vez por ciclo.
             List<Long> ids;
             while (!(ids = envioService.reservarLote(inicioCiclo)).isEmpty()) {
                 if (!enviarLote(ids)) return;
@@ -83,7 +68,6 @@ public class NotificacaoWorker {
         }
     }
 
-    /** @return false se a thread foi interrompida (aplicação encerrando). */
     private boolean enviarLote(List<Long> ids) {
         long pausaMs = Math.max(1, 1000L / properties.taxaPorSegundo());
         for (Long id : ids) {

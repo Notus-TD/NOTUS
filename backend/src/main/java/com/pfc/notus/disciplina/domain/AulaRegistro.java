@@ -5,12 +5,9 @@ import com.pfc.notus.turma.domain.Turma;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.time.LocalDate;
 
-/**
- * Uma aula dada de uma disciplina em uma turma, numa data (RF05 RN02: no máximo uma por turma e disciplina
- * em cada data). A frequência do aluno conta só as aulas da turma dele.
- */
 @Entity
 @Table(name = "tb_aula_registro", uniqueConstraints = @UniqueConstraint(
         name = "uk_aula_turma_disciplina_data", columnNames = {"turma_id", "disciplina_id", "data"}))
@@ -35,15 +32,19 @@ public class AulaRegistro {
     @Getter
     private Turma turma;
 
-    /** Ano letivo da turma quando a aula foi registrada (ex.: "2026"). */
     @Column(name = "ano_letivo", length = 4)
     @Getter
     private String anoLetivo;
 
-    public AulaRegistro(LocalDate data, Disciplina disciplina, Turma turma) {
+    @Column(name = "quantidade_aulas", nullable = false)
+    @Getter @Setter
+    private Integer quantidadeAulas;
+
+    public AulaRegistro(LocalDate data, Disciplina disciplina, Turma turma, Integer quantidadeAulas) {
         this.data = data;
         this.disciplina = disciplina;
         this.turma = turma;
         this.anoLetivo = AnoLetivo.daTurma(turma);
+        this.quantidadeAulas = quantidadeAulas;
     }
 }

@@ -26,13 +26,11 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Optional;
 
-/** Links de uso único para definir a senha: "esqueci minha senha" e, depois, o convite de primeiro acesso. */
 @Service
 public class SenhaService {
 
     private static final Logger log = LoggerFactory.getLogger(SenhaService.class);
 
-    /** Links gerados por usuário a cada hora; pedidos de redefinição acima disso são ignorados em silêncio. */
     static final int MAX_REDEFINICOES_POR_HORA = 3;
 
     static final String LINK_INVALIDO = "Este link é inválido ou já expirou. Peça um novo link.";
@@ -55,10 +53,6 @@ public class SenhaService {
         this.loginTentativaService = loginTentativaService;
     }
 
-    /**
-     * Nunca informa se o e-mail existe: e-mail desconhecido, conta inativa e excesso de pedidos
-     * terminam do mesmo jeito para quem chamou.
-     */
     @Transactional
     public void solicitarRedefinicao(String email) {
         Optional<User> encontrado = userRepository.findByEmail(email.trim());
@@ -75,12 +69,10 @@ public class SenhaService {
             return;
         }
 
-        // Quem nunca ativou o acesso recebe um convite novo, que também pede o aceite dos termos.
         TipoTokenSenha tipo = user.isFirstLogin() ? TipoTokenSenha.CONVITE : TipoTokenSenha.REDEFINICAO;
         gerarLink(user, tipo, agora);
     }
 
-    /** Cria um link novo, encerra os anteriores do usuário e agenda o e-mail para depois do commit. */
     @Transactional
     public void gerarLink(User user, TipoTokenSenha tipo) {
         gerarLink(user, tipo, LocalDateTime.now());
@@ -107,10 +99,8 @@ public class SenhaService {
         }
 
         user.setPassword(passwordEncoder.encode(novaSenha));
-        // Encerra este link e qualquer outro que ainda estivesse aberto para o mesmo usuário.
         tokenSenhaRepository.encerrarAbertos(user.getId(), agora);
         userRepository.save(user);
-        // Quem acabou de provar que é dono do e-mail não deve continuar bloqueado no login.
         loginTentativaService.limpar(user.getEmail());
 
         log.info(AuditMarker.AUDIT, "Senha do usuário {} definida por link de {}", user.getId(), tokenSenha.getTipo());

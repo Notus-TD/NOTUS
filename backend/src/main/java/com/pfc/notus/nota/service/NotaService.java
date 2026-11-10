@@ -1,5 +1,6 @@
 package com.pfc.notus.nota.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.repository.BoletimRepository;
@@ -41,6 +42,9 @@ public class NotaService {
 
     @Autowired
     private BoletimRepository boletimRepository;
+
+    @Autowired
+    private CalendarioService calendarioService;
 
     @Transactional(readOnly = true)
     public NotaDTO getById(Long id, String requesterEmail) {
@@ -94,12 +98,8 @@ public class NotaService {
         notaRepository.delete(entity);
     }
 
-    /**
-     * Uma vez lançada a nota final do bimestre (RF09), as notas de avaliação daquele aluno,
-     * disciplina e bimestre ficam travadas. Para corrigir, o professor remove a nota final
-     * (reabrindo o bimestre) e lança de novo.
-     */
     private void assertBimestreAberto(Student student, Long disciplinaId, Bimestre bimestre) {
+        calendarioService.exigirBimestreAberto(AnoLetivo.doAluno(student), bimestre);
         boolean fechado = boletimRepository
                 .findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
                         student.getId(), disciplinaId, bimestre, AnoLetivo.doAluno(student))

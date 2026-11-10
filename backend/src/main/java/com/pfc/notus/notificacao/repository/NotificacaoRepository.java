@@ -62,6 +62,10 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
                          Long studentId, String motivo);
 
     @Modifying
+    @Query("DELETE FROM Notificacao n WHERE n.criadoEm < :limite")
+    int apagarCriadasAntesDe(LocalDateTime limite);
+
+    @Modifying
     @Query("UPDATE Notificacao n SET n.variaveis = NULL WHERE n.student.id = :studentId")
     int apagarVariaveisDoAluno(Long studentId);
 

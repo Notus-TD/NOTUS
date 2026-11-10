@@ -33,7 +33,6 @@ public class ResponsibleService {
         return (Responsible) userService.register(responsible, "ROLE_RESPONSAVEL");
     }
 
-    /** Altera os dados cadastrais de um responsável já ativo (RF01). Só o administrador pode chamar. */
     @Transactional
     public ResponsibleDTO updateResponsible(Long responsibleId, ResponsibleRequest dto) {
         Responsible responsible = responsibleRepository.findById(responsibleId)

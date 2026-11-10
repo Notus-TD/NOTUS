@@ -17,7 +17,6 @@ class LoginTentativaServiceUnitTest {
     private static final String EMAIL = "marta.responsavel@gmail.com";
     private static final String IP = "10.0.0.1";
 
-    /** Relógio que o teste avança na mão. */
     private static final class RelogioManual extends Clock {
         private Instant agora = Instant.parse("2026-11-03T12:00:00Z");
 

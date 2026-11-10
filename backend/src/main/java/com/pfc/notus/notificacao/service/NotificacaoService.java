@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class NotificacaoService {
@@ -52,6 +54,7 @@ public class NotificacaoService {
     public static final String REF_BOLETIM = "BOLETIM";
     public static final String REF_ATIVIDADE = "ATIVIDADE";
     public static final String REF_COMUNICADO = "COMUNICADO";
+    public static final int MESES_RETENCAO = 6;
 
     @Autowired
     private NotificacaoRepository notificacaoRepository;
@@ -161,7 +164,6 @@ public class NotificacaoService {
         }
     }
 
-    /** Comunicado para responsáveis: um aviso por responsável ativo com ao menos um filho com matrícula ativa. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notificarComunicado(Long comunicadoId) {
         Comunicado comunicado = comunicadoRepository.findById(comunicadoId).orElse(null);
@@ -169,7 +171,10 @@ public class NotificacaoService {
             log.warn("Comunicado {} não encontrado ao criar as notificações", comunicadoId);
             return;
         }
-        for (Responsible responsavel : responsibleRepository.findAll()) {
+        List<Responsible> destinatarios = comunicado.getTurmaId() == null
+                ? responsibleRepository.findAll()
+                : responsaveisDaTurma(comunicado.getTurmaId());
+        for (Responsible responsavel : destinatarios) {
             boolean temFilhoAtivo = responsavel.getStudents().stream()
                     .anyMatch(s -> s.getStatusMatricula() == StatusMatricula.ATIVA);
             if (!temFilhoAtivo || motivoBloqueio(responsavel, null) != null) continue;
@@ -181,17 +186,13 @@ public class NotificacaoService {
         }
     }
 
-    /**
-     * Avisos do responsável logado (faltas, notas e atividades dos filhos), com o texto do e-mail.
-     * Os comunicados não entram aqui: o portal mostra o comunicado completo, vindo de /comunicado/me.
-     */
     @Transactional(readOnly = true)
     public List<AvisoDTO> avisosDoResponsavel(String email) {
         Responsible responsavel = responsibleRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Responsável não encontrado: " + email));
         return notificacaoRepository.buscarAvisosDoResponsavel(responsavel.getId(),
                         StatusNotificacao.CANCELADA, TipoNotificacao.COMUNICADO).stream()
-                .filter(n -> n.getVariaveis() != null) // anonimizado: sem conteúdo para mostrar
+                .filter(n -> n.getVariaveis() != null)
                 .map(n -> {
                     List<String> variaveis = List.of(objectMapper.readValue(n.getVariaveis(), String[].class));
                     Student aluno = n.getStudent();
@@ -268,6 +269,15 @@ public class NotificacaoService {
         return NotificacaoDTO.from(notificacao);
     }
 
+    private List<Responsible> responsaveisDaTurma(Long turmaId) {
+        return studentRepository.findByTurmaId(turmaId, Sort.unsorted()).stream()
+                .filter(s -> s.getStatusMatricula() == StatusMatricula.ATIVA)
+                .map(Student::getResponsible)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
     public String motivoBloqueio(Responsible responsavel, Student aluno) {
         if (responsavel == null) return "Aluno sem responsável cadastrado";
         if (!responsavel.isAtivo()) return "Responsável inativo ou anonimizado";
@@ -290,7 +300,6 @@ public class NotificacaoService {
         criar(tipo, null, responsavel, aluno, referenciaTipo, referenciaId, chave, variaveis);
     }
 
-    /** @param templateNome variação de texto do tipo (ex.: nota_atualizada); null usa o template padrão. */
     private void criar(TipoNotificacao tipo, String templateNome, Responsible responsavel, Student aluno,
                        String referenciaTipo, Long referenciaId, String chave, List<String> variaveis) {
         if (notificacaoRepository.existsByChaveIdempotencia(chave)) {
@@ -304,5 +313,15 @@ public class NotificacaoService {
         notificacao = notificacaoRepository.save(notificacao);
         log.info(AuditMarker.AUDIT, "Notificação {} criada | {} | responsável {} | {}",
                 notificacao.getId(), tipo, responsavel.getId(), EmailUtil.mascarar(responsavel.getEmail()));
+    }
+
+    @Scheduled(cron = "${notificacao.retencao-cron:0 0 3 * * *}")
+    @Transactional
+    public int apagarVencidas() {
+        LocalDateTime limite = LocalDateTime.now().minusMonths(MESES_RETENCAO);
+        int apagadas = notificacaoRepository.apagarCriadasAntesDe(limite);
+        if (apagadas == 0) return 0;
+        log.info("Retenção: {} registros de aviso anteriores a {} apagados", apagadas, limite.toLocalDate());
+        return apagadas;
     }
 }

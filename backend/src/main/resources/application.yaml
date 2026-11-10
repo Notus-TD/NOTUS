@@ -3,17 +3,22 @@ spring:
     active: h2
 
   jpa:
-    show-sql: false
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
+
+server:
+  port: ${PORT:8080}
 
 security:
   jwt:
     # Obrigatória fora do ambiente local: um valor aleatório com pelo menos 32 caracteres
     # (ex.: openssl rand -base64 48). Sem ela a aplicação não sobe.
     secret: ${JWT_SECRET}
-    expiration: 3600000
+    expiration: ${JWT_EXPIRATION_MS:3600000}
+  mfa:
+    chave: ${MFA_CHAVE}
 
 # Origens que podem chamar a API pelo navegador. Inclui a rede local (192.168.x.x) para testes
 # em outras máquinas; sobrescreva com a variável CORS_ALLOWED_ORIGINS (separada por vírgulas).
@@ -38,7 +43,7 @@ resend:
 notificacao:
   taxa-por-segundo: ${NOTIFICACAO_TAXA_POR_SEGUNDO:20}
   max-tentativas: ${NOTIFICACAO_MAX_TENTATIVAS:3}
-  lote: 50
+  lote: ${NOTIFICACAO_LOTE:50}
   worker-intervalo-ms: ${NOTIFICACAO_WORKER_INTERVALO_MS:600000}
 
 ---
@@ -48,7 +53,7 @@ spring:
       on-profile: h2
 
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
     username: sa
     password:
 
@@ -66,6 +71,8 @@ app:
 security:
   jwt:
     secret: ${JWT_SECRET:notus-chave-local-de-desenvolvimento-nao-usar-em-producao}
+  mfa:
+    chave: ${MFA_CHAVE:chave-local-do-mfa-so-para-desenvolvimento-notus}
 
 ---
 
@@ -75,9 +82,9 @@ spring:
       on-profile: dev
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/notusdb
-    username: postgres
-    password: 1234567
+    url: ${DEV_DB_URL:jdbc:postgresql://localhost:5433/notusdb}
+    username: ${DEV_DB_USER:postgres}
+    password: ${DEV_DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -90,6 +97,8 @@ app:
 security:
   jwt:
     secret: ${JWT_SECRET:notus-chave-local-de-desenvolvimento-nao-usar-em-producao}
+  mfa:
+    chave: ${MFA_CHAVE:chave-local-do-mfa-so-para-desenvolvimento-notus}
 
 ---
 
@@ -99,18 +108,18 @@ spring:
       on-profile: supabase
 
   datasource:
-    url: ${SUPABASE_DB_URL:jdbc:postgresql://db.jvznbyhigagxgbihnpmx.supabase.co:5432/postgres?sslmode=require}
+    url: ${SUPABASE_DB_URL}
     username: ${SUPABASE_DB_USER:postgres}
     password: ${SUPABASE_DB_PASSWORD}
     hikari:
-      maximum-pool-size: 5
-      schema: notus
+      maximum-pool-size: ${SUPABASE_DB_POOL_SIZE:5}
+      schema: ${SUPABASE_DB_SCHEMA:notus}
 
   jpa:
     hibernate:
       ddl-auto: ${SUPABASE_DDL_AUTO:update}
     properties:
       hibernate:
-        default_schema: notus
+        default_schema: ${SUPABASE_DB_SCHEMA:notus}
         hbm2ddl:
           create_namespaces: true

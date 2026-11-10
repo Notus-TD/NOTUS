@@ -26,7 +26,6 @@ public class NotificacaoEnvioService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificacaoEnvioService.class);
 
-    /** Tempo que uma notificação fica reservada (ENVIANDO); passado isso, volta a ser elegível se a aplicação caiu no meio do envio. */
     private static final Duration RESERVA = Duration.ofMinutes(10);
 
     private static final int MAX_ERRO = 500;
@@ -46,10 +45,6 @@ public class NotificacaoEnvioService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    /**
-     * Reserva o próximo lote de notificações prontas até o início do ciclo. O que for reservado ou reagendado
-     * durante o ciclo fica com data posterior a {@code inicioCiclo} e só volta no próximo ciclo.
-     */
     @Transactional
     public List<Long> reservarLote(LocalDateTime inicioCiclo) {
         List<Long> ids = notificacaoRepository.findIdsProntosParaEnvio(
@@ -104,7 +99,6 @@ public class NotificacaoEnvioService {
                 if (notificacao.getTentativas() >= properties.maxTentativas()) {
                     falhar(notificacao, "Tentativas esgotadas: " + resultado.erro(), destino);
                 } else {
-                    // Volta para a fila; como a data é posterior ao início do ciclo, só é tentada no próximo ciclo.
                     notificacao.setStatus(StatusNotificacao.PENDENTE);
                     notificacao.setProximaTentativaEm(LocalDateTime.now());
                     notificacao.setErro(truncar(resultado.erro()));

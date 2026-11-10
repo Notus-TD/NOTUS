@@ -25,10 +25,6 @@ public class ResourceExceptionHandler {
         return buildStandardResponse(HttpStatus.CONFLICT, e, request);
     }
 
-    /**
-     * Rede de segurança: uma operação que esbarra numa regra do banco (ex.: excluir algo que ainda
-     * tem registros ligados) vira 409 com uma mensagem clara, em vez de erro interno (500).
-     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<StandardError> handleIntegridade(DataIntegrityViolationException e, HttpServletRequest request) {
         return buildStandardResponse(HttpStatus.CONFLICT,
@@ -63,7 +59,7 @@ public class ResourceExceptionHandler {
         StandardError error = new StandardError(
                 Instant.now(),
                 status.value(),
-                "Error",
+                "Erro",
                 e.getMessage(),
                 request.getRequestURI()
         );
@@ -74,8 +70,8 @@ public class ResourceExceptionHandler {
         ValidationError err = new ValidationError(
                 Instant.now(),
                 status.value(),
-                "Validation Error",
-                "Invalid data",
+                "Erro de validação",
+                "Dados inválidos",
                 request.getRequestURI()
         );
         for (FieldError f : e.getBindingResult().getFieldErrors()) {

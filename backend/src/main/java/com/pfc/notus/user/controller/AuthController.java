@@ -1,13 +1,15 @@
 package com.pfc.notus.user.controller;
 
-
 import com.pfc.notus.user.dto.DefinirSenhaRequest;
 import com.pfc.notus.user.dto.EsqueciSenhaRequest;
 import com.pfc.notus.user.dto.MeuPerfilDTO;
 import com.pfc.notus.user.dto.TokenSenhaDTO;
 import com.pfc.notus.user.dto.ValidarTokenSenhaRequest;
 import com.pfc.notus.user.dto.security.AccountCredentialsDTO;
-import com.pfc.notus.user.dto.security.TokenDTO;
+import com.pfc.notus.user.dto.security.LoginRespostaDTO;
+import com.pfc.notus.user.dto.security.MfaCadastroDTO;
+import com.pfc.notus.user.dto.security.MfaCodigoRequest;
+import com.pfc.notus.user.dto.security.MfaDesafioRequest;
 import com.pfc.notus.user.service.AuthService;
 import com.pfc.notus.user.service.SenhaService;
 import com.pfc.notus.user.service.UserService;
@@ -35,22 +37,33 @@ public class AuthController {
         this.senhaService = senhaService;
     }
 
-
     @PostMapping("/login")
-    public ResponseEntity<TokenDTO> login(@Valid @RequestBody AccountCredentialsDTO dto, HttpServletRequest request) {
-        // getRemoteAddr e não X-Forwarded-For: esse cabeçalho pode ser forjado para escapar do limite por IP.
-        TokenDTO tokenDTO = authService.login(dto, request.getRemoteAddr());
-        return ResponseEntity.ok(tokenDTO);
+    public ResponseEntity<LoginRespostaDTO> login(@Valid @RequestBody AccountCredentialsDTO dto, HttpServletRequest request) {
+        return ResponseEntity.ok(authService.login(dto, request.getRemoteAddr()));
     }
 
-    /** Sempre 204, exista ou não o e-mail, para não revelar quem tem conta. */
+    @PostMapping("/mfa/cadastro")
+    public ResponseEntity<MfaCadastroDTO> iniciarCadastroMfa(@Valid @RequestBody MfaDesafioRequest dto) {
+        return ResponseEntity.ok(authService.iniciarCadastroMfa(dto.desafio()));
+    }
+
+    @PostMapping("/mfa/cadastro/confirmar")
+    public ResponseEntity<LoginRespostaDTO> confirmarCadastroMfa(@Valid @RequestBody MfaCodigoRequest dto,
+                                                                 HttpServletRequest request) {
+        return ResponseEntity.ok(authService.confirmarCadastroMfa(dto.desafio(), dto.codigo(), request.getRemoteAddr()));
+    }
+
+    @PostMapping("/mfa/verificar")
+    public ResponseEntity<LoginRespostaDTO> verificarMfa(@Valid @RequestBody MfaCodigoRequest dto, HttpServletRequest request) {
+        return ResponseEntity.ok(authService.verificarMfa(dto.desafio(), dto.codigo(), request.getRemoteAddr()));
+    }
+
     @PostMapping("/esqueci-senha")
     public ResponseEntity<Void> esqueciSenha(@Valid @RequestBody EsqueciSenhaRequest dto) {
         senhaService.solicitarRedefinicao(dto.email());
         return ResponseEntity.noContent().build();
     }
 
-    /** 200 com o tipo do link, ou 422 se ele for inválido ou estiver expirado. */
     @PostMapping("/token-senha/validar")
     public ResponseEntity<TokenSenhaDTO> validarTokenSenha(@Valid @RequestBody ValidarTokenSenhaRequest dto) {
         return ResponseEntity.ok(senhaService.validar(dto.token()));

@@ -1,6 +1,5 @@
 package com.pfc.notus.atividade.controller;
 
-
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.service.AtividadeService;
 import jakarta.validation.Valid;
@@ -37,7 +36,6 @@ public class AtividadeController {
         return atividadeService.getMinhas(authentication.getName());
     }
 
-    /** Atividades de um aluno com a situação da entrega (para o responsável acompanhar os filhos). */
     @PreAuthorize("hasAnyRole('RESPONSAVEL', 'ADMIN')")
     @GetMapping("/student/{studentId}")
     public List<AtividadeDTO> getDoAluno(@PathVariable Long studentId, Authentication authentication) {

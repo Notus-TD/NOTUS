@@ -37,7 +37,6 @@ class NotificacaoWorkerUnitTest {
 
     @BeforeEach
     void setUp() {
-        // taxa alta para a pausa entre envios ser de 1 ms
         ReflectionTestUtils.setField(worker, "properties", new NotificacaoProperties(1000, 3, 50));
     }
 
@@ -78,7 +77,6 @@ class NotificacaoWorkerUnitTest {
         primeiro.start();
         assertTrue(cicloComecou.await(5, TimeUnit.SECONDS));
 
-        // Chega um pedido enquanto o primeiro ciclo está rodando: volta na hora, sem rodar junto.
         worker.executar();
         liberarCiclo.countDown();
         primeiro.join(5000);

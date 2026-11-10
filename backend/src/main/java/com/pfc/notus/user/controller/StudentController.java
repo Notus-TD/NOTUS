@@ -1,6 +1,6 @@
 package com.pfc.notus.user.controller;
 
-import com.pfc.notus.user.dto.ReativacaoAlunoRequest;
+import com.pfc.notus.user.dto.AcessoAlunoRequest;
 import com.pfc.notus.user.dto.StudentBatchRegistrationRequest;
 import com.pfc.notus.user.dto.StudentDetalheDTO;
 import com.pfc.notus.user.dto.StudentMinDTO;
@@ -56,12 +56,29 @@ public class StudentController {
         return ResponseEntity.ok(studentService.updateStudent(id, dto));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN')")
-    @PutMapping("/{id}/reativar")
-    public ResponseEntity<Void> reativar(@PathVariable Long id, @RequestBody @Valid ReativacaoAlunoRequest dto,
-                                         Authentication authentication) {
-        studentService.reativar(id, dto, authentication.getName());
-        return ResponseEntity.noContent().build();
+    @PreAuthorize("hasRole('RESPONSAVEL')")
+    @PutMapping("/{id}/acesso")
+    public ResponseEntity<StudentMinDTO> liberarAcesso(@PathVariable Long id, @RequestBody @Valid AcessoAlunoRequest dto,
+                                                       Authentication authentication) {
+        return ResponseEntity.ok(studentService.liberarAcesso(id, dto.email(), authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('RESPONSAVEL')")
+    @DeleteMapping("/{id}/acesso")
+    public ResponseEntity<StudentMinDTO> retirarAcesso(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(studentService.retirarAcesso(id, authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/matricula/cancelar")
+    public ResponseEntity<StudentMinDTO> cancelarMatricula(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(studentService.cancelarMatricula(id, authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/matricula/reativar")
+    public ResponseEntity<StudentMinDTO> reativarMatricula(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(studentService.reativarMatricula(id, authentication.getName()));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
@@ -72,7 +89,6 @@ public class StudentController {
         if (admin) {
             return ResponseEntity.ok(studentService.listStudents());
         }
-        // Professor só enxerga alunos das turmas em que leciona.
         return ResponseEntity.ok(studentService.listStudentsByTurmas(
                 studentAccessGuardService.turmaIdsDoProfessor(authentication.getName())));
     }

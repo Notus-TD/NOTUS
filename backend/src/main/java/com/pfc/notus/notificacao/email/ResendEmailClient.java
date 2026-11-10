@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Envia o aviso pela API do Resend (POST /emails) para o e-mail do responsável. */
 @Component
 public class ResendEmailClient implements NotificadorPort {
 
@@ -39,7 +38,6 @@ public class ResendEmailClient implements NotificadorPort {
     private final TemplateRegistry templateRegistry;
     private final RestClient restClient;
     private final String urlPortal;
-    /** Logo em Base64, anexada a cada e-mail e mostrada no topo do HTML (nula se o arquivo faltar). */
     private final String logoBase64;
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -90,7 +88,6 @@ public class ResendEmailClient implements NotificadorPort {
         }
     }
 
-    /** Avisos aos responsáveis: o botão do e-mail abre o portal. */
     @Override
     public ResultadoEnvio enviar(String email, String template, List<String> variaveis) {
         if (email == null || email.isBlank()) {
@@ -100,7 +97,6 @@ public class ResendEmailClient implements NotificadorPort {
                 new EmailHtml.Botao("Abrir o portal", urlPortal));
     }
 
-    /** Envio de texto livre, usado pelos e-mails transacionais (links de senha). Nunca lança exceção. */
     public ResultadoEnvio enviarTexto(String email, String assunto, String texto, EmailHtml.Botao botao) {
         if (!properties.credenciaisConfiguradas()) {
             return ResultadoEnvio.definitivo("Resend sem API key configurada (RESEND_API_KEY)");
@@ -128,16 +124,10 @@ public class ResendEmailClient implements NotificadorPort {
         } catch (ResourceAccessException e) {
             return ResultadoEnvio.temporario("Falha de comunicação com o Resend: " + e.getMessage());
         } catch (RuntimeException e) {
-            // Nunca propaga: qualquer outro erro vira nova tentativa.
             return ResultadoEnvio.temporario("Erro inesperado ao chamar o Resend: " + e.getMessage());
         }
     }
 
-    /**
-     * Corpo do POST /emails, com a versão em texto e a versão em HTML (logo anexada como imagem
-     * embutida). Com o redirecionamento ativo (só em desenvolvimento), troca apenas o destinatário:
-     * assunto e texto ficam iguais aos que o destinatário real receberia.
-     */
     Map<String, Object> montarCorpo(String email, String assunto, String texto, EmailHtml.Botao botao) {
         String destino = email;
         if (properties.redirecionamentoAtivo()) {
@@ -159,7 +149,6 @@ public class ResendEmailClient implements NotificadorPort {
         return corpo;
     }
 
-    /** 429 (limite de envio) e 5xx: tenta de novo no próximo ciclo. O resto (401, 403, 422...) é definitivo. */
     private ResultadoEnvio classificar(RestClientResponseException e) {
         int httpStatus = e.getStatusCode().value();
         RespostaErro erro = null;

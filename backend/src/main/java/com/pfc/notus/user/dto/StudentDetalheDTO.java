@@ -5,6 +5,7 @@ import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record StudentDetalheDTO(
         Long userId,
@@ -18,7 +19,8 @@ public record StudentDetalheDTO(
         Long responsibleId,
         String responsibleName,
         String responsibleEmail,
-        String responsiblePhone
+        String responsiblePhone,
+        LocalDateTime acessoLiberadoEm
 ) {
     public static StudentDetalheDTO of(Student s) {
         Responsible r = s.getResponsible();
@@ -29,7 +31,8 @@ public record StudentDetalheDTO(
                 r == null ? null : r.getId(),
                 r == null ? null : r.getName(),
                 r == null ? null : r.getEmail(),
-                r == null ? null : r.getPhone()
+                r == null ? null : r.getPhone(),
+                s.getAcessoLiberadoEm()
         );
     }
 }

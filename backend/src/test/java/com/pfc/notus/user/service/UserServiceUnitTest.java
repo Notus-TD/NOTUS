@@ -101,6 +101,7 @@ class UserServiceUnitTest {
     @Test
     void deveAnonimizarOAlunoMantendoSoOIdEAMatricula() {
         Student aluno = criarAluno(10L, 20260001L, "Ana Aluna", criarResponsavel(3L, "Marta Responsável"));
+        aluno.setStatusMatricula(StatusMatricula.CANCELADA);
         when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
 
         userService.anonimyzeUser(10L, " 20260001 ", ADMIN);
@@ -115,11 +116,24 @@ class UserServiceUnitTest {
         assertNull(aluno.getResponsible());
         assertNull(aluno.getTurma());
         assertFalse(aluno.isAtivo());
-        assertEquals(StatusMatricula.FINALIZADA, aluno.getStatusMatricula());
+        assertEquals(StatusMatricula.CANCELADA, aluno.getStatusMatricula());
         assertNotNull(aluno.getAnonimizadoEm());
         verify(userRepository).save(aluno);
         verify(notificacaoService).cancelarPendentesDoAluno(10L, "Aluno anonimizado");
         verify(notificacaoService).apagarDadosDoAluno(10L);
+    }
+
+    @Test
+    void deveBloquearAnonimizarOAlunoComMatriculaAtiva() {
+        Student aluno = criarAluno(10L, 20260001L, "Ana Aluna", null);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
+
+        ConflictException excecao = assertThrows(ConflictException.class,
+                () -> userService.anonimyzeUser(10L, "20260001", ADMIN));
+
+        assertEquals("Cancele a matrícula do aluno antes de anonimizar.", excecao.getMessage());
+        assertEquals("Ana Aluna", aluno.getFullName());
+        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -291,35 +305,5 @@ class UserServiceUnitTest {
 
         assertThrows(RegraNegocioException.class, () -> userService.reenviarConvite(3L, ADMIN));
         verify(senhaService, never()).gerarLink(any(), eq(TipoTokenSenha.CONVITE));
-    }
-
-    @Test
-    void reativarDevolveOAcessoEEnviaConvite() {
-        Student student = new Student();
-        student.setAtivo(false);
-        student.setFirstLogin(false);
-        student.setAnonimizadoEm(LocalDateTime.of(2026, 6, 1, 10, 0));
-        when(userRepository.findByEmail("lucas@escola.com")).thenReturn(Optional.empty());
-        when(passwordEncoder.encode(any())).thenReturn("hash");
-        when(userRepository.save(student)).thenReturn(student);
-
-        userService.reativar(student, " lucas@escola.com ");
-
-        assertEquals("lucas@escola.com", student.getEmail());
-        assertEquals("hash", student.getPassword());
-        assertTrue(student.isAtivo());
-        assertTrue(student.isFirstLogin());
-        assertNull(student.getAnonimizadoEm());
-        assertNull(student.getTermsAcceptedAt());
-        verify(senhaService).gerarLink(student, TipoTokenSenha.CONVITE);
-    }
-
-    @Test
-    void reativarRecusaEmailJaCadastrado() {
-        Student student = new Student();
-        when(userRepository.findByEmail("ana@escola.com")).thenReturn(Optional.of(new Student()));
-
-        assertThrows(ConflictException.class, () -> userService.reativar(student, "ana@escola.com"));
-        verify(senhaService, never()).gerarLink(any(), any());
     }
 }

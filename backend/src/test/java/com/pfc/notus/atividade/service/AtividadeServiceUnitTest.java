@@ -1,5 +1,6 @@
 package com.pfc.notus.atividade.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
@@ -54,6 +55,9 @@ class AtividadeServiceUnitTest {
 
     @Mock
     private AtividadeRepository atividadeRepository;
+
+    @Mock
+    private CalendarioService calendarioService;
 
     @Mock
     private TurmaRepository turmaRepository;

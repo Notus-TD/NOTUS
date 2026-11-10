@@ -1,13 +1,20 @@
 package com.pfc.notus.falta.service;
 
 import com.pfc.notus.boletim.domain.AnoLetivo;
+import com.pfc.notus.calendario.service.CalendarioService;
+import com.pfc.notus.disciplina.domain.AulaRegistro;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.falta.domain.FaltaDomain;
 import com.pfc.notus.falta.dto.FaltaDTO;
-import com.pfc.notus.falta.dto.FaltaRequestDTO;
+import com.pfc.notus.falta.dto.ChamadaAlunoDTO;
+import com.pfc.notus.falta.dto.ChamadaDTO;
+import com.pfc.notus.falta.dto.ChamadaFaltaRequestDTO;
+import com.pfc.notus.falta.dto.ChamadaRequestDTO;
+import com.pfc.notus.falta.mapper.FaltaMapper;
 import com.pfc.notus.falta.dto.FrequenciaDisciplinaDTO;
 import com.pfc.notus.falta.repository.FaltaRepository;
 import com.pfc.notus.lecionamento.domain.Lecionamento;
@@ -16,28 +23,41 @@ import com.pfc.notus.notificacao.event.FaltaRegistradaEvent;
 import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.turma.domain.Turma;
+import com.pfc.notus.turma.repository.TurmaRepository;
 import com.pfc.notus.user.domain.User;
+import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class FaltaService {
 
+    private static final int MAXIMO_AULAS_POR_DIA = 2;
+    private static final String DATA_FUTURA = "Não é possível lançar chamada em data futura.";
+
     @Autowired
     private FaltaRepository faltaRepository;
+
+    @Autowired
+    private TurmaRepository turmaRepository;
 
     @Autowired
     private StudentRepository studentRepository;
@@ -63,39 +83,79 @@ public class FaltaService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Autowired
+    private CalendarioService calendarioService;
+
     public List<FaltaDTO> getAllFaltas() {
-        return faltaRepository.findAll().stream().map(this::toDTO).toList();
+        return faltaRepository.findAll().stream().map(FaltaMapper::toDto).toList();
     }
 
     public List<FaltaDTO> getByStudent(Long studentId) {
         Student aluno = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
         return faltaRepository.findByAlunoIdAndAnoLetivo(studentId, AnoLetivo.doAluno(aluno)).stream()
-                .map(this::toDTO).toList();
+                .map(FaltaMapper::toDto).toList();
     }
 
     @Transactional
-    public FaltaDTO associarFalta(FaltaRequestDTO dto, String registradoPorEmail) {
-        Student aluno = studentRepository.findById(dto.studentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
+    public ChamadaDTO getChamada(Long turmaId, Long disciplinaId, LocalDate data, String requesterEmail) {
+        if (data == null) {
+            throw new RegraNegocioException("Informe a data da chamada.");
+        }
+        studentAccessGuardService.assertCanTeachTurma(turmaId, disciplinaId, requesterEmail);
+        Turma turma = turmaRepository.findById(turmaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + turmaId));
+        return montarChamada(turma, disciplinaId, data);
+    }
+
+    @Transactional
+    public ChamadaDTO salvarChamada(ChamadaRequestDTO dto, String requesterEmail) {
+        if (dto.data().isAfter(LocalDate.now())) {
+            throw new RegraNegocioException(DATA_FUTURA);
+        }
+        if (dto.aulas() < 1 || dto.aulas() > MAXIMO_AULAS_POR_DIA) {
+            throw new RegraNegocioException("A chamada deve ter 1 ou 2 aulas no dia.");
+        }
+        Set<Long> repetidos = new HashSet<>();
+        for (ChamadaFaltaRequestDTO falta : dto.faltas()) {
+            if (falta.faltas() < 0 || falta.faltas() > dto.aulas()) {
+                throw new RegraNegocioException("O aluno pode ter no máximo %d falta(s) nesta chamada.".formatted(dto.aulas()));
+            }
+            if (!repetidos.add(falta.studentId())) {
+                throw new RegraNegocioException("Aluno repetido na chamada: " + falta.studentId());
+            }
+        }
+        studentAccessGuardService.assertCanTeachTurma(dto.turmaId(), dto.disciplinaId(), requesterEmail);
+        Turma turma = turmaRepository.findById(dto.turmaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + dto.turmaId()));
+        calendarioService.exigirDataLetiva(AnoLetivo.daTurma(turma), dto.data());
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
-        studentAccessGuardService.assertCanTeach(aluno.getId(), disciplina.getId(), registradoPorEmail);
-        User registradoPor = userRepository.findByEmail(registradoPorEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + registradoPorEmail));
+        User registradoPor = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + requesterEmail));
+        Map<Long, Student> alunos = alunosAtivos(turma.getId()).stream()
+                .collect(Collectors.toMap(Student::getId, Function.identity()));
+        for (ChamadaFaltaRequestDTO falta : dto.faltas()) {
+            if (!alunos.containsKey(falta.studentId())) {
+                throw new RegraNegocioException("O aluno não pertence a esta turma: " + falta.studentId());
+            }
+        }
 
-        FaltaDomain entity = new FaltaDomain(dto.quantidade(), dto.data(), LocalDateTime.now(), aluno, registradoPor, disciplina);
+        String anoLetivo = AnoLetivo.daTurma(turma);
+        AulaRegistro aula = aulaRegistroRepository
+                .findByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(turma.getId(), disciplina.getId(), dto.data(), anoLetivo)
+                .orElseGet(() -> new AulaRegistro(dto.data(), disciplina, turma, dto.aulas()));
+        aula.setQuantidadeAulas(dto.aulas());
+        aulaRegistroRepository.save(aula);
 
-        entity = faltaRepository.save(entity);
-
-        int totalNaDisciplina = faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), AnoLetivo.doAluno(aluno)).stream()
-                .filter(f -> f.getDisciplina().getId().equals(disciplina.getId()))
-                .mapToInt(FaltaDomain::getQuantidade)
-                .sum();
-        // A notificação é criada só depois do commit (NotificacaoListener): um erro nela não desfaz a falta.
-        eventPublisher.publishEvent(new FaltaRegistradaEvent(entity.getId(), totalNaDisciplina));
-
-        return toDTO(entity);
+        Map<Long, List<FaltaDomain>> existentes = faltaRepository
+                .findByAlunoIdInAndDisciplinaIdAndData(List.copyOf(alunos.keySet()), disciplina.getId(), dto.data()).stream()
+                .collect(Collectors.groupingBy(f -> f.getAluno().getId()));
+        for (ChamadaFaltaRequestDTO falta : dto.faltas()) {
+            aplicarFaltas(alunos.get(falta.studentId()), falta.faltas(), existentes.getOrDefault(falta.studentId(), List.of()),
+                    disciplina, dto.data(), registradoPor);
+        }
+        return montarChamada(turma, disciplina.getId(), dto.data());
     }
 
     @Transactional
@@ -124,7 +184,7 @@ public class FaltaService {
         if (alunos.isEmpty()) return List.of();
         return alunos.stream()
                 .flatMap(a -> faltaRepository.findByAlunoIdAndAnoLetivo(a.getId(), AnoLetivo.doAluno(a)).stream())
-                .map(this::toDTO)
+                .map(FaltaMapper::toDto)
                 .toList();
     }
 
@@ -135,19 +195,17 @@ public class FaltaService {
         List<FrequenciaDisciplinaDTO> resultado = new ArrayList<>();
 
         for (Student aluno : alunos) {
-            // Sem turma não há aulas registradas para o aluno, então não há percentual a mostrar.
             if (aluno.getTurma() == null) continue;
             Long turmaId = aluno.getTurma().getId();
             String anoLetivo = AnoLetivo.doAluno(aluno);
             List<FaltaDomain> faltas = faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), anoLetivo);
 
             for (Disciplina disciplina : disciplinas) {
-                Set<LocalDate> datasDasAulas = aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(turmaId, disciplina.getId(), anoLetivo);
-                long totalAulas = datasDasAulas.size();
+                List<AulaRegistro> aulas = aulaRegistroRepository.findByTurmaIdAndDisciplinaIdAndAnoLetivo(turmaId, disciplina.getId(), anoLetivo);
+                long totalAulas = aulas.stream().mapToInt(AulaRegistro::getQuantidadeAulas).sum();
                 if (totalAulas == 0) continue;
+                Set<LocalDate> datasDasAulas = aulas.stream().map(AulaRegistro::getData).collect(Collectors.toSet());
 
-                // Só contam as faltas em aulas da turma atual: as de uma turma anterior (aluno
-                // transferido ou que passou de ano) não entram no percentual de agora.
                 long totalFaltas = faltas.stream()
                         .filter(f -> f.getDisciplina().getId().equals(disciplina.getId()) && datasDasAulas.contains(f.getData()))
                         .mapToInt(FaltaDomain::getQuantidade)
@@ -177,7 +235,7 @@ public class FaltaService {
                 .flatMap(a -> faltaRepository.findByAlunoIdAndAnoLetivo(a.getId(), AnoLetivo.doAluno(a)).stream())
                 .filter(f -> f.getAluno().getTurma() != null
                         && turmaDisciplina.contains(f.getAluno().getTurma().getId() + ":" + f.getDisciplina().getId()))
-                .map(this::toDTO)
+                .map(FaltaMapper::toDto)
                 .toList();
     }
 
@@ -190,15 +248,66 @@ public class FaltaService {
         return List.of();
     }
 
-    private FaltaDTO toDTO(FaltaDomain entity) {
-        return new FaltaDTO(
-                entity.getId(),
-                entity.getData(),
-                entity.getQuantidade(),
-                entity.getRegistradoEm(),
-                entity.getAluno().getId(),
-                entity.getDisciplina().getId(),
-                entity.getRegistradoPor().getId()
-        );
+    private ChamadaDTO montarChamada(Turma turma, Long disciplinaId, LocalDate data) {
+        String anoLetivo = AnoLetivo.daTurma(turma);
+        List<Student> alunos = alunosAtivos(turma.getId());
+        Integer aulas = aulaRegistroRepository
+                .findByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(turma.getId(), disciplinaId, data, anoLetivo)
+                .map(AulaRegistro::getQuantidadeAulas)
+                .orElse(null);
+        String bloqueio = data.isAfter(LocalDate.now())
+                ? DATA_FUTURA
+                : calendarioService.motivoBloqueioDaData(anoLetivo, data).orElse(null);
+        if (alunos.isEmpty()) {
+            return FaltaMapper.toChamadaDto(turma.getId(), disciplinaId, data, aulas, List.of(), bloqueio);
+        }
+
+        List<Long> ids = alunos.stream().map(Student::getId).toList();
+        Map<Long, Integer> faltasNoDia = somarPorAluno(faltaRepository.findByAlunoIdInAndDisciplinaIdAndData(ids, disciplinaId, data));
+        Map<Long, Integer> totalFaltas = somarPorAluno(faltaRepository.findByAlunoIdInAndDisciplinaIdAndAnoLetivo(ids, disciplinaId, anoLetivo));
+        List<ChamadaAlunoDTO> linhas = alunos.stream()
+                .map(a -> FaltaMapper.toChamadaAlunoDto(a, faltasNoDia.getOrDefault(a.getId(), 0), totalFaltas.getOrDefault(a.getId(), 0)))
+                .toList();
+        return FaltaMapper.toChamadaDto(turma.getId(), disciplinaId, data, aulas, linhas, bloqueio);
+    }
+
+    private void aplicarFaltas(Student aluno, int faltas, List<FaltaDomain> doDia, Disciplina disciplina,
+                               LocalDate data, User registradoPor) {
+        if (faltas == 0) {
+            doDia.forEach(this::excluirFalta);
+            return;
+        }
+        doDia.stream().skip(1).forEach(this::excluirFalta);
+        LocalDateTime agora = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        if (doDia.isEmpty()) {
+            FaltaDomain nova = faltaRepository.save(new FaltaDomain(faltas, data, agora, aluno, registradoPor, disciplina));
+            int total = faltaRepository
+                    .findByAlunoIdInAndDisciplinaIdAndAnoLetivo(List.of(aluno.getId()), disciplina.getId(), AnoLetivo.doAluno(aluno)).stream()
+                    .mapToInt(FaltaDomain::getQuantidade)
+                    .sum();
+            eventPublisher.publishEvent(new FaltaRegistradaEvent(nova.getId(), total));
+            return;
+        }
+        FaltaDomain atual = doDia.getFirst();
+        atual.setQuantidade(faltas);
+        atual.setRegistradoPor(registradoPor);
+        atual.setRegistradoEm(agora);
+        faltaRepository.save(atual);
+    }
+
+    private void excluirFalta(FaltaDomain falta) {
+        faltaRepository.delete(falta);
+        notificacaoService.cancelarPorReferencia(NotificacaoService.REF_FALTA, falta.getId(), "Falta removida na chamada");
+    }
+
+    private List<Student> alunosAtivos(Long turmaId) {
+        return studentRepository.findByTurmaId(turmaId, Sort.by("fullName")).stream()
+                .filter(a -> a.getStatusMatricula() == StatusMatricula.ATIVA)
+                .toList();
+    }
+
+    private static Map<Long, Integer> somarPorAluno(List<FaltaDomain> faltas) {
+        return faltas.stream()
+                .collect(Collectors.groupingBy(f -> f.getAluno().getId(), Collectors.summingInt(FaltaDomain::getQuantidade)));
     }
 }

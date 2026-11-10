@@ -15,6 +15,7 @@ import com.pfc.notus.notificacao.repository.NotificacaoRepository;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.ResponsibleRepository;
+import com.pfc.notus.user.repository.StudentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -51,6 +53,9 @@ class NotificacaoServiceUnitTest {
 
     @Mock
     private ResponsibleRepository responsibleRepository;
+
+    @Mock
+    private StudentRepository studentRepository;
 
     @Spy
     private TemplateRegistry templateRegistry = new TemplateRegistry();
@@ -144,8 +149,35 @@ class NotificacaoServiceUnitTest {
         assertEquals(1, avisos.size());
         AvisoDTO aviso = avisos.get(0);
         assertEquals("Falta registrada", aviso.titulo());
-        assertEquals("Ana", aviso.alunoNome());
+        assertEquals("Ana Souza", aviso.alunoNome());
         assertTrue(aviso.texto().contains("Registramos uma falta de Ana em Matemática no dia 02/03/2026"), aviso.texto());
         assertFalse(aviso.texto().contains("Mensagem automática"));
+    }
+
+    @Test
+    void recadoDeTurmaAvisaSoOsResponsaveisDaTurma() {
+        Comunicado recado = new Comunicado("Prova", "Quinta.", "pedro@gmail.com", LocalDateTime.now(), 10L);
+        ReflectionTestUtils.setField(recado, "id", 8L);
+        when(comunicadoRepository.findById(8L)).thenReturn(Optional.of(recado));
+        when(studentRepository.findByTurmaId(10L, Sort.unsorted())).thenReturn(List.of(aluno));
+
+        notificacaoService.notificarComunicado(8L);
+
+        assertEquals(3L, salvaPeloServico().getResponsavel().getId());
+        verify(responsibleRepository, never()).findAll();
+    }
+
+    @Test
+    void apagarVencidas_apagaRegistrosComMaisDeSeisMeses() {
+        when(notificacaoRepository.apagarCriadasAntesDe(any())).thenReturn(3);
+        LocalDateTime antes = LocalDateTime.now().minusMonths(NotificacaoService.MESES_RETENCAO);
+
+        int apagadas = notificacaoService.apagarVencidas();
+
+        ArgumentCaptor<LocalDateTime> limite = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(notificacaoRepository).apagarCriadasAntesDe(limite.capture());
+        assertEquals(3, apagadas);
+        assertFalse(limite.getValue().isBefore(antes));
+        assertTrue(limite.getValue().isBefore(LocalDateTime.now().minusMonths(NotificacaoService.MESES_RETENCAO).plusSeconds(1)));
     }
 }

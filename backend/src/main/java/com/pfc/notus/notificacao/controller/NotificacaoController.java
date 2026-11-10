@@ -36,7 +36,6 @@ public class NotificacaoController {
         return notificacaoService.listar(tipo, status, responsavelId, de, ate);
     }
 
-    /** Avisos do responsável logado (faltas, notas e atividades dos filhos). */
     @PreAuthorize("hasRole('RESPONSAVEL')")
     @GetMapping("/me")
     public List<AvisoDTO> meusAvisos(org.springframework.security.core.Authentication authentication) {
@@ -47,7 +46,7 @@ public class NotificacaoController {
     @PostMapping("/{id}/reenviar")
     public ResponseEntity<NotificacaoDTO> reenviar(@PathVariable Long id) {
         NotificacaoDTO dto = notificacaoService.reenviar(id);
-        worker.processarAgora(); // reenviar já fez commit: a notificação sai na hora
+        worker.processarAgora();
         return ResponseEntity.ok(dto);
     }
 }

@@ -1,5 +1,6 @@
 package com.pfc.notus.atividade.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
@@ -63,6 +64,9 @@ public class AtividadeService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Autowired
+    private CalendarioService calendarioService;
+
     @Transactional
     public List<AtividadeDTO> getAllAtividade() {
         return atividadeRepository.findAll().stream().map(a -> toDTO(a, null)).toList();
@@ -87,7 +91,6 @@ public class AtividadeService {
         return atividadesComEntrega(aluno);
     }
 
-    /** Atividades da turma de um aluno, com a entrega dele. Responsável só vê os próprios dependentes. */
     @Transactional
     public List<AtividadeDTO> getDoAluno(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
@@ -127,6 +130,7 @@ public class AtividadeService {
         User requester = buscarUsuario(requesterEmail);
         Turma turma = turmaRepository.findById(dto.turmaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + dto.turmaId()));
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(turma), dto.bimestre());
         Disciplina disciplina = resolverDisciplina(requester, turma.getId(), dto.disciplinaId());
 
         Atividade entity = new Atividade();
@@ -145,10 +149,6 @@ public class AtividadeService {
         return toDTO(entity, null);
     }
 
-    /**
-     * Edita título, texto, bimestre, prazo e pontos de uma atividade já publicada.
-     * Turma e disciplina não mudam. Só o professor que leciona a disciplina na turma (ou o admin) pode editar.
-     */
     @Transactional
     public AtividadeDTO atualizar(Long id, AtividadeDTO dto, String requesterEmail) {
         Atividade atividade = atividadeRepository.findById(id)
@@ -163,7 +163,8 @@ public class AtividadeService {
         if (dto.bimestre() == null) {
             throw new RegraNegocioException("Informe o bimestre da atividade.");
         }
-        // Um prazo já vencido pode ser mantido; só não dá para mudar o prazo para uma data passada.
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), atividade.getBimestre());
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), dto.bimestre());
         if (!dto.prazo().equals(atividade.getPrazo()) && dto.prazo().isBefore(LocalDate.now())) {
             throw new RegraNegocioException("O prazo da atividade não pode ser uma data passada.");
         }
@@ -197,6 +198,7 @@ public class AtividadeService {
         if (!podeExcluir) {
             throw new AccessDeniedException("Sem permissão para excluir esta atividade.");
         }
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), atividade.getBimestre());
         if (entregaRepository.existsByAtividadeId(id)) {
             throw new ConflictException("A atividade já tem entregas e não pode ser excluída.");
         }

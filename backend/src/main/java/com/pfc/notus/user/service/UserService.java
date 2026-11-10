@@ -78,20 +78,24 @@ public class UserService implements UserDetailsService {
         User user = new User(result.getFirst().getUsername(), result.getFirst().getPassword());
         user.setId(result.getFirst().getId());
         user.setFirstLogin(Boolean.TRUE.equals(result.getFirst().getFirstLogin()));
-        user.setAtivo(!Boolean.FALSE.equals(result.getFirst().getAtivo()));
+        user.setAtivo(!Boolean.FALSE.equals(result.getFirst().getAtivo())
+                && !Boolean.FALSE.equals(result.getFirst().getAcessoLiberado()));
         for (UserDetailsProjection projection : result) {
             user.addRole(new Role(projection.getRoleId(), projection.getAuthority()));
         }
 
         return user;
     }
-    /**
-     * A senha inicial é aleatória e ninguém a conhece: o usuário define a dele pelo link de convite
-     * que vai por e-mail depois do commit.
-     */
     @Transactional
     public User register(User user, String roleAuthority) {
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+        User salvo = registrarSemConvite(user, roleAuthority);
+        senhaService.gerarLink(salvo, TipoTokenSenha.CONVITE);
+        return salvo;
+    }
+
+    @Transactional
+    public User registrarSemConvite(User user, String roleAuthority) {
+        if (user.getEmail() != null && userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new ConflictException("E-mail já cadastrado: " + user.getEmail());
         }
 
@@ -102,36 +106,9 @@ public class UserService implements UserDetailsService {
         user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
         user.addRole(role);
 
-        User salvo = userRepository.save(user);
-        senhaService.gerarLink(salvo, TipoTokenSenha.CONVITE);
-        return salvo;
+        return userRepository.save(user);
     }
 
-    /**
-     * Devolve o acesso a um usuário anonimizado que recebeu dados novos: conta ativa, primeiro acesso
-     * pendente (senha e termos de novo) e um convite no e-mail informado.
-     */
-    @Transactional
-    public User reativar(User user, String email) {
-        String emailLimpo = email.trim();
-        if (userRepository.findByEmail(emailLimpo).isPresent()) {
-            throw new ConflictException("E-mail já cadastrado: " + emailLimpo);
-        }
-        user.setEmail(emailLimpo);
-        user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-        user.setFirstLogin(true);
-        user.setTermsAcceptedAt(null);
-        user.setAtivo(true);
-        user.setAnonimizadoEm(null);
-        User salvo = userRepository.save(user);
-        senhaService.gerarLink(salvo, TipoTokenSenha.CONVITE);
-        return salvo;
-    }
-
-    /**
-     * Troca o e-mail de um usuário já cadastrado, recusando se outro usuário já usa o novo e-mail
-     * (RF01 RN02). Não salva: quem chama decide quando persistir, junto dos outros campos alterados.
-     */
     public void atualizarEmail(User user, String novoEmail) {
         String emailLimpo = novoEmail.trim();
         userRepository.findByEmail(emailLimpo).ifPresent(outro -> {
@@ -142,7 +119,6 @@ public class UserService implements UserDetailsService {
         user.setEmail(emailLimpo);
     }
 
-    /** Novo link de convite para quem ainda não ativou o acesso (o anterior deixa de valer). */
     @Transactional
     public void reenviarConvite(Long userId, String requesterEmail) {
         User user = userRepository.findById(userId)
@@ -153,8 +129,26 @@ public class UserService implements UserDetailsService {
         if (!user.isFirstLogin()) {
             throw new ConflictException("Este usuário já ativou o acesso. Ele pode usar \"Esqueci minha senha\" no login.");
         }
+        if (user instanceof Student aluno && aluno.getAcessoLiberadoEm() == null) {
+            throw new RegraNegocioException("O acesso deste aluno ainda não foi liberado pelo responsável.");
+        }
         senhaService.gerarLink(user, TipoTokenSenha.CONVITE);
         log.info(AuditMarker.AUDIT, "Convite do usuário {} reenviado por {}", user.getId(), requesterEmail);
+    }
+
+    @Transactional
+    public void redefinirMfa(Long userId, String requesterEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + userId));
+        if (!user.isMfaAtivo() && user.getMfaSegredo() == null) {
+            throw new ConflictException("Este usuário ainda não ativou a verificação em duas etapas.");
+        }
+
+        user.setMfaSegredo(null);
+        user.setMfaAtivo(false);
+        user.setMfaUltimoPasso(null);
+        userRepository.save(user);
+        log.info(AuditMarker.AUDIT, "Verificação em duas etapas do usuário {} redefinida por {}", user.getId(), requesterEmail);
     }
 
     @Transactional
@@ -178,7 +172,6 @@ public class UserService implements UserDetailsService {
 
         return new MeuPerfilDTO(user.getEmail(), roles, nome, dependentes);
     }
-
 
     @Transactional
     public void onBoarding (String newPassword, Boolean acceptTerms){
@@ -208,9 +201,9 @@ public class UserService implements UserDetailsService {
     public List<UsuarioDTO> listarUsuarios() {
         return Stream.concat(
                         studentRepository.findAll().stream()
-                                .map(s -> new UsuarioDTO(s.getId(), "ALUNO", s.getFullName(), s.getMatricula(), s.getAnonimizadoEm() != null, s.isFirstLogin())),
+                                .map(s -> new UsuarioDTO(s.getId(), "ALUNO", s.getFullName(), s.getMatricula(), s.getAnonimizadoEm() != null, s.isFirstLogin(), s.getStatusMatricula())),
                         responsibleRepository.findAll().stream()
-                                .map(r -> new UsuarioDTO(r.getId(), "RESPONSAVEL", r.getName(), null, r.getAnonimizadoEm() != null, r.isFirstLogin())))
+                                .map(r -> new UsuarioDTO(r.getId(), "RESPONSAVEL", r.getName(), null, r.getAnonimizadoEm() != null, r.isFirstLogin(), null)))
                 .sorted(Comparator.comparing(UsuarioDTO::anonimizado)
                         .thenComparing(UsuarioDTO::nome, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
                         .thenComparing(UsuarioDTO::id))
@@ -236,6 +229,9 @@ public class UserService implements UserDetailsService {
         if (user instanceof Responsible && !String.valueOf(user.getId()).equals(confirmacao.trim())) {
             throw new RegraNegocioException("O registro digitado não confere com o do responsável.");
         }
+        if (user instanceof Student student && student.getStatusMatricula() == StatusMatricula.ATIVA) {
+            throw new ConflictException("Cancele a matrícula do aluno antes de anonimizar.");
+        }
         if (user instanceof Responsible && studentRepository.existsByResponsibleIdAndStatusMatricula(user.getId(), StatusMatricula.ATIVA)) {
             throw new ConflictException("Não é possível anonimizar: o responsável tem aluno com matrícula ativa.");
         }
@@ -245,7 +241,7 @@ public class UserService implements UserDetailsService {
             student.setBirthDate(null);
             student.setResponsible(null);
             student.setTurma(null);
-            student.setStatusMatricula(StatusMatricula.FINALIZADA);
+            student.setAcessoLiberadoEm(null);
             notificacaoService.cancelarPendentesDoAluno(student.getId(), "Aluno anonimizado");
             notificacaoService.apagarDadosDoAluno(student.getId());
         }

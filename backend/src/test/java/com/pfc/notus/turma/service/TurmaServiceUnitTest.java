@@ -67,7 +67,6 @@ class TurmaServiceUnitTest {
             @DisplayName("Deve associar o aluno à turma e retornar o DTO correspondente")
             @Test
             void test1() {
-                // dado
                 var turma = criarTurma(1L, "9º Ano A");
                 var aluno = criarAluno(2L);
                 var dto = new TurmaAlunoRequestDTO(aluno.getId());
@@ -75,10 +74,8 @@ class TurmaServiceUnitTest {
                 when(turmaRepository.findById(turma.getId())).thenReturn(Optional.of(turma));
                 when(studentRepository.findById(aluno.getId())).thenReturn(Optional.of(aluno));
 
-                // quando
                 TurmaAlunoResponseDTO resultado = turmaService.associarAluno(turma.getId(), dto);
 
-                // entao
                 assertThat(resultado.turmaId()).isEqualTo(turma.getId());
                 assertThat(resultado.turmaName()).isEqualTo("9º Ano A");
                 assertThat(resultado.studentId()).isEqualTo(aluno.getId());

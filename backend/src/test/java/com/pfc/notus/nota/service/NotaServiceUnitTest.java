@@ -1,5 +1,6 @@
 package com.pfc.notus.nota.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
@@ -46,6 +47,9 @@ class NotaServiceUnitTest {
 
     @Mock
     private NotaRepository notaRepository;
+
+    @Mock
+    private CalendarioService calendarioService;
 
     @Mock
     private StudentRepository studentRepository;
@@ -251,7 +255,6 @@ class NotaServiceUnitTest {
         Turma turma = new Turma("9º Ano A", "2026");
         aluno.setTurma(turma);
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
-        // Só as notas do ano letivo da turma atual do aluno.
         when(notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(10L, "2026"))
                 .thenReturn(List.of(criarNota(100L, aluno, matematica), criarNota(101L, aluno, matematica)));
 

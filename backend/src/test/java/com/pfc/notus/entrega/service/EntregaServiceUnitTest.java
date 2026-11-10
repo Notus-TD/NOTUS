@@ -1,5 +1,6 @@
 package com.pfc.notus.entrega.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
 import com.pfc.notus.boletim.domain.Bimestre;
@@ -45,6 +46,9 @@ class EntregaServiceUnitTest {
 
     @Mock
     private EntregaRepository entregaRepository;
+
+    @Mock
+    private CalendarioService calendarioService;
 
     @Mock
     private AtividadeRepository atividadeRepository;

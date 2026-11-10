@@ -5,11 +5,6 @@ import com.pfc.notus.user.domain.Student;
 
 import java.time.Year;
 
-/**
- * Ano letivo em que as notas, faltas, aulas, atividades e comunicados são lançados e consultados.
- * Assim, quando o aluno passa de ano (ex.: do 6º para o 7º), o boletim novo começa vazio e os
- * registros do ano anterior continuam guardados, sem serem sobrescritos.
- */
 public final class AnoLetivo {
 
     private AnoLetivo() {
@@ -29,7 +24,6 @@ public final class AnoLetivo {
         return atual();
     }
 
-    /** Usado para registros sem turma/aluno associado diretamente (ex.: comunicados da coordenação). */
     public static String atual() {
         return String.valueOf(Year.now().getValue());
     }

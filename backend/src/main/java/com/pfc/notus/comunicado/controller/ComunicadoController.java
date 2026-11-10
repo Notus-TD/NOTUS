@@ -30,7 +30,6 @@ public class ComunicadoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(comunicadoService.publicar(request, authentication.getName()));
     }
 
-    /** Recado do professor para uma turma específica */
     @PreAuthorize("hasRole('PROFESSOR')")
     @PostMapping("/recado")
     public ResponseEntity<ComunicadoDTO> publicarRecado(@Valid @RequestBody RecadoProfessorRequest request, Authentication authentication) {
@@ -43,7 +42,6 @@ public class ComunicadoController {
         return comunicadoService.listarTodos();
     }
 
-    /** Comunicados visíveis para quem está logado (aluno, responsável, professor ou admin). */
     @GetMapping("/me")
     public List<ComunicadoDTO> meus(Authentication authentication) {
         return comunicadoService.listarParaUsuario((UserDetails) authentication.getPrincipal());

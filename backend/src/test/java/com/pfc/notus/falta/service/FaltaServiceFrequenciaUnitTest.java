@@ -1,5 +1,7 @@
 package com.pfc.notus.falta.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
+import com.pfc.notus.disciplina.domain.AulaRegistro;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
@@ -18,10 +20,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -30,7 +31,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** RF06: o percentual de presença conta só as aulas da turma do aluno. */
 @ExtendWith(MockitoExtension.class)
 class FaltaServiceFrequenciaUnitTest {
 
@@ -38,6 +38,9 @@ class FaltaServiceFrequenciaUnitTest {
 
     @Mock
     private FaltaRepository faltaRepository;
+
+    @Mock
+    private CalendarioService calendarioService;
 
     @Mock
     private DisiciplinaRepository disciplinaRepository;
@@ -76,13 +79,11 @@ class FaltaServiceFrequenciaUnitTest {
         when(faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), "2026")).thenReturn(List.of(
                 new FaltaDomain(1, LocalDate.of(2026, 3, 2), LocalDateTime.now(), aluno, null, matematica),
                 new FaltaDomain(1, LocalDate.of(2026, 3, 9), LocalDateTime.now(), aluno, null, matematica),
-                // Falta de uma turma anterior (data sem aula na turma atual): não conta.
                 new FaltaDomain(1, LocalDate.of(2025, 9, 1), LocalDateTime.now(), aluno, null, matematica)));
-        Set<LocalDate> dezAulas = new HashSet<>();
-        for (int dia = 2; dia <= 11; dia++) dezAulas.add(LocalDate.of(2026, 3, dia));
-        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 1L, "2026")).thenReturn(dezAulas);
-        // Inglês só tem aulas em outra turma: para a turma 1 não há aula.
-        when(aulaRegistroRepository.findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 2L, "2026")).thenReturn(Set.of());
+        List<AulaRegistro> dezAulas = new ArrayList<>();
+        for (int dia = 2; dia <= 11; dia++) dezAulas.add(new AulaRegistro(LocalDate.of(2026, 3, dia), matematica, aluno.getTurma(), 1));
+        when(aulaRegistroRepository.findByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 1L, "2026")).thenReturn(dezAulas);
+        when(aulaRegistroRepository.findByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 2L, "2026")).thenReturn(List.of());
 
         List<FrequenciaDisciplinaDTO> frequencia = faltaService.getFrequenciaParaUsuarioLogado(ALUNO);
 
@@ -91,7 +92,7 @@ class FaltaServiceFrequenciaUnitTest {
         assertThat(frequencia.get(0).totalAulas()).isEqualTo(10L);
         assertThat(frequencia.get(0).percentualPresenca()).isEqualTo(80.0);
         assertThat(frequencia.get(0).totalFaltas()).isEqualTo(2L);
-        verify(aulaRegistroRepository, never()).findDatasByTurmaIdAndDisciplinaIdAndAnoLetivo(eq(2L), anyLong(), eq("2026"));
+        verify(aulaRegistroRepository, never()).findByTurmaIdAndDisciplinaIdAndAnoLetivo(eq(2L), anyLong(), eq("2026"));
     }
 
     @Test
@@ -102,5 +103,24 @@ class FaltaServiceFrequenciaUnitTest {
         when(disciplinaRepository.findAll()).thenReturn(List.of(disciplina(1L, "Matemática")));
 
         assertThat(faltaService.getFrequenciaParaUsuarioLogado(ALUNO)).isEmpty();
+    }
+
+    @Test
+    void frequencia_deveContarAsDuasAulasDoMesmoDia() {
+        Student aluno = alunoNaTurma(1L);
+        Disciplina matematica = disciplina(1L, "Matemática");
+        when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findAll()).thenReturn(List.of(matematica));
+        when(faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), "2026")).thenReturn(List.of(
+                new FaltaDomain(2, LocalDate.of(2026, 3, 2), LocalDateTime.now(), aluno, null, matematica)));
+        when(aulaRegistroRepository.findByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 1L, "2026")).thenReturn(List.of(
+                new AulaRegistro(LocalDate.of(2026, 3, 2), matematica, aluno.getTurma(), 2),
+                new AulaRegistro(LocalDate.of(2026, 3, 9), matematica, aluno.getTurma(), 2)));
+
+        List<FrequenciaDisciplinaDTO> frequencia = faltaService.getFrequenciaParaUsuarioLogado(ALUNO);
+
+        assertThat(frequencia.get(0).totalAulas()).isEqualTo(4L);
+        assertThat(frequencia.get(0).totalFaltas()).isEqualTo(2L);
+        assertThat(frequencia.get(0).percentualPresenca()).isEqualTo(50.0);
     }
 }

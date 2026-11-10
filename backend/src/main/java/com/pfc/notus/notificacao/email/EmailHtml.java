@@ -3,14 +3,8 @@ package com.pfc.notus.notificacao.email;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Versão em HTML dos e-mails do NOTUS, montada a partir do mesmo texto da versão simples:
- * logo no topo, o texto em parágrafos, um botão de ação e o rodapé em letra menor.
- * Usa tabelas e estilos inline porque é o que os programas de e-mail (Gmail, Outlook) entendem.
- */
 public final class EmailHtml {
 
-    /** Identificador da logo anexada ao e-mail (referenciada no HTML como cid:notus-logo). */
     public static final String CID_LOGO = "notus-logo";
 
     private static final String AZUL = "#003c84";
@@ -88,7 +82,6 @@ public final class EmailHtml {
         return html.toString();
     }
 
-    /** No HTML o link vira botão: tira do parágrafo a linha que é só o endereço. */
     private static String semLink(String bloco, Botao botao) {
         if (botao == null) return bloco;
         StringBuilder sb = new StringBuilder();
