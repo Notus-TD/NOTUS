@@ -1,6 +1,6 @@
 package com.pfc.notus.comunicado.domain;
 
-/** Quem vê o comunicado no portal. Responsáveis também recebem aviso por e-mail. */
+// ! REFC: Controla quem vê no portal + quem recebe e-mail (só TODOS e RESPONSAVEIS geram e-mail)
 public enum PublicoComunicado {
     TODOS,
     ALUNOS,

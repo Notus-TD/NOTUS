@@ -116,6 +116,7 @@ const secoes: SecaoPainel<SecaoId>[] = [
 
 type DisciplinaRef = { id: number; title: string };
 
+// ! REFC: Formulário para professor publicar recado (comunicado) para turma específica (público fixo=RESPONSAVEIS)
 function Comunicados({
   turmaId,
   turmaName,
@@ -134,6 +135,7 @@ function Comunicados({
     }
     setPublicando(true);
     try {
+      // ! REFC: Chama POST /comunicado/recado backend; professor só envia título, texto e turmaId (público fixo=RESPONSAVEIS)
       await publicarRecado({
         titulo: titulo.trim(),
         texto: corpo.trim(),
@@ -155,6 +157,7 @@ function Comunicados({
         <CardHeader>
           <CardTitle className="text-xl">Novo comunicado</CardTitle>
           <CardDescription className="text-base">
+            // ! REFC: Recado chega aos responsáveis da turma como aviso por e-mail + portal
             Publique uma mensagem para os alunos do {turmaName}. Seus responsáveis também receberão uma notificação.
           </CardDescription>
         </CardHeader>

@@ -1877,8 +1877,7 @@ function Dado({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-// Comunicados agora são salvos no back-end; responsáveis recebem aviso por e-mail
-// quando o público é "Toda a escola" ou "Responsáveis".
+// ! REFC: Mapeia cada valor do enum PublicoComunicado para um rótulo legível na UI
 type Publico = PublicoComunicado;
 
 const rotuloPublico: Record<Publico, string> = {
@@ -1888,6 +1887,7 @@ const rotuloPublico: Record<Publico, string> = {
   PROFESSORES: "Professores",
 };
 
+// ! REFC: Formulário para admin criar e publicar comunicado global (público escolhido pelo admin)
 function FormComunicado({
   compacto = false,
   aoEnviar,
@@ -1908,6 +1908,7 @@ function FormComunicado({
     }
     setEnviando(true);
     try {
+      // ! REFC: Chama POST /comunicado backend; envia só título, texto e público (admin o escolhe)
       const novo = await publicarComunicado({
         titulo: titulo.trim(),
         texto: texto.trim(),
@@ -2187,8 +2188,10 @@ function FormularioDisciplina({
   );
 }
 
+// ! REFC: Seção admin para criar e listar todos os comunicados globais publicados
 function Comunicados() {
   const [versao, setVersao] = useState(0);
+  // ! REFC: GET /comunicado backend - admin vê todos (sem filtro de público)
   const carga = useCarga<ComunicadoDTO[]>(getComunicados, versao);
 
   return (
@@ -2217,6 +2220,7 @@ function Comunicados() {
         {carga.estado === "ok" && carga.dados.length > 0 && (
           <div className="grid gap-4">
             {carga.dados.map((c) => (
+              // ! REFC: Exibe cada comunicado com título, público, data, autor e conteúdo
               <section
                 key={c.id}
                 aria-label={c.titulo}

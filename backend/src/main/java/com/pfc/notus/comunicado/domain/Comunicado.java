@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/** Comunicado geral da escola (Módulo de Comunicação), publicado pela secretaria. */
+// ! REFC: Entidade JPA mapeada em tb_comunicado - suporta comunicados globais (admin) e recados de turma (professor)
 @Entity
 @Table(name = "tb_comunicado")
 @NoArgsConstructor
@@ -37,13 +37,15 @@ public class Comunicado {
     @Column(length = 20)
     private String tipoRemetente; // ADMIN ou PROFESSOR
 
+    // ! REFC: Escopo local: null=comunicado global (admin), preenchido=recado de turma específica (professor)
     @Column
-    private Long turmaId; // Null para comunicados do admin, preenchido para recados do professor
+    private Long turmaId;
 
-    /** Ano letivo em que o comunicado foi publicado (ex.: "2026"). */
+    // ! REFC: Rastreia em qual ano letivo o comunicado foi publicado
     @Column(name = "ano_letivo", length = 4)
     private String anoLetivo;
 
+    // ! REFC: Construtor para comunicados globais (admin): público escolhido pelo admin, turmaId sempre null
     public Comunicado(String titulo, String texto, PublicoComunicado publico, String autorEmail, LocalDateTime enviadoEm) {
         this.titulo = titulo;
         this.texto = texto;
@@ -55,6 +57,7 @@ public class Comunicado {
         this.anoLetivo = AnoLetivo.atual();
     }
 
+    // ! REFC: Construtor para recados de turma (professor): público fixo=RESPONSAVEIS, turmaId preenchido
     public Comunicado(String titulo, String texto, String autorEmail, LocalDateTime enviadoEm, Long turmaId) {
         this.titulo = titulo;
         this.texto = texto;
@@ -62,14 +65,16 @@ public class Comunicado {
         this.enviadoEm = enviadoEm;
         this.tipoRemetente = "PROFESSOR";
         this.turmaId = turmaId;
-        this.publico = PublicoComunicado.RESPONSAVEIS; // Professor só manda para responsáveis
+        this.publico = PublicoComunicado.RESPONSAVEIS;
         this.anoLetivo = AnoLetivo.atual();
     }
 
+    // ! REFC: Decide se dispara evento de e-mail: true apenas para TODOS e RESPONSAVEIS
     public boolean incluiResponsaveis() {
         return publico == PublicoComunicado.TODOS || publico == PublicoComunicado.RESPONSAVEIS;
     }
 
+    // ! REFC: Diferencia comunicado do admin (false) de recado do professor (true)
     public boolean ehRecadoProfessor() {
         return "PROFESSOR".equals(tipoRemetente);
     }
