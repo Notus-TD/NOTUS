@@ -1,6 +1,5 @@
 package com.pfc.notus.exception;
 
-/** Login bloqueado por excesso de tentativas; vira HTTP 429 com o cabeçalho Retry-After. */
 public class MuitasTentativasException extends RuntimeException {
 
     private final long segundosParaLiberar;

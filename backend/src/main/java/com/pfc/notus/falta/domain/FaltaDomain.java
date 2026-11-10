@@ -1,5 +1,6 @@
 package com.pfc.notus.falta.domain;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.User;
@@ -27,6 +28,10 @@ public class FaltaDomain {
     @Getter @Setter
     private LocalDateTime registradoEm;
 
+    @Column(name = "ano_letivo", length = 4)
+    @Getter @Setter
+    private String anoLetivo;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     @Getter @Setter
@@ -49,5 +54,6 @@ public class FaltaDomain {
         this.aluno = aluno;
         this.registradoPor = registradoPor;
         this.disciplina = disciplina;
+        this.anoLetivo = AnoLetivo.doAluno(aluno);
     }
 }

@@ -1,8 +1,10 @@
 package com.pfc.notus.atividade.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.entrega.domain.StatusEntrega;
@@ -62,6 +64,9 @@ public class AtividadeService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Autowired
+    private CalendarioService calendarioService;
+
     @Transactional
     public List<AtividadeDTO> getAllAtividade() {
         return atividadeRepository.findAll().stream().map(a -> toDTO(a, null)).toList();
@@ -70,7 +75,9 @@ public class AtividadeService {
     @Transactional
     public List<AtividadeDTO> getByTurma(Long turmaId, String requesterEmail) {
         studentAccessGuardService.assertCanViewTurma(turmaId, requesterEmail);
-        return atividadeRepository.findByTurmaIdOrderByPrazoAsc(turmaId).stream()
+        Turma turma = turmaRepository.findById(turmaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + turmaId));
+        return atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(turmaId, AnoLetivo.daTurma(turma)).stream()
                 .map(a -> toDTO(a, null))
                 .toList();
     }
@@ -78,14 +85,35 @@ public class AtividadeService {
     @Transactional
     public List<AtividadeDTO> getMinhas(String requesterEmail) {
         User requester = buscarUsuario(requesterEmail);
-        if (!(requester instanceof Student aluno) || aluno.getTurma() == null) {
+        if (!(requester instanceof Student aluno)) {
+            return List.of();
+        }
+        return atividadesComEntrega(aluno);
+    }
+
+    @Transactional
+    public List<AtividadeDTO> getDoAluno(Long studentId, String requesterEmail) {
+        studentAccessGuardService.assertCanView(studentId, requesterEmail);
+        User usuario = userRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        if (!(usuario instanceof Student aluno)) {
+            throw new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId);
+        }
+        return atividadesComEntrega(aluno);
+    }
+
+    private List<AtividadeDTO> atividadesComEntrega(Student aluno) {
+        if (aluno.getTurma() == null) {
             return List.of();
         }
         Set<Long> entregues = entregaRepository.findByStudentId(aluno.getId()).stream()
                 .filter(e -> e.getStatus() == StatusEntrega.ENTREGUE || e.getStatus() == StatusEntrega.ATRASADA)
                 .map(e -> e.getAtividade().getId())
                 .collect(Collectors.toSet());
-        return atividadeRepository.findByTurmaIdOrderByPrazoAsc(aluno.getTurma().getId()).stream()
+        LocalDate desde = aluno.getTurmaDesde();
+        return atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(
+                        aluno.getTurma().getId(), AnoLetivo.doAluno(aluno)).stream()
+                .filter(a -> desde == null || !a.getPrazo().isBefore(desde))
                 .map(a -> toDTO(a, entregues.contains(a.getId())))
                 .toList();
     }
@@ -104,6 +132,7 @@ public class AtividadeService {
         User requester = buscarUsuario(requesterEmail);
         Turma turma = turmaRepository.findById(dto.turmaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + dto.turmaId()));
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(turma), dto.bimestre());
         Disciplina disciplina = resolverDisciplina(requester, turma.getId(), dto.disciplinaId());
 
         Atividade entity = new Atividade();
@@ -115,10 +144,49 @@ public class AtividadeService {
         entity.setPublicadaEm(LocalDateTime.now());
         entity.setTurma(turma);
         entity.setDisciplina(disciplina);
+        entity.setAnoLetivo(AnoLetivo.daTurma(turma));
 
         entity = atividadeRepository.save(entity);
         eventPublisher.publishEvent(new AtividadePublicadaEvent(entity.getId()));
         return toDTO(entity, null);
+    }
+
+    @Transactional
+    public AtividadeDTO atualizar(Long id, AtividadeDTO dto, String requesterEmail) {
+        Atividade atividade = atividadeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + id));
+        User requester = buscarUsuario(requesterEmail);
+        boolean podeEditar = requester.hasRole("ROLE_ADMIN")
+                || (requester.hasRole("ROLE_PROFESSOR") && lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(
+                        requester.getId(), atividade.getTurma().getId(), atividade.getDisciplina().getId()));
+        if (!podeEditar) {
+            throw new AccessDeniedException("Sem permissão para editar esta atividade.");
+        }
+        if (dto.bimestre() == null) {
+            throw new RegraNegocioException("Informe o bimestre da atividade.");
+        }
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), atividade.getBimestre());
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), dto.bimestre());
+        if (!dto.prazo().equals(atividade.getPrazo()) && dto.prazo().isBefore(LocalDate.now())) {
+            throw new RegraNegocioException("O prazo da atividade não pode ser uma data passada.");
+        }
+        if (dto.pontos() != null && (dto.pontos().isNaN() || dto.pontos() <= 0 || dto.pontos() > 10)) {
+            throw new RegraNegocioException("Os pontos da atividade devem ser maiores que 0 e no máximo 10.");
+        }
+        float novoMaximo = dto.pontos() == null ? 0f : dto.pontos();
+        boolean entregaAcimaDoNovoValor = entregaRepository.findByAtividadeId(id).stream()
+                .anyMatch(e -> e.getPontosObtidos() != null && e.getPontosObtidos() > novoMaximo);
+        if (entregaAcimaDoNovoValor) {
+            throw new ConflictException("Há entregas com mais pontos do que o novo valor da atividade. "
+                    + "Ajuste os pontos dessas entregas antes.");
+        }
+
+        atividade.setTitle(dto.title().trim());
+        atividade.setContent(dto.content().trim());
+        atividade.setBimestre(dto.bimestre());
+        atividade.setPrazo(dto.prazo());
+        atividade.setPontos(dto.pontos());
+        return toDTO(atividadeRepository.save(atividade), null);
     }
 
     @Transactional
@@ -132,6 +200,7 @@ public class AtividadeService {
         if (!podeExcluir) {
             throw new AccessDeniedException("Sem permissão para excluir esta atividade.");
         }
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), atividade.getBimestre());
         if (entregaRepository.existsByAtividadeId(id)) {
             throw new ConflictException("A atividade já tem entregas e não pode ser excluída.");
         }

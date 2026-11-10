@@ -20,7 +20,6 @@ public class ProfessorService {
     @Autowired
     private UserService userService;
 
-    // Mesma regra do aluno e do responsável: o professor recebe um link de convite por e-mail.
     @Transactional
     public ProfessorDTO createProfessor(ProfessorRequest dto) {
         Professor professor = new Professor(dto.fullName().trim(), dto.email().trim());

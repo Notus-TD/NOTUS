@@ -18,6 +18,16 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
     boolean existsByChaveIdempotencia(String chaveIdempotencia);
 
     @Query("""
+            SELECT n FROM Notificacao n LEFT JOIN FETCH n.student s
+            WHERE n.responsavel.id = :responsavelId
+              AND n.status <> :cancelada
+              AND n.tipo <> :excluido
+            ORDER BY n.criadoEm DESC, n.id DESC
+            """)
+    List<Notificacao> buscarAvisosDoResponsavel(Long responsavelId, StatusNotificacao cancelada,
+                                                TipoNotificacao excluido);
+
+    @Query("""
             SELECT n.id FROM Notificacao n
             WHERE n.status IN (:pendente, :enviando)
               AND n.proximaTentativaEm <= :agora
@@ -52,6 +62,10 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
                          Long studentId, String motivo);
 
     @Modifying
+    @Query("DELETE FROM Notificacao n WHERE n.criadoEm < :limite")
+    int apagarCriadasAntesDe(LocalDateTime limite);
+
+    @Modifying
     @Query("UPDATE Notificacao n SET n.variaveis = NULL WHERE n.student.id = :studentId")
     int apagarVariaveisDoAluno(Long studentId);
 
@@ -69,4 +83,8 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
             """)
     List<Notificacao> buscar(TipoNotificacao tipo, StatusNotificacao status, Long responsavelId,
                              LocalDateTime de, LocalDateTime ate);
+
+    long countByStudentId(Long studentId);
+
+    long countByResponsavelId(Long responsavelId);
 }

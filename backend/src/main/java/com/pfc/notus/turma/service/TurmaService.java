@@ -4,8 +4,10 @@ import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.lecionamento.dto.LecionamentoDTO;
 import com.pfc.notus.turma.domain.Turma;
+import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.turma.dto.TurmaAlunoRequestDTO;
 import com.pfc.notus.turma.dto.TurmaAlunoResponseDTO;
+import com.pfc.notus.turma.dto.TurmaAlunosLoteRequestDTO;
 import com.pfc.notus.turma.dto.TurmaDTO;
 import com.pfc.notus.turma.dto.TurmaDetalheDTO;
 import com.pfc.notus.turma.dto.TurmaRequestDTO;
@@ -14,12 +16,16 @@ import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.dto.StudentMinDTO;
 import com.pfc.notus.user.repository.StudentRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class TurmaService {
@@ -45,7 +51,7 @@ public class TurmaService {
 
         List<StudentMinDTO> alunos = turma.getAlunos().stream()
                 .sorted(Comparator.comparing(Student::getFullName, String.CASE_INSENSITIVE_ORDER))
-                .map(s -> new StudentMinDTO(s.getId(), s.getMatricula(), s.getFullName(), s.getStatusMatricula()))
+                .map(StudentMinDTO::of)
                 .toList();
 
         List<LecionamentoDTO> lecionamentos = turma.getLecionamentos().stream()
@@ -94,25 +100,45 @@ public class TurmaService {
             throw new ConflictException("A turma possui professores associados. Remova os vínculos antes de excluí-la.");
         }
 
-        turmaRepository.delete(turma);
+        try {
+            turmaRepository.delete(turma);
+            turmaRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new ConflictException("A turma tem aulas ou atividades registradas e não pode ser excluída.");
+        }
     }
 
     @Transactional
     public TurmaAlunoResponseDTO associarAluno(Long turmaId, TurmaAlunoRequestDTO dto) {
         Turma turma = buscarTurma(turmaId);
-        Student student = buscarAluno(dto.studentId());
+        return associarUm(turma, dto.studentId());
+    }
+
+    @Transactional
+    public List<TurmaAlunoResponseDTO> associarAlunosLote(Long turmaId, TurmaAlunosLoteRequestDTO dto) {
+        Set<Long> idsUnicos = new HashSet<>(dto.studentIds());
+        if (idsUnicos.size() != dto.studentIds().size()) {
+            throw new RegraNegocioException("A lista de alunos tem matrículas repetidas.");
+        }
+
+        Turma turma = buscarTurma(turmaId);
+        return dto.studentIds().stream()
+                .map(studentId -> associarUm(turma, studentId))
+                .toList();
+    }
+
+    private TurmaAlunoResponseDTO associarUm(Turma turma, Long studentId) {
+        Student student = buscarAluno(studentId);
 
         if (student.getStatusMatricula() != StatusMatricula.ATIVA) {
             throw new ConflictException("O aluno não possui matrícula ativa.");
         }
-        if (student.getTurma() != null) {
-            if (student.getTurma().getId().equals(turma.getId())) {
-                throw new ConflictException("O aluno já está associado a esta turma.");
-            }
-            throw new ConflictException("O aluno já está associado à turma " + student.getTurma().getName() + ".");
+        if (student.getTurma() != null && student.getTurma().getId().equals(turma.getId())) {
+            throw new ConflictException("O aluno já está associado a esta turma.");
         }
 
         student.setTurma(turma);
+        student.setTurmaDesde(LocalDate.now());
         studentRepository.save(student);
 
         return new TurmaAlunoResponseDTO(
@@ -134,6 +160,7 @@ public class TurmaService {
         }
 
         student.setTurma(null);
+        student.setTurmaDesde(null);
         studentRepository.save(student);
     }
 

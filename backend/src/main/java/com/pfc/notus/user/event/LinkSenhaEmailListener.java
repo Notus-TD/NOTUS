@@ -1,5 +1,6 @@
 package com.pfc.notus.user.event;
 
+import com.pfc.notus.notificacao.email.EmailHtml;
 import com.pfc.notus.notificacao.email.ResendEmailClient;
 import com.pfc.notus.notificacao.port.ResultadoEnvio;
 import com.pfc.notus.notificacao.util.EmailUtil;
@@ -12,10 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Envia o link de senha na hora, sem passar pela fila de notificações (que roda a cada 10 min).
- * É assíncrono para o tempo de resposta de /auth/esqueci-senha não revelar se o e-mail existe.
- */
 @Component
 public class LinkSenhaEmailListener {
 
@@ -41,17 +38,24 @@ public class LinkSenhaEmailListener {
         String link = frontendUrl + "/redefinir-senha?token=" + evento.token();
 
         if (logarLink) {
-            // Só nos profiles de desenvolvimento: o Resend sem domínio verificado não entrega para outros e-mails.
             log.info("[DEV] Link de {} para {}: {}", evento.tipo(), EmailUtil.mascarar(evento.email()), link);
         }
 
-        ResultadoEnvio resultado = emailClient.enviarTexto(evento.email(), assunto(evento.tipo()), texto(evento.tipo(), link));
+        ResultadoEnvio resultado = emailClient.enviarTexto(evento.email(), assunto(evento.tipo()),
+                texto(evento.tipo(), link), new EmailHtml.Botao(rotuloBotao(evento.tipo()), link));
         if (resultado.tipo() == ResultadoEnvio.Tipo.SUCESSO) {
             log.info("E-mail de {} enviado para {}", evento.tipo(), EmailUtil.mascarar(evento.email()));
         } else {
             log.warn("Falha ao enviar e-mail de {} para {}: {}", evento.tipo(),
                     EmailUtil.mascarar(evento.email()), resultado.erro());
         }
+    }
+
+    static String rotuloBotao(TipoTokenSenha tipo) {
+        return switch (tipo) {
+            case CONVITE -> "Criar minha senha";
+            case REDEFINICAO -> "Criar senha nova";
+        };
     }
 
     static String assunto(TipoTokenSenha tipo) {

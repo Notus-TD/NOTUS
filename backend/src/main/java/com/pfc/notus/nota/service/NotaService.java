@@ -1,5 +1,9 @@
 package com.pfc.notus.nota.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
+import com.pfc.notus.boletim.domain.AnoLetivo;
+import com.pfc.notus.boletim.domain.Bimestre;
+import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -36,6 +40,12 @@ public class NotaService {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
+    @Autowired
+    private BoletimRepository boletimRepository;
+
+    @Autowired
+    private CalendarioService calendarioService;
+
     @Transactional(readOnly = true)
     public NotaDTO getById(Long id, String requesterEmail) {
         Nota entity = buscarNota(id);
@@ -46,7 +56,8 @@ public class NotaService {
     @Transactional(readOnly = true)
     public List<NotaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
-        return notaRepository.findByStudentIdOrderByIdAsc(studentId).stream()
+        Student aluno = buscarAluno(studentId);
+        return notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(studentId, AnoLetivo.doAluno(aluno)).stream()
                 .map(NotaMapper::toDto)
                 .toList();
     }
@@ -57,6 +68,7 @@ public class NotaService {
         Student student = buscarAluno(dto.studentId());
         studentAccessGuardService.assertCanTeach(student.getId(), dto.disciplinaId(), requesterEmail);
         Disciplina disciplina = buscarDisciplina(dto.disciplinaId());
+        assertBimestreAberto(student, dto.disciplinaId(), dto.bimestre());
 
         Nota entity = notaRepository.save(NotaMapper.toEntity(dto, student, disciplina));
         return NotaMapper.toDto(entity);
@@ -70,6 +82,7 @@ public class NotaService {
         if (!entity.getStudent().getId().equals(dto.studentId()) || !entity.getDisciplina().getId().equals(dto.disciplinaId())) {
             throw new RegraNegocioException("Não é possível trocar o aluno ou a disciplina de uma nota.");
         }
+        assertBimestreAberto(entity.getStudent(), entity.getDisciplina().getId(), entity.getBimestre());
 
         entity.setDescricao(dto.descricao().trim());
         entity.setRate(dto.rate());
@@ -81,7 +94,20 @@ public class NotaService {
     public void delete(Long id, String requesterEmail) {
         Nota entity = buscarNota(id);
         studentAccessGuardService.assertCanTeach(entity.getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
+        assertBimestreAberto(entity.getStudent(), entity.getDisciplina().getId(), entity.getBimestre());
         notaRepository.delete(entity);
+    }
+
+    private void assertBimestreAberto(Student student, Long disciplinaId, Bimestre bimestre) {
+        calendarioService.exigirBimestreAberto(AnoLetivo.doAluno(student), bimestre);
+        boolean fechado = boletimRepository
+                .findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                        student.getId(), disciplinaId, bimestre, AnoLetivo.doAluno(student))
+                .isPresent();
+        if (fechado) {
+            throw new RegraNegocioException(
+                    "Este bimestre já tem nota final lançada no boletim. Remova a nota final para reabrir e corrigir as notas.");
+        }
     }
 
     private void validarAvaliacao(NotaRequestDTO dto) {

@@ -13,6 +13,10 @@ abstract class User {
   +ativo: Boolean
   +createdAt: LocalDateTime
   +termsAcceptedAt: LocalDateTime
+  +anonimizadoEm: LocalDateTime
+  +mfaSegredo: String
+  +mfaAtivo: Boolean
+  +mfaUltimoPasso: Long
 }
 
 class Role {
@@ -25,6 +29,7 @@ class Student {
   +matricula: Long
   +birthDate: LocalDate
   +statusMatricula: StatusMatricula
+  +acessoLiberadoEm: LocalDateTime
 }
 
 class Responsible {
@@ -60,7 +65,10 @@ class Atividade {
   +id: Long
   +title: String
   +content: String
-  +status: StatusAtividade
+  +bimestre: Bimestre
+  +prazo: LocalDate
+  +pontos: Float
+  +anoLetivo: String
 }
 
 class Entrega {
@@ -71,10 +79,10 @@ class Entrega {
 
 class Boletim {
   +id: Long
-  +period: String
-  +finalAverage: BigDecimal
-  +status: String
-  +situacao: String
+  +bimestre: Bimestre
+  +notaFinal: Float
+  +anoLetivo: String
+  +lancadoEm: LocalDateTime
 }
 
 class Nota {
@@ -86,6 +94,8 @@ class Nota {
 class AulaRegistro {
   +id: Long
   +data: LocalDate
+  +quantidadeAulas: Integer
+  +anoLetivo: String
 }
 
 class Falta {
@@ -93,18 +103,60 @@ class Falta {
   +data: LocalDate
   +quantidade: Integer
   +registradoEm: LocalDateTime
+  +anoLetivo: String
+}
+
+class PeriodoLetivo {
+  +id: Long
+  +anoLetivo: String
+  +bimestre: Bimestre
+  +inicio: LocalDate
+  +fim: LocalDate
+  +reaberto: Boolean
+  +situacao(hoje): SituacaoPeriodo
+}
+
+class SolicitacaoTitular {
+  +id: Long
+  +tipo: TipoSolicitacao
+  +detalhe: String
+  +status: StatusSolicitacao
+  +solicitadaEm: LocalDateTime
+  +prazoEm: LocalDate
+  +respondidaEm: LocalDateTime
+  +resposta: String
+  +respondidaPor: String
 }
 
 enum StatusMatricula {
   ATIVA
-  INATIVA
-  ENCERRADA
+  FINALIZADA
+  CANCELADA
 }
 
-enum StatusAtividade {
+enum Bimestre {
+  PRIMEIRO
+  SEGUNDO
+  TERCEIRO
+  QUARTO
+}
+
+enum SituacaoPeriodo {
+  NAO_INICIADO
+  EM_ANDAMENTO
+  FECHADO
+  REABERTO
+}
+
+enum TipoSolicitacao {
+  ANONIMIZACAO
+  CORRECAO
+}
+
+enum StatusSolicitacao {
   ABERTA
-  ENCERRADA
-  CANCELADA
+  ATENDIDA
+  RECUSADA
 }
 
 User "0..*" -- "0..*" Role : possui >
@@ -130,5 +182,10 @@ Disciplina "1" -- "0..*" AulaRegistro : possui aulas >
 Student "1" -- "0..*" Falta : possui >
 Disciplina "1" -- "0..*" Falta : ocorre em >
 Professor "1" -- "0..*" Falta : registra >
+
+Responsible "1" -- "0..*" SolicitacaoTitular : solicita >
+Student "0..1" -- "0..*" SolicitacaoTitular : refere-se a <
+PeriodoLetivo ..> Falta : libera ou bloqueia pela data >
+PeriodoLetivo ..> Boletim : libera ou bloqueia pelo bimestre >
 
 @enduml

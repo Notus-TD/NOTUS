@@ -6,16 +6,15 @@ import com.pfc.notus.notificacao.port.ResultadoEnvio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Envia as notificações pendentes em segundo plano, fora de qualquer requisição do usuário.
- * Cada notificação é tratada isoladamente: um erro numa não impede o envio das outras.
- */
 @Component
 public class NotificacaoWorker {
 
@@ -30,12 +29,36 @@ public class NotificacaoWorker {
     @Autowired
     private NotificacaoProperties properties;
 
+    private final ReentrantLock emExecucao = new ReentrantLock();
+    private final AtomicBoolean pedidoPendente = new AtomicBoolean(false);
+
     @Scheduled(fixedDelayString = "${notificacao.worker-intervalo-ms:600000}",
             initialDelayString = "${notificacao.worker-atraso-inicial-ms:15000}")
     public void processar() {
+        executar();
+    }
+
+    @Async
+    public void processarAgora() {
+        executar();
+    }
+
+    void executar() {
+        pedidoPendente.set(true);
+        while (pedidoPendente.get() && emExecucao.tryLock()) {
+            try {
+                while (pedidoPendente.getAndSet(false)) {
+                    ciclo();
+                }
+            } finally {
+                emExecucao.unlock();
+            }
+        }
+    }
+
+    private void ciclo() {
         LocalDateTime inicioCiclo = LocalDateTime.now();
         try {
-            // Repete os lotes até a fila esvaziar; cada notificação é pega no máximo uma vez por ciclo.
             List<Long> ids;
             while (!(ids = envioService.reservarLote(inicioCiclo)).isEmpty()) {
                 if (!enviarLote(ids)) return;
@@ -45,7 +68,6 @@ public class NotificacaoWorker {
         }
     }
 
-    /** @return false se a thread foi interrompida (aplicação encerrando). */
     private boolean enviarLote(List<Long> ids) {
         long pausaMs = Math.max(1, 1000L / properties.taxaPorSegundo());
         for (Long id : ids) {

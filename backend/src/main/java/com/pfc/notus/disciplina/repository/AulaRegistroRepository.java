@@ -5,11 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AulaRegistroRepository extends JpaRepository<AulaRegistro, Long> {
 
-    boolean existsByDisciplinaIdAndData(Long disciplinaId, LocalDate data);
+    Optional<AulaRegistro> findByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(Long turmaId, Long disciplinaId, LocalDate data, String anoLetivo);
 
-    long countByDisciplinaId(Long disciplinaId);
+    List<AulaRegistro> findByTurmaIdAndDisciplinaIdAndAnoLetivo(Long turmaId, Long disciplinaId, String anoLetivo);
 }

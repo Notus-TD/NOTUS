@@ -101,6 +101,7 @@ class UserServiceUnitTest {
     @Test
     void deveAnonimizarOAlunoMantendoSoOIdEAMatricula() {
         Student aluno = criarAluno(10L, 20260001L, "Ana Aluna", criarResponsavel(3L, "Marta Responsável"));
+        aluno.setStatusMatricula(StatusMatricula.CANCELADA);
         when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
 
         userService.anonimyzeUser(10L, " 20260001 ", ADMIN);
@@ -115,11 +116,24 @@ class UserServiceUnitTest {
         assertNull(aluno.getResponsible());
         assertNull(aluno.getTurma());
         assertFalse(aluno.isAtivo());
-        assertEquals(StatusMatricula.FINALIZADA, aluno.getStatusMatricula());
+        assertEquals(StatusMatricula.CANCELADA, aluno.getStatusMatricula());
         assertNotNull(aluno.getAnonimizadoEm());
         verify(userRepository).save(aluno);
         verify(notificacaoService).cancelarPendentesDoAluno(10L, "Aluno anonimizado");
         verify(notificacaoService).apagarDadosDoAluno(10L);
+    }
+
+    @Test
+    void deveBloquearAnonimizarOAlunoComMatriculaAtiva() {
+        Student aluno = criarAluno(10L, 20260001L, "Ana Aluna", null);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
+
+        ConflictException excecao = assertThrows(ConflictException.class,
+                () -> userService.anonimyzeUser(10L, "20260001", ADMIN));
+
+        assertEquals("Cancele a matrícula do aluno antes de anonimizar.", excecao.getMessage());
+        assertEquals("Ana Aluna", aluno.getFullName());
+        verify(userRepository, never()).save(any());
     }
 
     @Test

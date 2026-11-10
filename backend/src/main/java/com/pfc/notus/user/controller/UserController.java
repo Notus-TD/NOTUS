@@ -1,6 +1,5 @@
 package com.pfc.notus.user.controller;
 
-import com.pfc.notus.user.dto.AnonimizacaoRequestDTO;
 import com.pfc.notus.user.dto.OnboardingRequest;
 import com.pfc.notus.user.dto.UsuarioDTO;
 import com.pfc.notus.user.service.UserService;
@@ -35,16 +34,16 @@ public class UserController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{userId}/mfa/redefinir")
+    public ResponseEntity<Void> redefinirMfa(@PathVariable Long userId, Authentication authentication) {
+        userService.redefinirMfa(userId, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UsuarioDTO>> listarUsuarios() {
         return ResponseEntity.ok(userService.listarUsuarios());
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/me/anonymize/{userId}")
-    public ResponseEntity<Void> anonimyzeUser(@PathVariable Long userId, @RequestBody @Valid AnonimizacaoRequestDTO dto,
-                                              Authentication authentication) {
-        userService.anonimyzeUser(userId, dto.confirmacao(), authentication.getName());
-        return ResponseEntity.noContent().build();
-    }
 }

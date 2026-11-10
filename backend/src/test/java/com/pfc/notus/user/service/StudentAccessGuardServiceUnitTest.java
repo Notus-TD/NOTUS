@@ -74,58 +74,48 @@ class StudentAccessGuardServiceUnitTest {
 
     @Test
     void devePermitirLancarNotaQuandoProfessorLecionaADisciplinaNaTurmaDoAluno() {
-        // Arrange
         Professor professor = criarProfessor();
         when(userRepository.findByEmail(professor.getEmail())).thenReturn(Optional.of(professor));
         when(studentRepository.findById(ID_ALUNO)).thenReturn(Optional.of(criarAluno(ID_ALUNO, criarTurma())));
         when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(ID_PROFESSOR, ID_TURMA, ID_MATEMATICA))
                 .thenReturn(true);
 
-        // Act + Assert
         assertDoesNotThrow(() -> studentAccessGuardService.assertCanTeach(ID_ALUNO, ID_MATEMATICA, professor.getEmail()));
         verify(lecionamentoRepository).existsByProfessorIdAndTurmaIdAndDisciplinaId(ID_PROFESSOR, ID_TURMA, ID_MATEMATICA);
     }
 
     @Test
     void deveNegarLancamentoDeNotaQuandoProfessorNaoLecionaADisciplinaNaTurmaDoAluno() {
-        // Arrange
         Professor professor = criarProfessor();
         when(userRepository.findByEmail(professor.getEmail())).thenReturn(Optional.of(professor));
         when(studentRepository.findById(ID_ALUNO)).thenReturn(Optional.of(criarAluno(ID_ALUNO, criarTurma())));
         when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(ID_PROFESSOR, ID_TURMA, ID_MATEMATICA))
                 .thenReturn(false);
 
-        // Act
         AccessDeniedException excecao = assertThrows(AccessDeniedException.class,
                 () -> studentAccessGuardService.assertCanTeach(ID_ALUNO, ID_MATEMATICA, professor.getEmail()));
 
-        // Assert
         assertEquals("Sem permissão para lançar dados desta disciplina para este aluno.", excecao.getMessage());
     }
 
     @Test
     void deveNegarLancamentoDeNotaSemConsultarLecionamentoQuandoAlunoNaoTemTurma() {
-        // Arrange
         Professor professor = criarProfessor();
         when(userRepository.findByEmail(professor.getEmail())).thenReturn(Optional.of(professor));
         when(studentRepository.findById(ID_ALUNO)).thenReturn(Optional.of(criarAluno(ID_ALUNO, null)));
 
-        // Act
         AccessDeniedException excecao = assertThrows(AccessDeniedException.class,
                 () -> studentAccessGuardService.assertCanTeach(ID_ALUNO, ID_MATEMATICA, professor.getEmail()));
 
-        // Assert
         assertEquals("Sem permissão para lançar dados desta disciplina para este aluno.", excecao.getMessage());
         verify(lecionamentoRepository, never()).existsByProfessorIdAndTurmaIdAndDisciplinaId(anyLong(), anyLong(), anyLong());
     }
 
     @Test
     void devePermitirAdminLancarNotaSemConsultarAlunoNemLecionamento() {
-        // Arrange
         User admin = comIdEPapel(new User("admin@notus.com"), 1L, "ROLE_ADMIN");
         when(userRepository.findByEmail("admin@notus.com")).thenReturn(Optional.of(admin));
 
-        // Act + Assert
         assertDoesNotThrow(() -> studentAccessGuardService.assertCanTeach(ID_ALUNO, ID_MATEMATICA, "admin@notus.com"));
         verify(studentRepository, never()).findById(anyLong());
         verifyNoInteractions(lecionamentoRepository);
@@ -133,57 +123,46 @@ class StudentAccessGuardServiceUnitTest {
 
     @Test
     void deveNegarLancamentoDeNotaQuandoUsuarioEhAlunoMesmoSendoAsPropriasNotas() {
-        // Arrange
         Student aluno = criarAluno(ID_ALUNO, criarTurma());
         when(userRepository.findByEmail(aluno.getEmail())).thenReturn(Optional.of(aluno));
 
-        // Act
         AccessDeniedException excecao = assertThrows(AccessDeniedException.class,
                 () -> studentAccessGuardService.assertCanTeach(ID_ALUNO, ID_MATEMATICA, aluno.getEmail()));
 
-        // Assert
         assertEquals("Sem permissão para lançar dados desta disciplina para este aluno.", excecao.getMessage());
         verifyNoInteractions(lecionamentoRepository);
     }
 
     @Test
     void devePermitirResponsavelVerNotasDoProprioFilho() {
-        // Arrange
         Responsible responsavel = comIdEPapel(
                 new Responsible("Marta Responsável", "marta.responsavel@gmail.com", "11999990000"), 20L, "ROLE_RESPONSAVEL");
         responsavel.getStudents().add(criarAluno(ID_ALUNO, criarTurma()));
         when(userRepository.findByEmail(responsavel.getEmail())).thenReturn(Optional.of(responsavel));
 
-        // Act + Assert
         assertDoesNotThrow(() -> studentAccessGuardService.assertCanView(ID_ALUNO, responsavel.getEmail()));
     }
 
     @Test
     void deveNegarResponsavelVerNotasDeAlunoQueNaoEhSeuFilho() {
-        // Arrange
         Responsible responsavel = comIdEPapel(
                 new Responsible("Marta Responsável", "marta.responsavel@gmail.com", "11999990000"), 20L, "ROLE_RESPONSAVEL");
         responsavel.getStudents().add(criarAluno(ID_ALUNO, criarTurma()));
         when(userRepository.findByEmail(responsavel.getEmail())).thenReturn(Optional.of(responsavel));
 
-        // Act
         AccessDeniedException excecao = assertThrows(AccessDeniedException.class,
                 () -> studentAccessGuardService.assertCanView(99L, responsavel.getEmail()));
 
-        // Assert
         assertEquals("Sem permissão para ver os dados deste aluno.", excecao.getMessage());
     }
 
     @Test
     void deveLancarExcecaoQuandoUsuarioAutenticadoNaoExiste() {
-        // Arrange
         when(userRepository.findByEmail("fantasma@gmail.com")).thenReturn(Optional.empty());
 
-        // Act
         ResourceNotFoundException excecao = assertThrows(ResourceNotFoundException.class,
                 () -> studentAccessGuardService.assertCanView(ID_ALUNO, "fantasma@gmail.com"));
 
-        // Assert
         assertEquals("Usuário autenticado não encontrado: fantasma@gmail.com", excecao.getMessage());
         verifyNoInteractions(studentRepository, lecionamentoRepository);
     }

@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tb_boletim",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "disciplina_id", "bimestre"}))
+        uniqueConstraints = @UniqueConstraint(name = "uk_boletim_aluno_disciplina_bimestre_ano",
+                columnNames = {"student_id", "disciplina_id", "bimestre", "ano_letivo"}))
 @NoArgsConstructor
 public class Boletim {
 
@@ -25,6 +26,10 @@ public class Boletim {
     @Column(nullable = false)
     @Getter @Setter
     private Bimestre bimestre;
+
+    @Column(name = "ano_letivo", length = 9)
+    @Getter @Setter
+    private String anoLetivo;
 
     @Column(nullable = false)
     @Getter @Setter
@@ -53,5 +58,6 @@ public class Boletim {
         this.student = student;
         this.disciplina = disciplina;
         this.bimestre = bimestre;
+        this.anoLetivo = AnoLetivo.doAluno(student);
     }
 }

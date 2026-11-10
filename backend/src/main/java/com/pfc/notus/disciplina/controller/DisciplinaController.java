@@ -1,8 +1,5 @@
 package com.pfc.notus.disciplina.controller;
 
-import org.springframework.security.core.Authentication;
-import com.pfc.notus.user.service.StudentAccessGuardService;
-import com.pfc.notus.disciplina.dto.AulaRequestDTO;
 import com.pfc.notus.disciplina.dto.DisciplinaDTO;
 import com.pfc.notus.disciplina.service.DisciplinaService;
 import jakarta.validation.Valid;
@@ -20,9 +17,6 @@ public class DisciplinaController {
     @Autowired
     private DisciplinaService disciplinaService;
 
-    @Autowired
-    private StudentAccessGuardService studentAccessGuardService;
-    
     @GetMapping
     public List<DisciplinaDTO> getAllDisciplina(){
         return disciplinaService.getAllDisciplina();
@@ -36,18 +30,18 @@ public class DisciplinaController {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<DisciplinaDTO> update(@PathVariable Long id, @RequestBody @Valid DisciplinaDTO dto){
+        DisciplinaDTO updated = disciplinaService.update(id, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping ("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){
         disciplinaService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','PROFESSOR')")
-    @PostMapping("/{id}/aulas")
-    public ResponseEntity<Void> registrarAula(@PathVariable Long id, @RequestBody @Valid AulaRequestDTO req, Authentication authentication) {
-        studentAccessGuardService.assertCanTeachDisciplina(id, authentication.getName());
-        disciplinaService.registrarAula(id, req.data());
-        return ResponseEntity.noContent().build();
-    }
 
 }

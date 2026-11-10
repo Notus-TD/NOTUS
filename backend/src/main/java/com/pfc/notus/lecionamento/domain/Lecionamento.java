@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "tb_lecionamento",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"turma_id", "disciplina_id"}))
+        uniqueConstraints = @UniqueConstraint(name = "uk_lecionamento_turma_disciplina_professor",
+                columnNames = {"turma_id", "disciplina_id", "professor_id"}))
 @NoArgsConstructor
 public class Lecionamento {
 

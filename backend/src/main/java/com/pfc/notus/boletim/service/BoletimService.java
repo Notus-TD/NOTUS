@@ -1,5 +1,7 @@
 package com.pfc.notus.boletim.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
+import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
@@ -17,27 +19,24 @@ import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.repository.NotaRepository;
 import com.pfc.notus.notificacao.event.NotaFinalLancadaEvent;
 import com.pfc.notus.notificacao.service.NotificacaoService;
-import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.user.domain.Student;
-import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalDouble;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -75,40 +74,21 @@ public class BoletimService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Autowired
+    private CalendarioService calendarioService;
+
     @Transactional(readOnly = true)
     public List<BoletimDisciplinaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
 
-        Map<Long, Float> mediasDaSala = mediasDaSala(studentId);
-        return montarBoletim(studentId).stream()
-                .map(d -> BoletimMapper.comMediaSala(d, mediasDaSala.get(d.disciplinaId())))
-                .toList();
-    }
-
-    /** Média final da turma do aluno em cada disciplina, considerando só os alunos com matrícula ativa. */
-    private Map<Long, Float> mediasDaSala(Long studentId) {
-        Turma turma = studentRepository.findById(studentId).map(Student::getTurma).orElse(null);
-        if (turma == null) {
-            return Map.of();
-        }
-        Map<Long, List<Float>> mediasPorDisciplina = new HashMap<>();
-        for (Student colega : studentRepository.findByTurmaId(turma.getId(), Sort.unsorted())) {
-            if (colega.getStatusMatricula() != StatusMatricula.ATIVA) {
-                continue;
-            }
-            montarBoletim(colega.getId()).stream()
-                    .filter(d -> d.mediaFinal() != null)
-                    .forEach(d -> mediasPorDisciplina.computeIfAbsent(d.disciplinaId(), id -> new ArrayList<>()).add(d.mediaFinal()));
-        }
-        return mediasPorDisciplina.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey,
-                        e -> (float) e.getValue().stream().mapToDouble(Float::doubleValue).average().orElseThrow()));
+        return montarBoletim(studentId);
     }
 
     private List<BoletimDisciplinaDTO> montarBoletim(Long studentId) {
-        List<Nota> notas = notaRepository.findByStudentIdOrderByIdAsc(studentId);
-        List<Boletim> boletins = boletimRepository.findByStudentId(studentId);
-        List<Entrega> pontuadas = entregasPontuadas(studentId);
+        String ano = anoLetivoDoAluno(studentId);
+        List<Nota> notas = notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(studentId, ano);
+        List<Boletim> boletins = boletimRepository.findByStudentIdAndAnoLetivo(studentId, ano);
+        List<Entrega> pontuadas = entregasPontuadas(studentId, ano);
 
         Map<Long, Disciplina> disciplinas = new HashMap<>();
         notas.forEach(n -> disciplinas.putIfAbsent(n.getDisciplina().getId(), n.getDisciplina()));
@@ -141,19 +121,25 @@ public class BoletimService {
         Student student = studentRepository.findById(dto.studentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
         studentAccessGuardService.assertCanTeach(student.getId(), dto.disciplinaId(), requesterEmail);
+        calendarioService.exigirBimestreAberto(AnoLetivo.doAluno(student), dto.bimestre());
         Disciplina disciplina = disciplinaRepository.findById(dto.disciplinaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + dto.disciplinaId()));
         User lancadoPor = userRepository.findByEmail(requesterEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + requesterEmail));
 
-        Boletim entity = boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(student.getId(), disciplina.getId(), dto.bimestre())
+        Boletim entity = boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                        student.getId(), disciplina.getId(), dto.bimestre(), AnoLetivo.doAluno(student))
                 .orElseGet(() -> new Boletim(student, disciplina, dto.bimestre()));
+        Float notaAnterior = entity.getNotaFinal();
+        boolean mudou = notaAnterior == null || !notaAnterior.equals(dto.notaFinal());
         entity.setNotaFinal(dto.notaFinal());
         entity.setLancadoPor(lancadoPor);
         entity.setLancadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         entity = boletimRepository.save(entity);
 
-        eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId()));
+        if (mudou) {
+            eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId(), notaAnterior != null));
+        }
         return BoletimMapper.toDto(entity, mediaCalculada(student.getId(), disciplina.getId(), dto.bimestre()),
                 pontosAtividades(student.getId(), disciplina.getId(), dto.bimestre()));
     }
@@ -163,13 +149,15 @@ public class BoletimService {
         Boletim entity = boletimRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Nota final não encontrada com o id: " + id));
         studentAccessGuardService.assertCanTeach(entity.getStudent().getId(), entity.getDisciplina().getId(), requesterEmail);
+        calendarioService.exigirBimestreAberto(AnoLetivo.doAluno(entity.getStudent()), entity.getBimestre());
 
         boletimRepository.delete(entity);
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_BOLETIM, id, "Nota final removida antes do envio");
     }
 
     private Float mediaCalculada(Long studentId, Long disciplinaId, Bimestre bimestre) {
-        OptionalDouble media = notaRepository.findByStudentIdAndDisciplinaIdAndBimestre(studentId, disciplinaId, bimestre).stream()
+        OptionalDouble media = notaRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                        studentId, disciplinaId, bimestre, anoLetivoDoAluno(studentId)).stream()
                 .mapToDouble(Nota::getRate)
                 .average();
         return media.isPresent() ? (float) media.getAsDouble() : null;
@@ -177,16 +165,23 @@ public class BoletimService {
 
     private Float pontosAtividades(Long studentId, Long disciplinaId, Bimestre bimestre) {
         Celula celula = new Celula(disciplinaId, bimestre);
-        List<Entrega> daCelula = entregasPontuadas(studentId).stream()
+        List<Entrega> daCelula = entregasPontuadas(studentId, anoLetivoDoAluno(studentId)).stream()
                 .filter(e -> celulaDaEntrega(e).equals(celula))
                 .toList();
         return daCelula.isEmpty() ? null : (float) daCelula.stream().mapToDouble(Entrega::getPontosObtidos).sum();
     }
 
-    private List<Entrega> entregasPontuadas(Long studentId) {
+    private List<Entrega> entregasPontuadas(Long studentId, String ano) {
         return entregaRepository.findByStudentId(studentId).stream()
                 .filter(e -> e.getPontosObtidos() != null)
+                .filter(e -> ano.equals(e.getAtividade().getTurma().getSchoolYear().trim()))
                 .toList();
+    }
+
+    private String anoLetivoDoAluno(Long studentId) {
+        Student aluno = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        return AnoLetivo.doAluno(aluno);
     }
 
     private static Celula celulaDaEntrega(Entrega entrega) {
@@ -205,7 +200,9 @@ public class BoletimService {
 
     private Float mediaFinal(List<BoletimDTO> bimestres) {
         OptionalDouble media = bimestres.stream()
-                .mapToDouble(BoletimDTO::nota)
+                .map(BoletimDTO::nota)
+                .filter(Objects::nonNull)
+                .mapToDouble(Float::doubleValue)
                 .average();
         return media.isPresent() ? (float) media.getAsDouble() : null;
     }

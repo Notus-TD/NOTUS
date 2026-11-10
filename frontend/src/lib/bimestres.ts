@@ -1,4 +1,4 @@
-import type { Bimestre } from "@/lib/api";
+import type { Bimestre } from "@/api/boletim";
 
 export const BIMESTRES: { id: Bimestre; label: string }[] = [
   { id: "PRIMEIRO", label: "1º bimestre" },

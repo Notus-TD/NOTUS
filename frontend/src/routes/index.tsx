@@ -1,7 +1,8 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { PerfilSwitcher } from "@/components/PerfilSwitcher";
+import { PerfilSwitcher } from "@/components/layout/PerfilSwitcher";
 import { CalendarDays, BellRing, ClipboardCheck, ShieldCheck, UserPlus } from "lucide-react";
-import { RodapeSite } from "@/components/LegalPage";
+import { RodapeSite } from "@/features/legal/LegalPage";
+import { MarcaNotus } from "@/components/layout/AppShell";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
@@ -27,10 +28,26 @@ export const Route = createFileRoute("/")({
 });
 
 const destaques = [
-  { icon: CalendarDays, titulo: "Atividades e prazos", texto: "O aluno vê o que entregar hoje, o que vem depois e o que ficou atrasado." },
-  { icon: BellRing, titulo: "Avisos para a família", texto: "Reuniões, autorizações e recados dos professores em texto grande e claro." },
-  { icon: ClipboardCheck, titulo: "Diário de classe", texto: "O professor faz a chamada, lança notas e publica recados em poucos toques." },
-  { icon: ShieldCheck, titulo: "Informação confiável", texto: "Cada perfil vê apenas o que precisa, sempre com a mesma linguagem simples." },
+  {
+    icon: CalendarDays,
+    titulo: "Atividades e prazos",
+    texto: "O aluno vê o que entregar hoje, o que vem depois e o que ficou atrasado.",
+  },
+  {
+    icon: BellRing,
+    titulo: "Avisos para a família",
+    texto: "Reuniões, autorizações e recados dos professores em texto grande e claro.",
+  },
+  {
+    icon: ClipboardCheck,
+    titulo: "Diário de classe",
+    texto: "O professor faz a chamada, lança notas e publica recados em poucos toques.",
+  },
+  {
+    icon: ShieldCheck,
+    titulo: "Informação confiável",
+    texto: "Cada perfil vê apenas o que precisa, sempre com a mesma linguagem simples.",
+  },
 ];
 
 function Index() {
@@ -38,20 +55,19 @@ function Index() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground">
-              N
-            </span>
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">NOTUS</span>
+          <Link to="/" aria-label="NOTUS, página inicial">
+            <MarcaNotus />
           </Link>
-          <span className="hidden text-base text-muted-foreground sm:block">Colégio Notus · 2026</span>
+          <span className="hidden text-base text-muted-foreground sm:block">
+            Colégio Notus · 2026
+          </span>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6">
         <section className="max-w-3xl">
           <p className="text-base font-semibold uppercase tracking-widest text-primary">
-            Gestão escolar do 5º ano ao 9º ano
+            Ensino Fundamental II, do 6º ao 9º ano
           </p>
           <h1 className="mt-3 font-display text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl">
             A vida escolar organizada, em palavras que todos entendem.
@@ -63,7 +79,9 @@ function Index() {
         </section>
 
         <section className="mt-10">
-          <h2 className="mb-4 font-display text-2xl font-bold text-foreground">Escolha uma visão</h2>
+          <h2 className="mb-4 font-display text-2xl font-bold text-foreground">
+            Escolha uma visão
+          </h2>
           <PerfilSwitcher />
           <Link
             to="/cadastro"

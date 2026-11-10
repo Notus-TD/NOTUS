@@ -1,7 +1,8 @@
 package com.pfc.notus.falta.controller;
 
+import com.pfc.notus.falta.dto.ChamadaDTO;
+import com.pfc.notus.falta.dto.ChamadaRequestDTO;
 import com.pfc.notus.falta.dto.FaltaDTO;
-import com.pfc.notus.falta.dto.FaltaRequestDTO;
 import com.pfc.notus.falta.dto.FrequenciaDisciplinaDTO;
 import com.pfc.notus.falta.service.FaltaService;
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -42,11 +44,17 @@ public class FaltaController {
         return faltaService.getFrequenciaParaUsuarioLogado(authentication.getName());
     }
 
-    @PreAuthorize("hasAnyRole('PROFESSOR')")
-    @PostMapping("/associar")
-    public ResponseEntity<FaltaDTO> associar(@RequestBody @Valid FaltaRequestDTO dto, Authentication authentication) {
-        FaltaDTO created = faltaService.associarFalta(dto, authentication.getName());
-        return ResponseEntity.ok(created);
+    @PreAuthorize("hasRole('PROFESSOR')")
+    @GetMapping("/chamada")
+    public ChamadaDTO getChamada(@RequestParam Long turmaId, @RequestParam Long disciplinaId,
+                                 @RequestParam LocalDate data, Authentication authentication) {
+        return faltaService.getChamada(turmaId, disciplinaId, data, authentication.getName());
+    }
+
+    @PreAuthorize("hasRole('PROFESSOR')")
+    @PutMapping("/chamada")
+    public ChamadaDTO salvarChamada(@RequestBody @Valid ChamadaRequestDTO dto, Authentication authentication) {
+        return faltaService.salvarChamada(dto, authentication.getName());
     }
 
     @PreAuthorize("hasAnyRole('PROFESSOR', 'ADMIN')")

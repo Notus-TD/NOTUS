@@ -1,5 +1,6 @@
 package com.pfc.notus.boletim.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
@@ -21,17 +22,16 @@ import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Professor;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.user.domain.Student;
-import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -60,6 +60,9 @@ class BoletimServiceUnitTest {
     private BoletimRepository boletimRepository;
 
     @Mock
+    private CalendarioService calendarioService;
+
+    @Mock
     private NotaRepository notaRepository;
 
     @Mock
@@ -86,9 +89,14 @@ class BoletimServiceUnitTest {
     @InjectMocks
     private BoletimService boletimService;
 
+    private static final String ANO = "2026";
+
     private Student criarAluno(Long id) {
         Student aluno = new Student("Ana Aluna", "ana.aluna@gmail.com", 20260001L, LocalDate.of(2012, 5, 10), null);
         ReflectionTestUtils.setField(aluno, "id", id);
+        Turma turma = new Turma("9º Ano A", ANO);
+        ReflectionTestUtils.setField(turma, "id", 99L);
+        aluno.setTurma(turma);
         return aluno;
     }
 
@@ -124,13 +132,14 @@ class BoletimServiceUnitTest {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
         Disciplina portugues = criarDisciplina(6L, "Português");
-        when(notaRepository.findByStudentIdOrderByIdAsc(10L)).thenReturn(List.of(
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(10L, ANO)).thenReturn(List.of(
                 criarNota(8f, Bimestre.PRIMEIRO, aluno, matematica),
                 criarNota(9f, Bimestre.PRIMEIRO, aluno, matematica),
                 criarNota(6f, Bimestre.SEGUNDO, aluno, matematica),
                 criarNota(5f, Bimestre.TERCEIRO, aluno, matematica),
                 criarNota(7f, Bimestre.PRIMEIRO, aluno, portugues)));
-        when(boletimRepository.findByStudentId(10L))
+        when(boletimRepository.findByStudentIdAndAnoLetivo(10L, ANO))
                 .thenReturn(List.of(criarNotaFinal(1L, 10f, Bimestre.PRIMEIRO, aluno, matematica)));
 
         List<BoletimDisciplinaDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
@@ -155,6 +164,7 @@ class BoletimServiceUnitTest {
 
     private Entrega criarEntrega(float pontosObtidos, Bimestre bimestre, Student aluno, Disciplina disciplina) {
         Atividade atividade = new Atividade("Lista", "Exercícios");
+        atividade.setTurma(aluno.getTurma());
         atividade.setBimestre(bimestre);
         atividade.setDisciplina(disciplina);
         atividade.setPontos(2f);
@@ -165,37 +175,13 @@ class BoletimServiceUnitTest {
     }
 
     @Test
-    void deveCalcularAMediaDaSalaSoComOsAlunosAtivosDaTurma() {
-        Turma turma = new Turma("9º Ano A", "2026");
-        ReflectionTestUtils.setField(turma, "id", 1L);
-        Disciplina matematica = criarDisciplina(5L, "Matemática");
-        Student aluno = criarAluno(10L);
-        Student colega = criarAluno(11L);
-        Student desligado = criarAluno(12L);
-        aluno.setTurma(turma);
-        colega.setTurma(turma);
-        desligado.setTurma(turma);
-        desligado.setStatusMatricula(StatusMatricula.FINALIZADA);
-        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
-        when(studentRepository.findByTurmaId(1L, Sort.unsorted())).thenReturn(List.of(aluno, colega, desligado));
-        when(boletimRepository.findByStudentId(10L))
-                .thenReturn(List.of(criarNotaFinal(1L, 8f, Bimestre.PRIMEIRO, aluno, matematica)));
-        when(boletimRepository.findByStudentId(11L))
-                .thenReturn(List.of(criarNotaFinal(2L, 5f, Bimestre.PRIMEIRO, colega, matematica)));
-
-        List<BoletimDisciplinaDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
-
-        assertEquals(8f, resultado.get(0).mediaFinal());
-        assertEquals(6.5f, resultado.get(0).mediaSala());
-    }
-
-    @Test
     void deveSomarOsPontosDasAtividadesANotaDoBimestreLimitandoA10() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
-        when(notaRepository.findByStudentIdOrderByIdAsc(10L))
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(10L, ANO))
                 .thenReturn(List.of(criarNota(6f, Bimestre.SEGUNDO, aluno, matematica)));
-        when(boletimRepository.findByStudentId(10L))
+        when(boletimRepository.findByStudentIdAndAnoLetivo(10L, ANO))
                 .thenReturn(List.of(criarNotaFinal(1L, 8f, Bimestre.PRIMEIRO, aluno, matematica)));
         Entrega semPontos = new Entrega(new Atividade("Recado", "Sem nota"), aluno);
         when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(
@@ -215,7 +201,9 @@ class BoletimServiceUnitTest {
         assertEquals(0.5f, bimestres.get(1).pontosAtividades());
         assertEquals(6.5f, bimestres.get(1).nota());
         assertNull(bimestres.get(2).notaFinal());
-        assertEquals(2f, bimestres.get(2).nota());
+        assertEquals(2f, bimestres.get(2).pontosAtividades());
+        assertNull(bimestres.get(2).nota());
+        assertEquals(8.25f, resultado.get(0).mediaFinal());
     }
 
     @Test
@@ -225,13 +213,13 @@ class BoletimServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
         when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
-        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.empty());
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO)).thenReturn(Optional.empty());
         when(boletimRepository.save(any(Boletim.class))).thenAnswer(invocacao -> {
             Boletim salvo = invocacao.getArgument(0);
             ReflectionTestUtils.setField(salvo, "id", 50L);
             return salvo;
         });
-        when(notaRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO))
+        when(notaRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO))
                 .thenReturn(List.of(criarNota(7f, Bimestre.PRIMEIRO, aluno, matematica), criarNota(8f, Bimestre.PRIMEIRO, aluno, matematica)));
 
         BoletimDTO resultado = boletimService.lancarNotaFinal(
@@ -242,7 +230,7 @@ class BoletimServiceUnitTest {
         assertEquals(7.5f, resultado.mediaCalculada());
         assertNotNull(resultado.lancadoEm());
         verify(studentAccessGuardService).assertCanTeach(10L, 5L, PROFESSOR);
-        verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L));
+        verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L, false));
     }
 
     @Test
@@ -253,7 +241,7 @@ class BoletimServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
         when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
-        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestre(10L, 5L, Bimestre.PRIMEIRO)).thenReturn(Optional.of(existente));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO)).thenReturn(Optional.of(existente));
         when(boletimRepository.save(existente)).thenReturn(existente);
 
         BoletimDTO resultado = boletimService.lancarNotaFinal(
@@ -262,6 +250,23 @@ class BoletimServiceUnitTest {
         assertEquals(50L, resultado.id());
         assertEquals(7f, resultado.notaFinal());
         assertNull(resultado.mediaCalculada());
+        verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L, true));
+    }
+
+    @Test
+    void naoDeveAvisarOResponsavelQuandoANotaSalvaEAMesma() {
+        Student aluno = criarAluno(10L);
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        Boletim existente = criarNotaFinal(50L, 7f, Bimestre.PRIMEIRO, aluno, matematica);
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, ANO)).thenReturn(Optional.of(existente));
+        when(boletimRepository.save(existente)).thenReturn(existente);
+
+        boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 7f), PROFESSOR);
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -318,5 +323,24 @@ class BoletimServiceUnitTest {
 
         assertEquals("Nota final não encontrada com o id: 99", excecao.getMessage());
         verify(boletimRepository, never()).delete(any());
+    }
+
+    @Test
+    void notaFinalDoAnoNovoNaoSobrescreveADoAnoAnterior() {
+        Student aluno = criarAluno(10L);
+        aluno.setTurma(new Turma("7º Ano A", "2027"));
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
+        when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, "2027"))
+                .thenReturn(Optional.empty());
+        when(boletimRepository.save(any(Boletim.class))).thenAnswer(invocacao -> invocacao.getArgument(0));
+
+        boletimService.lancarNotaFinal(new NotaFinalRequestDTO(10L, 5L, Bimestre.PRIMEIRO, 9f), PROFESSOR);
+
+        ArgumentCaptor<Boletim> salvo = ArgumentCaptor.forClass(Boletim.class);
+        verify(boletimRepository).save(salvo.capture());
+        assertEquals("2027", salvo.getValue().getAnoLetivo());
     }
 }

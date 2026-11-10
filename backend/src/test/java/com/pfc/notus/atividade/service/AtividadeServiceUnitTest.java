@@ -1,5 +1,6 @@
 package com.pfc.notus.atividade.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
@@ -54,6 +55,9 @@ class AtividadeServiceUnitTest {
 
     @Mock
     private AtividadeRepository atividadeRepository;
+
+    @Mock
+    private CalendarioService calendarioService;
 
     @Mock
     private TurmaRepository turmaRepository;
@@ -285,13 +289,35 @@ class AtividadeServiceUnitTest {
 
         when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
         when(entregaRepository.findByStudentId(10L)).thenReturn(List.of(entrega, naoEntregue));
-        when(atividadeRepository.findByTurmaIdOrderByPrazoAsc(1L)).thenReturn(List.of(entregue, pendente));
+        when(atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(1L, "2026")).thenReturn(List.of(entregue, pendente));
 
         List<AtividadeDTO> resultado = atividadeService.getMinhas(ALUNO);
 
         assertEquals(2, resultado.size());
         assertEquals(true, resultado.get(0).entregue());
         assertEquals(false, resultado.get(1).entregue());
+    }
+
+    @Test
+    void alunoQueEntrouNaTurmaDepoisNaoVeAtividadesComPrazoAnterior() {
+        Turma turma = criarTurma(1L, "6º Ano A");
+        Student aluno = new Student("Gustavo Novo", ALUNO, 20260099L, LocalDate.of(2014, 3, 1), null);
+        aluno.setTurma(turma);
+        aluno.setTurmaDesde(LocalDate.now());
+        comIdEPapel(aluno, 10L, "ROLE_ALUNO");
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        Atividade antiga = criarAtividade(1L, turma, matematica);
+        antiga.setPrazo(LocalDate.now().minusDays(30));
+        Atividade atual = criarAtividade(2L, turma, matematica);
+
+        when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
+        when(entregaRepository.findByStudentId(10L)).thenReturn(List.of());
+        when(atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(1L, "2026")).thenReturn(List.of(antiga, atual));
+
+        List<AtividadeDTO> resultado = atividadeService.getMinhas(ALUNO);
+
+        assertEquals(1, resultado.size());
+        assertEquals(2L, resultado.get(0).id());
     }
 
     @Test
@@ -324,5 +350,84 @@ class AtividadeServiceUnitTest {
         verify(atividadeRepository).delete(atividade);
         verify(notificacaoService).cancelarPorReferencia(NotificacaoService.REF_ATIVIDADE, 1L,
                 "Atividade excluída antes do envio");
+    }
+
+    @Test
+    void responsavelNaoVeAtividadesDeQuemNaoEDependente() {
+        org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("Sem permissão para ver os dados deste aluno."))
+                .when(studentAccessGuardService).assertCanView(99L, "marta@gmail.com");
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> atividadeService.getDoAluno(99L, "marta@gmail.com"));
+        org.mockito.Mockito.verifyNoInteractions(atividadeRepository);
+    }
+
+    private com.pfc.notus.atividade.domain.Atividade atividadePublicada() {
+        com.pfc.notus.turma.domain.Turma turma = new com.pfc.notus.turma.domain.Turma("9º Ano B", "2026");
+        org.springframework.test.util.ReflectionTestUtils.setField(turma, "id", 2L);
+        com.pfc.notus.disciplina.domain.Disciplina mat = new com.pfc.notus.disciplina.domain.Disciplina("Matemática", "Álgebra");
+        org.springframework.test.util.ReflectionTestUtils.setField(mat, "id", 1L);
+        com.pfc.notus.atividade.domain.Atividade a = new com.pfc.notus.atividade.domain.Atividade();
+        org.springframework.test.util.ReflectionTestUtils.setField(a, "id", 9L);
+        a.setTitle("Lista");
+        a.setContent("Antigo");
+        a.setBimestre(com.pfc.notus.boletim.domain.Bimestre.QUARTO);
+        a.setPrazo(java.time.LocalDate.now().minusDays(3));
+        a.setPontos(2f);
+        a.setTurma(turma);
+        a.setDisciplina(mat);
+        return a;
+    }
+
+    private com.pfc.notus.atividade.dto.AtividadeDTO edicao(java.time.LocalDate prazo, Float pontos) {
+        return new com.pfc.notus.atividade.dto.AtividadeDTO(null, " Lista nova ", " Texto novo ",
+                com.pfc.notus.boletim.domain.Bimestre.QUARTO, prazo, 2L, 1L, null, null, null, null, pontos);
+    }
+
+    private void professorDaTurma() {
+        com.pfc.notus.user.domain.User prof = new com.pfc.notus.user.domain.User("pedro@notus.com");
+        org.springframework.test.util.ReflectionTestUtils.setField(prof, "id", 5L);
+        prof.addRole(new com.pfc.notus.user.domain.Role(2L, "ROLE_PROFESSOR"));
+        org.mockito.Mockito.when(userRepository.findByEmail("pedro@notus.com")).thenReturn(java.util.Optional.of(prof));
+        org.mockito.Mockito.when(lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(5L, 2L, 1L)).thenReturn(true);
+    }
+
+    @Test
+    void professorEditaAtividadeMantendoUmPrazoJaVencido() {
+        com.pfc.notus.atividade.domain.Atividade a = atividadePublicada();
+        org.mockito.Mockito.when(atividadeRepository.findById(9L)).thenReturn(java.util.Optional.of(a));
+        professorDaTurma();
+        org.mockito.Mockito.when(entregaRepository.findByAtividadeId(9L)).thenReturn(java.util.List.of());
+        org.mockito.Mockito.when(atividadeRepository.save(a)).thenReturn(a);
+
+        com.pfc.notus.atividade.dto.AtividadeDTO r = atividadeService.atualizar(9L, edicao(a.getPrazo(), 3f), "pedro@notus.com");
+
+        org.junit.jupiter.api.Assertions.assertEquals("Lista nova", r.title());
+        org.junit.jupiter.api.Assertions.assertEquals("Texto novo", a.getContent());
+        org.junit.jupiter.api.Assertions.assertEquals(3f, a.getPontos());
+    }
+
+    @Test
+    void naoDeixaMudarOPrazoParaUmaDataPassada() {
+        com.pfc.notus.atividade.domain.Atividade a = atividadePublicada();
+        org.mockito.Mockito.when(atividadeRepository.findById(9L)).thenReturn(java.util.Optional.of(a));
+        professorDaTurma();
+
+        org.junit.jupiter.api.Assertions.assertThrows(com.pfc.notus.exception.RegraNegocioException.class,
+                () -> atividadeService.atualizar(9L, edicao(java.time.LocalDate.now().minusDays(1), 2f), "pedro@notus.com"));
+        org.mockito.Mockito.verify(atividadeRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void naoDeixaBaixarOsPontosAbaixoDeUmaEntregaJaPontuada() {
+        com.pfc.notus.atividade.domain.Atividade a = atividadePublicada();
+        org.mockito.Mockito.when(atividadeRepository.findById(9L)).thenReturn(java.util.Optional.of(a));
+        professorDaTurma();
+        com.pfc.notus.entrega.domain.Entrega e = new com.pfc.notus.entrega.domain.Entrega();
+        e.setPontosObtidos(1.5f);
+        org.mockito.Mockito.when(entregaRepository.findByAtividadeId(9L)).thenReturn(java.util.List.of(e));
+
+        org.junit.jupiter.api.Assertions.assertThrows(com.pfc.notus.exception.ConflictException.class,
+                () -> atividadeService.atualizar(9L, edicao(a.getPrazo(), 1f), "pedro@notus.com"));
     }
 }

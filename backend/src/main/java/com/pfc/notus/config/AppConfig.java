@@ -29,7 +29,6 @@ public class AppConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-//
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
@@ -60,6 +59,7 @@ public class AppConfig {
                                 "/auth/esqueci-senha",
                                 "/auth/token-senha/validar",
                                 "/auth/definir-senha",
+                                "/auth/mfa/**",
                                 "/h2-console/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",

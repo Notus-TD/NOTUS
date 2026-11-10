@@ -1,9 +1,13 @@
 package com.pfc.notus.user.controller;
 
+import com.pfc.notus.user.dto.AcessoAlunoRequest;
+import com.pfc.notus.user.dto.CancelamentoMatriculaRequest;
 import com.pfc.notus.user.dto.StudentBatchRegistrationRequest;
+import com.pfc.notus.user.dto.StudentDetalheDTO;
 import com.pfc.notus.user.dto.StudentMinDTO;
 import com.pfc.notus.user.dto.StudentRegistrationRequest;
 import com.pfc.notus.user.dto.StudentRegistrationResponse;
+import com.pfc.notus.user.dto.StudentRequest;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import com.pfc.notus.user.service.StudentService;
 import jakarta.validation.Valid;
@@ -41,6 +45,45 @@ public class StudentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/{id}")
+    public ResponseEntity<StudentDetalheDTO> getDetalhe(@PathVariable Long id) {
+        return ResponseEntity.ok(studentService.getDetalhe(id));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<StudentDetalheDTO> update(@PathVariable Long id, @RequestBody @Valid StudentRequest dto) {
+        return ResponseEntity.ok(studentService.updateStudent(id, dto));
+    }
+
+    @PreAuthorize("hasRole('RESPONSAVEL')")
+    @PutMapping("/{id}/acesso")
+    public ResponseEntity<StudentMinDTO> liberarAcesso(@PathVariable Long id, @RequestBody @Valid AcessoAlunoRequest dto,
+                                                       Authentication authentication) {
+        return ResponseEntity.ok(studentService.liberarAcesso(id, dto.email(), authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('RESPONSAVEL')")
+    @DeleteMapping("/{id}/acesso")
+    public ResponseEntity<StudentMinDTO> retirarAcesso(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(studentService.retirarAcesso(id, authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/matricula/cancelar")
+    public ResponseEntity<StudentMinDTO> cancelarMatricula(@PathVariable Long id,
+                                                           @RequestBody @Valid CancelamentoMatriculaRequest request,
+                                                           Authentication authentication) {
+        return ResponseEntity.ok(studentService.cancelarMatricula(id, request.motivo(), authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/matricula/reativar")
+    public ResponseEntity<StudentMinDTO> reativarMatricula(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(studentService.reativarMatricula(id, authentication.getName()));
+    }
+
     @PreAuthorize("hasAnyRole('ADMIN', 'PROFESSOR')")
     @GetMapping
     public ResponseEntity<List<StudentMinDTO>> findAll(Authentication authentication) {
@@ -49,7 +92,6 @@ public class StudentController {
         if (admin) {
             return ResponseEntity.ok(studentService.listStudents());
         }
-        // Professor só enxerga alunos das turmas em que leciona.
         return ResponseEntity.ok(studentService.listStudentsByTurmas(
                 studentAccessGuardService.turmaIdsDoProfessor(authentication.getName())));
     }

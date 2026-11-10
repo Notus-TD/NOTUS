@@ -36,6 +36,10 @@ public class Atividade {
     @Getter @Setter
     private Float pontos;
 
+    @Column(name = "ano_letivo", length = 4)
+    @Getter @Setter
+    private String anoLetivo;
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn( name = "disciplina_id", nullable = false)

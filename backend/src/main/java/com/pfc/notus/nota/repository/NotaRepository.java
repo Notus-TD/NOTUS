@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface NotaRepository extends JpaRepository<Nota, Long> {
 
-    List<Nota> findByStudentIdOrderByIdAsc(Long studentId);
+    List<Nota> findByStudentIdAndAnoLetivoOrderByIdAsc(Long studentId, String anoLetivo);
 
-    List<Nota> findByStudentIdAndDisciplinaIdAndBimestre(Long studentId, Long disciplinaId, Bimestre bimestre);
+    List<Nota> findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(Long studentId, Long disciplinaId, Bimestre bimestre, String anoLetivo);
 }

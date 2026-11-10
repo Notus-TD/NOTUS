@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234567
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - ./.data/postgresql/data:/var/lib/postgresqldev/data
     networks:
@@ -23,7 +23,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: me@example.com
       PGADMIN_DEFAULT_PASSWORD: 1234567
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     volumes:
       - ./.data/pgadmin:/var/lib/pgadmin
     depends_on:
@@ -34,7 +34,7 @@ services:
   loki:
     image: grafana/loki:2.9.0
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     # Configuração própria com retenção de 6 meses (conteúdo em configs.loki-config, no fim do arquivo)
     command: -config.file=/etc/loki/loki-config.yaml
     configs:
@@ -48,8 +48,8 @@ services:
   grafana:
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
     entrypoint:
       - sh
       - -euc
@@ -71,7 +71,7 @@ services:
         /run.sh
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     networks:
       - naws-net
 

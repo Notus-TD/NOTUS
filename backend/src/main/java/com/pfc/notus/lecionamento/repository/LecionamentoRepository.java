@@ -13,9 +13,11 @@ public interface LecionamentoRepository extends JpaRepository<Lecionamento, Long
 
     boolean existsByTurmaIdAndDisciplinaId(Long turmaId, Long disciplinaId);
 
+    boolean existsByDisciplinaId(Long disciplinaId);
+
     boolean existsByProfessorIdAndTurmaId(Long professorId, Long turmaId);
 
-    boolean existsByProfessorIdAndDisciplinaId(Long professorId, Long disciplinaId);
+    long countByTurmaIdAndDisciplinaId(Long turmaId, Long disciplinaId);
 
     boolean existsByProfessorIdAndTurmaIdAndDisciplinaId(Long professorId, Long turmaId, Long disciplinaId);
 }

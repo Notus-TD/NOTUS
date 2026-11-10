@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "tb_student")
@@ -37,6 +38,19 @@ public class Student extends User {
     @Getter @Setter
     private Turma turma;
 
+    @Getter @Setter
+    private LocalDateTime acessoLiberadoEm;
+
+    @Getter @Setter
+    private LocalDate turmaDesde;
+
+    @Column(length = 300)
+    @Getter @Setter
+    private String motivoCancelamento;
+
+    @Getter @Setter
+    private LocalDateTime matriculaCanceladaEm;
+
     public Student(String fullName, String email, Long matricula, LocalDate birthDate, Responsible responsible) {
         super(email);
         this.fullName = fullName;
@@ -44,5 +58,10 @@ public class Student extends User {
         this.birthDate = birthDate;
         this.statusMatricula = StatusMatricula.ATIVA;
         this.responsible = responsible;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return super.isEnabled() && acessoLiberadoEm != null;
     }
 }

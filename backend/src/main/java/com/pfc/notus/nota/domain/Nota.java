@@ -31,6 +31,10 @@ public class Nota {
     @Getter @Setter
     private Bimestre bimestre;
 
+    @Column(name = "ano_letivo", length = 9)
+    @Getter @Setter
+    private String anoLetivo;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     @Getter @Setter

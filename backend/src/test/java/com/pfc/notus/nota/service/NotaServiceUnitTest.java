@@ -1,6 +1,8 @@
 package com.pfc.notus.nota.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.Bimestre;
+import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -9,6 +11,7 @@ import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.dto.NotaRequestDTO;
 import com.pfc.notus.nota.repository.NotaRepository;
+import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
@@ -31,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -45,6 +49,9 @@ class NotaServiceUnitTest {
     private NotaRepository notaRepository;
 
     @Mock
+    private CalendarioService calendarioService;
+
+    @Mock
     private StudentRepository studentRepository;
 
     @Mock
@@ -52,6 +59,9 @@ class NotaServiceUnitTest {
 
     @Mock
     private StudentAccessGuardService studentAccessGuardService;
+
+    @Mock
+    private BoletimRepository boletimRepository;
 
     @InjectMocks
     private NotaService notaService;
@@ -210,10 +220,42 @@ class NotaServiceUnitTest {
     }
 
     @Test
+    void deveRecusarLancamentoQuandoBimestreJaTemNotaFinal() {
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(criarAluno(10L)));
+        when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(criarDisciplina(5L, "Matemática")));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                eq(10L), eq(5L), eq(Bimestre.PRIMEIRO), anyString()))
+                .thenReturn(Optional.of(new com.pfc.notus.boletim.domain.Boletim()));
+
+        RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
+                () -> notaService.save(pedido(8.5f), PROFESSOR));
+
+        assertEquals("Este bimestre já tem nota final lançada no boletim. Remova a nota final para reabrir e corrigir as notas.",
+                excecao.getMessage());
+        verify(notaRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRecusarExclusaoQuandoBimestreJaTemNotaFinal() {
+        Nota nota = criarNota(100L, criarAluno(10L), criarDisciplina(5L, "Matemática"));
+        when(notaRepository.findById(100L)).thenReturn(Optional.of(nota));
+        when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
+                eq(10L), eq(5L), eq(Bimestre.PRIMEIRO), anyString()))
+                .thenReturn(Optional.of(new com.pfc.notus.boletim.domain.Boletim()));
+
+        assertThrows(RegraNegocioException.class, () -> notaService.delete(100L, PROFESSOR));
+
+        verify(notaRepository, never()).delete(any());
+    }
+
+    @Test
     void deveListarAsNotasDoAlunoDepoisDeValidarOAcesso() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
-        when(notaRepository.findByStudentIdOrderByIdAsc(10L))
+        Turma turma = new Turma("9º Ano A", "2026");
+        aluno.setTurma(turma);
+        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
+        when(notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(10L, "2026"))
                 .thenReturn(List.of(criarNota(100L, aluno, matematica), criarNota(101L, aluno, matematica)));
 
         List<NotaDTO> resultado = notaService.getByStudent(10L, PROFESSOR);

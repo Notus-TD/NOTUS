@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -46,6 +47,17 @@ public class User implements UserDetails {
 
     @Getter @Setter
     private LocalDateTime anonimizadoEm;
+
+    @JsonIgnore
+    @Getter @Setter
+    private String mfaSegredo;
+
+    @ColumnDefault("false")
+    @Getter @Setter
+    private boolean mfaAtivo;
+
+    @Getter @Setter
+    private Long mfaUltimoPasso;
 
     @ManyToMany
     @JoinTable(name = "tb_user_role",
