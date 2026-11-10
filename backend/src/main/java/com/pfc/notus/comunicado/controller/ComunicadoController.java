@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// ! REFC: Quatro rotas: publicar comunicado (admin), publicar recado (professor), listar tudo (admin), listar para usuário
 @RestController
 @RequestMapping("/comunicado")
 public class ComunicadoController {
@@ -24,26 +25,28 @@ public class ComunicadoController {
         this.comunicadoService = comunicadoService;
     }
 
+    // ! REFC: POST /comunicado - admin publica comunicado global (público escolhido); @PreAuthorize restringe a ADMIN
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ComunicadoDTO> publicar(@Valid @RequestBody ComunicadoRequest request, Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED).body(comunicadoService.publicar(request, authentication.getName()));
     }
 
-    /** Recado do professor para uma turma específica */
+    // ! REFC: POST /comunicado/recado - professor publica recado para turma específica; público fixo=RESPONSAVEIS
     @PreAuthorize("hasRole('PROFESSOR')")
     @PostMapping("/recado")
     public ResponseEntity<ComunicadoDTO> publicarRecado(@Valid @RequestBody RecadoProfessorRequest request, Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED).body(comunicadoService.publicarRecado(request, authentication.getName()));
     }
 
+    // ! REFC: GET /comunicado - admin vê todos os comunicados (sem filtro de público)
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<ComunicadoDTO> listar() {
         return comunicadoService.listarTodos();
     }
 
-    /** Comunicados visíveis para quem está logado (aluno, responsável, professor ou admin). */
+    // ! REFC: GET /comunicado/me - usuário vê comunicados conforme seu papel (TODOS + seu público específico)
     @GetMapping("/me")
     public List<ComunicadoDTO> meus(Authentication authentication) {
         return comunicadoService.listarParaUsuario((UserDetails) authentication.getPrincipal());

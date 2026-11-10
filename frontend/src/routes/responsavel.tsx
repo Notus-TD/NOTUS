@@ -80,11 +80,13 @@ function saudacao(hora = new Date().getHours()) {
   return "Boa noite";
 }
 
-// Item da lista de avisos: um comunicado da escola ou um aviso automático (falta, nota, atividade).
+// ! REFC: Item da lista de avisos: um comunicado da escola ou um aviso automático (falta, nota, atividade)
 type ItemAviso = { chave: string; titulo: string; texto: string; origem: string; quando: string };
 
+// ! REFC: Monta lista de avisos: combina comunicados globais (admin) + recados de turma (professor) + avisos automáticos (falta/nota/atividade)
 function montarAvisos(comunicados: ComunicadoDTO[], avisos: AvisoDTO[]): ItemAviso[] {
   return [
+    // ! REFC: Comunicados aparecem com origem "Secretaria da escola", ordenados por data descendente
     ...comunicados.map((c) => ({
       chave: `c-${c.id}`,
       titulo: c.titulo,
@@ -92,6 +94,7 @@ function montarAvisos(comunicados: ComunicadoDTO[], avisos: AvisoDTO[]): ItemAvi
       origem: "Secretaria da escola",
       quando: c.enviadoEm,
     })),
+    // ! REFC: Avisos automáticos aparecem com origem "Sobre {aluno}" ou "Escola" se genérico
     ...avisos.map((a) => ({
       chave: `n-${a.id}`,
       titulo: a.titulo,
