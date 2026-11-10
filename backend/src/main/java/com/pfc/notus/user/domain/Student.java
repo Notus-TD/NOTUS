@@ -41,6 +41,16 @@ public class Student extends User {
     @Getter @Setter
     private LocalDateTime acessoLiberadoEm;
 
+    @Getter @Setter
+    private LocalDate turmaDesde;
+
+    @Column(length = 300)
+    @Getter @Setter
+    private String motivoCancelamento;
+
+    @Getter @Setter
+    private LocalDateTime matriculaCanceladaEm;
+
     public Student(String fullName, String email, Long matricula, LocalDate birthDate, Responsible responsible) {
         super(email);
         this.fullName = fullName;

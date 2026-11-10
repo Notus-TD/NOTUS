@@ -1,3 +1,5 @@
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { getStudentDetalhe, type StudentDetalheDTO, type StudentMinDTO } from "@/api/alunos";
 import { ApiError } from "@/api/cliente";
 import { cancelarMatricula, reativarMatricula } from "@/api/usuarios";
@@ -23,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormularioEdicaoAluno } from "@/features/admin/alunos/FormularioEdicaoAluno";
 import { rotuloSituacao, tomSituacao } from "@/features/admin/alunos/situacao";
-import { BotaoAnonimizar } from "@/features/admin/comum/BotoesUsuario";
+import { FormAnonimizacao } from "@/features/admin/anonimizacao/FormAnonimizacao";
 import { useCarga } from "@/hooks/use-carga";
 import { MensagemErro } from "@/components/layout/MensagemErro";
 import { formatarTelefone } from "@/lib/validacao";
@@ -33,13 +35,14 @@ import { toast } from "sonner";
 
 function BotaoMatricula({ aluno, aoMudar }: { aluno: StudentDetalheDTO; aoMudar: () => void }) {
   const [salvando, setSalvando] = useState(false);
+  const [motivo, setMotivo] = useState("");
   const cancelar = aluno.matriculaStatus === "ATIVA";
   if (!cancelar && aluno.matriculaStatus !== "CANCELADA") return null;
 
   async function confirmar() {
     setSalvando(true);
     try {
-      if (cancelar) await cancelarMatricula(aluno.userId);
+      if (cancelar) await cancelarMatricula(aluno.userId, motivo.trim());
       if (!cancelar) await reativarMatricula(aluno.userId);
       toast.success(
         cancelar
@@ -55,7 +58,7 @@ function BotaoMatricula({ aluno, aoMudar }: { aluno: StudentDetalheDTO; aoMudar:
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog onOpenChange={(aberto) => !aberto && setMotivo("")}>
       <AlertDialogTrigger asChild>
         <Button
           variant="outline"
@@ -87,10 +90,25 @@ function BotaoMatricula({ aluno, aoMudar }: { aluno: StudentDetalheDTO; aoMudar:
               : "O aluno volta a ter acesso ao portal, ainda sem turma. Depois, escolha a turma dele em Turmas."}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {cancelar && (
+          <div className="space-y-1.5">
+            <Label htmlFor="motivo-cancelamento">Motivo do cancelamento</Label>
+            <Textarea
+              id="motivo-cancelamento"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              maxLength={300}
+              rows={2}
+              placeholder="Ex.: transferência para outra escola."
+            />
+          </div>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel>Voltar</AlertDialogCancel>
           <AlertDialogAction
             onClick={confirmar}
+            disabled={cancelar && !motivo.trim()}
             className={
               cancelar ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""
             }
@@ -156,6 +174,12 @@ export function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: ()
                 valor={new Date(`${detalhe.dados.birthDate}T00:00:00`).toLocaleDateString("pt-BR")}
               />
               <Dado rotulo="Turma" valor={detalhe.dados.turmaName ?? "Sem turma"} />
+              {detalhe.dados.motivoCancelamento && (
+                <Dado
+                  rotulo="Matrícula cancelada"
+                  valor={`${detalhe.dados.matriculaCanceladaEm ? new Date(detalhe.dados.matriculaCanceladaEm).toLocaleDateString("pt-BR") : ""} · ${detalhe.dados.motivoCancelamento}`}
+                />
+              )}
               <Dado
                 rotulo="Acesso ao portal"
                 valor={
@@ -199,11 +223,12 @@ export function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: ()
                   Cancele a matrícula do aluno antes de anonimizar.
                 </p>
               ) : (
-                <BotaoAnonimizar
+                <FormAnonimizacao
                   userId={detalhe.dados.userId}
                   nome={detalhe.dados.fullName}
                   codigo={String(detalhe.dados.matricula)}
                   rotuloCodigo="a matrícula"
+                  pedidos={[]}
                   aoConcluir={voltar}
                 />
               )}

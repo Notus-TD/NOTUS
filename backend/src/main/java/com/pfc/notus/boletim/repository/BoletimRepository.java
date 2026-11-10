@@ -14,4 +14,6 @@ public interface BoletimRepository extends JpaRepository<Boletim, Long> {
     List<Boletim> findByStudentIdAndAnoLetivo(Long studentId, String anoLetivo);
 
     Optional<Boletim> findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(Long studentId, Long disciplinaId, Bimestre bimestre, String anoLetivo);
+
+    long countByStudentId(Long studentId);
 }

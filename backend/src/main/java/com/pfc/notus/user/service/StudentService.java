@@ -139,7 +139,10 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentMinDTO cancelarMatricula(Long studentId, String requesterEmail) {
+    public StudentMinDTO cancelarMatricula(Long studentId, String motivo, String requesterEmail) {
+        if (motivo == null || motivo.isBlank()) {
+            throw new RegraNegocioException("Informe o motivo do cancelamento da matrícula.");
+        }
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
         if (student.getAnonimizadoEm() != null) {
@@ -151,10 +154,13 @@ public class StudentService {
 
         student.setStatusMatricula(StatusMatricula.CANCELADA);
         student.setTurma(null);
+        student.setTurmaDesde(null);
         student.setAtivo(false);
+        student.setMotivoCancelamento(motivo.trim());
+        student.setMatriculaCanceladaEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         studentRepository.save(student);
         notificacaoService.cancelarPendentesDoAluno(student.getId(), "Matrícula cancelada");
-        log.info(AuditMarker.AUDIT, "Matrícula do aluno {} cancelada por {}", student.getId(), requesterEmail);
+        log.info(AuditMarker.AUDIT, "Matrícula do aluno {} cancelada por {}. Motivo: {}", student.getId(), requesterEmail, motivo.trim());
         return StudentMinDTO.of(student);
     }
 
@@ -174,6 +180,8 @@ public class StudentService {
 
         student.setStatusMatricula(StatusMatricula.ATIVA);
         student.setAtivo(true);
+        student.setMotivoCancelamento(null);
+        student.setMatriculaCanceladaEm(null);
         studentRepository.save(student);
         log.info(AuditMarker.AUDIT, "Matrícula do aluno {} reativada por {}", student.getId(), requesterEmail);
         return StudentMinDTO.of(student);

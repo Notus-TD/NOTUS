@@ -1,6 +1,10 @@
 package com.pfc.notus.privacidade.controller;
 
+import com.pfc.notus.privacidade.dto.AnonimizarRequest;
 import com.pfc.notus.privacidade.dto.ExportacaoDadosDTO;
+import com.pfc.notus.privacidade.dto.RegistroAnonimizacaoDTO;
+import com.pfc.notus.privacidade.dto.ResumoAnonimizacaoDTO;
+import com.pfc.notus.privacidade.service.AnonimizacaoService;
 import com.pfc.notus.privacidade.dto.RespostaSolicitacaoRequest;
 import com.pfc.notus.privacidade.dto.SolicitacaoDTO;
 import com.pfc.notus.privacidade.dto.SolicitacaoRequest;
@@ -21,11 +25,14 @@ public class PrivacidadeController {
 
     private final ExportacaoDadosService exportacaoDadosService;
     private final SolicitacaoTitularService solicitacaoTitularService;
+    private final AnonimizacaoService anonimizacaoService;
 
     public PrivacidadeController(ExportacaoDadosService exportacaoDadosService,
-                                 SolicitacaoTitularService solicitacaoTitularService) {
+                                 SolicitacaoTitularService solicitacaoTitularService,
+                                 AnonimizacaoService anonimizacaoService) {
         this.exportacaoDadosService = exportacaoDadosService;
         this.solicitacaoTitularService = solicitacaoTitularService;
+        this.anonimizacaoService = anonimizacaoService;
     }
 
     @PreAuthorize("hasRole('RESPONSAVEL')")
@@ -57,5 +64,24 @@ public class PrivacidadeController {
     public SolicitacaoDTO responder(@PathVariable Long id, @Valid @RequestBody RespostaSolicitacaoRequest request,
                                     Authentication authentication) {
         return solicitacaoTitularService.responder(id, request, authentication.getName());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/usuarios/{userId}/resumo")
+    public ResumoAnonimizacaoDTO resumo(@PathVariable Long userId) {
+        return anonimizacaoService.resumo(userId);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/usuarios/{userId}/anonimizar")
+    public RegistroAnonimizacaoDTO anonimizar(@PathVariable Long userId, @Valid @RequestBody AnonimizarRequest request,
+                                              Authentication authentication) {
+        return anonimizacaoService.anonimizar(userId, request, authentication.getName());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/anonimizacoes")
+    public List<RegistroAnonimizacaoDTO> historico() {
+        return anonimizacaoService.historico();
     }
 }

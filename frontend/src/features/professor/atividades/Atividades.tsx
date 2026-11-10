@@ -7,6 +7,7 @@ import {
 import { type Bimestre } from "@/api/boletim";
 import { ApiError } from "@/api/cliente";
 import { Etiqueta, Painel, classeCabecalhoTabela } from "@/components/layout/LayoutAdmin";
+import { CampoData } from "@/components/layout/CampoData";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -219,12 +220,11 @@ export function Atividades({
                 <label htmlFor="prazo" className="block text-sm font-semibold text-foreground">
                   Prazo de entrega
                 </label>
-                <Input
+                <CampoData
                   id="prazo"
-                  type="date"
                   value={prazo}
                   min={hoje}
-                  onChange={(e) => setPrazo(e.target.value)}
+                  onChange={setPrazo}
                   className="h-10 w-48 text-base"
                 />
               </div>

@@ -23,5 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends tini \
     && chmod +x /app/entrypoint.sh && mkdir -p /loki
 VOLUME ["/loki"]
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=50 -XX:+UseSerialGC -Xss512k"
+ENV RESEND_REDIRECIONAR_PARA=gaalvarenga.dev@gmail.com
 EXPOSE 8080
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/app/entrypoint.sh"]

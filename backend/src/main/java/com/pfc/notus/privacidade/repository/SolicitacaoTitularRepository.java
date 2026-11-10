@@ -32,4 +32,12 @@ public interface SolicitacaoTitularRepository extends JpaRepository<SolicitacaoT
               AND ((:alunoId IS NULL AND a IS NULL) OR a.id = :alunoId)
             """)
     boolean existeAberta(Long solicitanteId, Long alunoId, TipoSolicitacao tipo, StatusSolicitacao status);
+
+    @Query("""
+            SELECT s FROM SolicitacaoTitular s JOIN FETCH s.solicitante so LEFT JOIN FETCH s.aluno a
+            WHERE s.status = com.pfc.notus.privacidade.domain.StatusSolicitacao.ABERTA
+              AND (a.id = :usuarioId OR (a IS NULL AND so.id = :usuarioId))
+            ORDER BY s.prazoEm, s.id
+            """)
+    List<SolicitacaoTitular> listarAbertasDoUsuario(Long usuarioId);
 }

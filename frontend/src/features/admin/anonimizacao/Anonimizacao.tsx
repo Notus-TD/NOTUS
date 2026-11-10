@@ -23,11 +23,22 @@ import {
 } from "@/components/ui/table";
 import { ALUNOS_POR_PAGINA, rotuloSituacao, tomSituacao } from "@/features/admin/alunos/situacao";
 import { PedidosTitulares } from "@/features/admin/anonimizacao/PedidosTitulares";
-import { BotaoAnonimizar, BotaoReenviarConvite } from "@/features/admin/comum/BotoesUsuario";
+import { DetalheAnonimizacao } from "@/features/admin/anonimizacao/DetalheAnonimizacao";
+import { HistoricoAnonimizacoes } from "@/features/admin/anonimizacao/HistoricoAnonimizacoes";
+import { BotaoReenviarConvite } from "@/features/admin/comum/BotoesUsuario";
+import { Button } from "@/components/ui/button";
 import { useCarga } from "@/hooks/use-carga";
 import { MensagemErro } from "@/components/layout/MensagemErro";
-import { Search, UserX } from "lucide-react";
+import { ChevronRight, Search, UserX } from "lucide-react";
 import { useState } from "react";
+
+type FiltroSituacao = "TODAS" | "ATIVOS" | "ANONIMIZADOS";
+
+const SITUACOES: Record<FiltroSituacao, string> = {
+  TODAS: "Todas as situações",
+  ATIVOS: "Não anonimizados",
+  ANONIMIZADOS: "Anonimizados",
+};
 
 const PERFIS: Record<PerfilUsuario, string> = {
   ALUNO: "Aluno",
@@ -38,7 +49,9 @@ export function ExcluirUsuarios() {
   const [versao, setVersao] = useState(0);
   const [busca, setBusca] = useState("");
   const [perfil, setPerfil] = useState<PerfilUsuario | "TODOS">("TODOS");
+  const [situacao, setSituacao] = useState<FiltroSituacao>("TODAS");
   const [pagina, setPagina] = useState(1);
+  const [aberto, setAberto] = useState<number | null>(null);
   const carga = useCarga<UsuarioDTO[]>(getUsuarios, versao);
 
   const termo = busca.trim().toLowerCase();
@@ -47,12 +60,23 @@ export function ExcluirUsuarios() {
       ? carga.dados.filter(
           (u) =>
             (perfil === "TODOS" || u.perfil === perfil) &&
+            (situacao === "TODAS" || (situacao === "ANONIMIZADOS") === u.anonimizado) &&
             (!termo ||
               (u.nome ?? "").toLowerCase().includes(termo) ||
               String(u.matricula ?? "").includes(termo) ||
               String(u.id).includes(termo)),
         )
       : [];
+
+  if (aberto !== null) {
+    return (
+      <DetalheAnonimizacao
+        userId={aberto}
+        voltar={() => setAberto(null)}
+        aoMudar={() => setVersao((v) => v + 1)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,7 +111,7 @@ export function ExcluirUsuarios() {
                 setPagina(1);
               }}
             >
-              <SelectTrigger className="h-9 w-44 text-sm" aria-label="Filtrar por perfil">
+              <SelectTrigger className="h-9 w-40 text-sm" aria-label="Filtrar por perfil">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -95,6 +119,24 @@ export function ExcluirUsuarios() {
                 {(Object.keys(PERFIS) as PerfilUsuario[]).map((p) => (
                   <SelectItem key={p} value={p}>
                     {PERFIS[p]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={situacao}
+              onValueChange={(v) => {
+                setSituacao(v as FiltroSituacao);
+                setPagina(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-48 text-sm" aria-label="Filtrar por situação">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(SITUACOES) as FiltroSituacao[]).map((sit) => (
+                  <SelectItem key={sit} value={sit}>
+                    {SITUACOES[sit]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -111,7 +153,8 @@ export function ExcluirUsuarios() {
                 aoMudar={setPagina}
               />
               <p className="text-xs text-muted-foreground">
-                A anonimização apaga nome, e-mail, telefone e nascimento e não pode ser desfeita.
+                Clique num usuário para ver tudo o que está ligado a ele e anonimizar com o motivo
+                registrado. A anonimização não pode ser desfeita.
               </p>
             </div>
           ) : undefined
@@ -162,32 +205,18 @@ export function ExcluirUsuarios() {
                       <SituacaoUsuario u={u} />
                     </TableCell>
                     <TableCell className="text-right">
-                      {u.anonimizado ? (
-                        <span className="text-sm text-muted-foreground">Dados apagados</span>
-                      ) : (
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {u.acessoPendente && (
-                            <BotaoReenviarConvite
-                              userId={u.id}
-                              nome={u.nome ?? `o registro nº ${u.id}`}
-                            />
-                          )}
-                          {u.matriculaStatus === "ATIVA" ? (
-                            <span className="text-sm text-muted-foreground">
-                              Cancele a matrícula antes
-                            </span>
-                          ) : (
-                            <BotaoAnonimizar
-                              userId={u.id}
-                              nome={u.nome ?? `o registro nº ${u.id}`}
-                              codigo={String(u.matricula ?? u.id)}
-                              rotuloCodigo={u.matricula === null ? "o registro" : "a matrícula"}
-                              compacto
-                              aoConcluir={() => setVersao((v) => v + 1)}
-                            />
-                          )}
-                        </div>
-                      )}
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {!u.anonimizado && u.acessoPendente && (
+                          <BotaoReenviarConvite
+                            userId={u.id}
+                            nome={u.nome ?? `o registro nº ${u.id}`}
+                          />
+                        )}
+                        <Button size="sm" variant="outline" onClick={() => setAberto(u.id)}>
+                          Abrir
+                          <ChevronRight aria-hidden="true" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -195,6 +224,7 @@ export function ExcluirUsuarios() {
           </Table>
         )}
       </Painel>
+      <HistoricoAnonimizacoes versao={versao} />
     </div>
   );
 }

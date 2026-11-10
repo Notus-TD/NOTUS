@@ -2,6 +2,7 @@ import { atualizarAtividade, type AtividadeDTO } from "@/api/atividades";
 import { type Bimestre } from "@/api/boletim";
 import { ApiError } from "@/api/cliente";
 import { Button } from "@/components/ui/button";
+import { CampoData } from "@/components/layout/CampoData";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -129,11 +130,10 @@ export function EditarAtividade({
           <label htmlFor={`${id}-prazo`} className="block text-base font-semibold text-foreground">
             Prazo de entrega
           </label>
-          <Input
+          <CampoData
             id={`${id}-prazo`}
-            type="date"
             value={prazo}
-            onChange={(e) => setPrazo(e.target.value)}
+            onChange={setPrazo}
             className="h-11 w-44 text-base"
           />
         </div>

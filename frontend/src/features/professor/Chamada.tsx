@@ -1,6 +1,7 @@
 import { ApiError } from "@/api/cliente";
 import { getChamada, salvarChamada, type ChamadaDTO } from "@/api/falta";
 import { Painel, classeCabecalhoTabela } from "@/components/layout/LayoutAdmin";
+import { CampoData } from "@/components/layout/CampoData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -101,12 +102,11 @@ export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: 
           <label htmlFor="data-chamada" className="text-sm font-semibold text-foreground">
             Dia da aula
           </label>
-          <Input
+          <CampoData
             id="data-chamada"
-            type="date"
             value={data}
             max={hoje}
-            onChange={(e) => e.target.value && setData(e.target.value)}
+            onChange={(v) => v && setData(v)}
             className="h-9 w-44 text-sm"
           />
           <label htmlFor="aulas-no-dia" className="text-sm font-semibold text-foreground">

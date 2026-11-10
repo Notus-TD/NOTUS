@@ -21,6 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -137,6 +138,7 @@ public class TurmaService {
         }
 
         student.setTurma(turma);
+        student.setTurmaDesde(LocalDate.now());
         studentRepository.save(student);
 
         return new TurmaAlunoResponseDTO(
@@ -158,6 +160,7 @@ public class TurmaService {
         }
 
         student.setTurma(null);
+        student.setTurmaDesde(null);
         studentRepository.save(student);
     }
 

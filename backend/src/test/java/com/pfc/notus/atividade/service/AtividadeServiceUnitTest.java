@@ -299,6 +299,28 @@ class AtividadeServiceUnitTest {
     }
 
     @Test
+    void alunoQueEntrouNaTurmaDepoisNaoVeAtividadesComPrazoAnterior() {
+        Turma turma = criarTurma(1L, "6º Ano A");
+        Student aluno = new Student("Gustavo Novo", ALUNO, 20260099L, LocalDate.of(2014, 3, 1), null);
+        aluno.setTurma(turma);
+        aluno.setTurmaDesde(LocalDate.now());
+        comIdEPapel(aluno, 10L, "ROLE_ALUNO");
+        Disciplina matematica = criarDisciplina(5L, "Matemática");
+        Atividade antiga = criarAtividade(1L, turma, matematica);
+        antiga.setPrazo(LocalDate.now().minusDays(30));
+        Atividade atual = criarAtividade(2L, turma, matematica);
+
+        when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
+        when(entregaRepository.findByStudentId(10L)).thenReturn(List.of());
+        when(atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(1L, "2026")).thenReturn(List.of(antiga, atual));
+
+        List<AtividadeDTO> resultado = atividadeService.getMinhas(ALUNO);
+
+        assertEquals(1, resultado.size());
+        assertEquals(2L, resultado.get(0).id());
+    }
+
+    @Test
     void deveRecusarExclusaoQuandoAtividadeJaTemEntregas() {
         Professor professor = criarProfessor();
         Atividade atividade = criarAtividade(1L, criarTurma(1L, "9º Ano A"), criarDisciplina(5L, "Matemática"));

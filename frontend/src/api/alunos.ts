@@ -43,6 +43,8 @@ export type StudentDetalheDTO = {
   responsibleEmail: string | null;
   responsiblePhone: string | null;
   acessoLiberadoEm: string | null;
+  motivoCancelamento: string | null;
+  matriculaCanceladaEm: string | null;
 };
 
 export const getStudentDetalhe = (studentId: number) =>

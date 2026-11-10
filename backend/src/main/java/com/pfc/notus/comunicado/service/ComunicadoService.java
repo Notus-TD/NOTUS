@@ -49,10 +49,7 @@ public class ComunicadoService {
         this.eventPublisher = eventPublisher;
     }
 
-<<<<<<< HEAD
-=======
     // ! REFC: Cria comunicado global (admin): salva, dispara evento se público inclui responsáveis (para e-mail)
->>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
     @Transactional
     public ComunicadoDTO publicar(ComunicadoRequest request, String autorEmail) {
         Comunicado comunicado = comunicadoRepository.save(new Comunicado(
@@ -66,10 +63,7 @@ public class ComunicadoService {
         return ComunicadoDTO.from(comunicado);
     }
 
-<<<<<<< HEAD
-=======
     // ! REFC: Cria recado de turma (professor): valida se professor leciona na turma, público fixo=RESPONSAVEIS
->>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
     @Transactional
     public ComunicadoDTO publicarRecado(RecadoProfessorRequest request, String autorEmail) {
         var professor = userRepository.findByEmail(autorEmail)
@@ -95,19 +89,12 @@ public class ComunicadoService {
                 .map(ComunicadoDTO::from).toList();
     }
 
-<<<<<<< HEAD
-    @Transactional(readOnly = true)
-    public List<ComunicadoDTO> listarParaUsuario(UserDetails usuario) {
-        Set<String> papeis = usuario.getAuthorities().stream().map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toSet());
-=======
     // ! REFC: Filtra comunicados por papel: monta EnumSet (TODOS + público do papel), busca no repo com filtro
     @Transactional(readOnly = true)
     public List<ComunicadoDTO> listarParaUsuario(UserDetails usuario) {
         Set<String> papeis = usuario.getAuthorities().stream().map(GrantedAuthority::getAuthority)
                 .collect(java.util.stream.Collectors.toSet());
         // ! REFC: Admin vê tudo (sem filtro); outro papel recebe TODOS + seu específico
->>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
         if (papeis.contains("ROLE_ADMIN")) return listarTodos();
 
         EnumSet<PublicoComunicado> publicos = EnumSet.of(PublicoComunicado.TODOS);

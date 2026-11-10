@@ -18,6 +18,9 @@ import {
   type AtividadeAluno,
   type Situacao,
 } from "@/features/familia/atividades-aluno";
+import { getCalendario } from "@/api/calendario";
+import { useCarga } from "@/hooks/use-carga";
+import { bimestreAtual, nomeBimestre } from "@/lib/bimestres";
 import { formatarData } from "@/lib/datas";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +60,16 @@ const situacaoAtividade: Record<Situacao, { texto: string; tom: Tom; ordem: numb
   proxima: { texto: "Para entregar", tom: "neutro", ordem: 2 },
   entregue: { texto: "Entregue", tom: "sucesso", ordem: 3 },
 };
+
+const ORDEM_PROXIMAS: Record<Situacao, number> = { hoje: 0, proxima: 1, atrasada: 2, entregue: 3 };
+
+function ordenarProximas(itens: AtividadeAluno[]) {
+  return [...itens].sort(
+    (a, b) =>
+      ORDEM_PROXIMAS[a.situacao] - ORDEM_PROXIMAS[b.situacao] ||
+      a.prazoData.localeCompare(b.prazoData),
+  );
+}
 
 function ordenarAtividades(itens: AtividadeAluno[]) {
   return [...itens].sort(
@@ -161,11 +174,18 @@ export function ResumoAluno({
 }) {
   const media = boletim ? mediaGeral(boletim) : null;
   const presenca = frequencia ? presencaGeral(frequencia) : null;
+  const calendario = useCarga(() => getCalendario(hoje.slice(0, 4)), 0);
+  const bimestre: Bimestre =
+    (calendario.estado === "ok" ? calendario.dados.bimestreAtual : null) ??
+    bimestreAtual(new Date(`${hoje}T12:00:00`));
   const itens = atividades ? atividades.map((a) => paraAtividadeAluno(a, hoje)) : null;
-  const pendentes = itens
-    ? ordenarAtividades(itens.filter((a) => a.situacao !== "entregue"))
+  const doBimestre = atividades
+    ? atividades.filter((a) => a.bimestre === bimestre).map((a) => paraAtividadeAluno(a, hoje))
     : null;
-  const atrasadas = itens ? itens.filter((a) => a.situacao === "atrasada").length : 0;
+  const pendentes = doBimestre
+    ? ordenarProximas(doBimestre.filter((a) => a.situacao !== "entregue"))
+    : null;
+  const atrasadas = doBimestre ? doBimestre.filter((a) => a.situacao === "atrasada").length : 0;
   const entregues = itens ? itens.filter((a) => a.situacao === "entregue").length : 0;
 
   const disciplinas = new Map<
@@ -210,7 +230,7 @@ export function ResumoAluno({
           icone={ClipboardList}
           rotulo="Atividades pendentes"
           valor={pendentes ? String(pendentes.length) : "…"}
-          detalhe={atrasadas > 0 ? `${atrasadas} atrasada(s)` : "Nenhuma atrasada"}
+          detalhe={`${nomeBimestre(bimestre)}${atrasadas > 0 ? ` · ${atrasadas} atrasada(s)` : ""}`}
           destaque={atrasadas > 0 ? "perigo" : undefined}
         />
         {avisosNovos === undefined ? (
@@ -305,7 +325,9 @@ export function ResumoAluno({
         >
           {pendentes === null && <p className="p-4 text-sm text-muted-foreground">Carregando…</p>}
           {pendentes?.length === 0 && (
-            <p className="p-4 text-sm text-muted-foreground">Nenhuma atividade pendente.</p>
+            <p className="p-4 text-sm text-muted-foreground">
+              Nenhuma atividade pendente no {nomeBimestre(bimestre)}.
+            </p>
           )}
           {pendentes && pendentes.length > 0 && (
             <ul className="divide-y divide-border">

@@ -41,16 +41,26 @@ export function LinksLegais({
   );
 }
 
+const larguras = {
+  padrao: "max-w-6xl justify-between px-4 sm:px-6",
+  painel: "max-w-7xl justify-between px-4 sm:px-6 lg:px-8",
+  centro: "max-w-md flex-col items-center justify-center px-4 text-center",
+};
+
 export function RodapeSite({
   className = "",
   novaAba = false,
+  largura = "padrao",
 }: {
   className?: string;
   novaAba?: boolean;
+  largura?: keyof typeof larguras;
 }) {
   return (
     <footer className={`border-t border-border bg-card ${className}`}>
-      <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-6 text-base text-muted-foreground sm:px-6">
+      <div
+        className={`mx-auto flex flex-wrap gap-2 py-6 text-sm text-muted-foreground ${larguras[largura]}`}
+      >
         <span>
           NOTUS · Portal de gestão escolar · Dúvidas: secretaria@colegionotus.com.br · (11)
           4002-8922

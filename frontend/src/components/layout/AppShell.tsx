@@ -136,7 +136,7 @@ export function AppShell({
         <div className={titulo ? "mt-8 space-y-8" : "space-y-8"}>{children}</div>
       </main>
 
-      <RodapeSite className="mt-12" />
+      <RodapeSite className="mt-12" largura={navegacao ? "painel" : "padrao"} />
     </div>
   );
 }

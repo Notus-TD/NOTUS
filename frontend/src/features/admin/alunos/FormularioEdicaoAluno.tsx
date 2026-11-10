@@ -1,6 +1,7 @@
 import { updateResponsible, updateStudent, type StudentDetalheDTO } from "@/api/alunos";
 import { ApiError } from "@/api/cliente";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/layout/blocos";
+import { CampoData } from "@/components/layout/CampoData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -182,14 +183,25 @@ function CampoTexto({
       <label htmlFor={id} className="block text-sm font-semibold text-foreground">
         {rotulo}
       </label>
-      <Input
-        id={id}
-        type={tipo}
-        value={valor}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 text-sm"
-        aria-invalid={!!erro}
-      />
+      {tipo === "date" ? (
+        <CampoData
+          id={id}
+          value={valor}
+          max={new Date().toISOString().slice(0, 10)}
+          onChange={onChange}
+          className="h-9 text-sm"
+          aria-invalid={!!erro}
+        />
+      ) : (
+        <Input
+          id={id}
+          type={tipo}
+          value={valor}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 text-sm"
+          aria-invalid={!!erro}
+        />
+      )}
       {erro && <p className="text-sm font-medium text-destructive">{erro}</p>}
     </div>
   );
