@@ -49,23 +49,33 @@ public class ComunicadoService {
         this.eventPublisher = eventPublisher;
     }
 
+<<<<<<< HEAD
+=======
+    // ! REFC: Cria comunicado global (admin): salva, dispara evento se público inclui responsáveis (para e-mail)
+>>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
     @Transactional
     public ComunicadoDTO publicar(ComunicadoRequest request, String autorEmail) {
         Comunicado comunicado = comunicadoRepository.save(new Comunicado(
                 request.titulo().trim(), request.texto().trim(), request.publico(), autorEmail,
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)));
         log.info(AuditMarker.AUDIT, "Comunicado {} publicado para {} por {}", comunicado.getId(), comunicado.getPublico(), autorEmail);
+        // ! REFC: Só dispara evento se público é TODOS ou RESPONSAVEIS (únicos que geram e-mail)
         if (comunicado.incluiResponsaveis()) {
             eventPublisher.publishEvent(new ComunicadoPublicadoEvent(comunicado.getId()));
         }
         return ComunicadoDTO.from(comunicado);
     }
 
+<<<<<<< HEAD
+=======
+    // ! REFC: Cria recado de turma (professor): valida se professor leciona na turma, público fixo=RESPONSAVEIS
+>>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
     @Transactional
     public ComunicadoDTO publicarRecado(RecadoProfessorRequest request, String autorEmail) {
         var professor = userRepository.findByEmail(autorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Professor não encontrado"));
 
+        // ! REFC: Segurança: professor só pode publicar recado em turmas onde leciona
         if (!lecionamentoRepository.existsByProfessorIdAndTurmaId(professor.getId(), request.turmaId())) {
             throw new AccessDeniedException("Você não pode publicar recado para esta turma");
         }
@@ -78,16 +88,26 @@ public class ComunicadoService {
         return ComunicadoDTO.from(recado);
     }
 
+    // ! REFC: Retorna todos os comunicados do ano letivo atual (sem filtro de público - só admin chama isso)
     @Transactional(readOnly = true)
     public List<ComunicadoDTO> listarTodos() {
         return comunicadoRepository.findByAnoLetivoOrderByEnviadoEmDesc(AnoLetivo.atual()).stream()
                 .map(ComunicadoDTO::from).toList();
     }
 
+<<<<<<< HEAD
     @Transactional(readOnly = true)
     public List<ComunicadoDTO> listarParaUsuario(UserDetails usuario) {
         Set<String> papeis = usuario.getAuthorities().stream().map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
+=======
+    // ! REFC: Filtra comunicados por papel: monta EnumSet (TODOS + público do papel), busca no repo com filtro
+    @Transactional(readOnly = true)
+    public List<ComunicadoDTO> listarParaUsuario(UserDetails usuario) {
+        Set<String> papeis = usuario.getAuthorities().stream().map(GrantedAuthority::getAuthority)
+                .collect(java.util.stream.Collectors.toSet());
+        // ! REFC: Admin vê tudo (sem filtro); outro papel recebe TODOS + seu específico
+>>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
         if (papeis.contains("ROLE_ADMIN")) return listarTodos();
 
         EnumSet<PublicoComunicado> publicos = EnumSet.of(PublicoComunicado.TODOS);
