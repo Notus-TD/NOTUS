@@ -35,6 +35,13 @@ public class UserController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{userId}/mfa/redefinir")
+    public ResponseEntity<Void> redefinirMfa(@PathVariable Long userId, Authentication authentication) {
+        userService.redefinirMfa(userId, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UsuarioDTO>> listarUsuarios() {
         return ResponseEntity.ok(userService.listarUsuarios());

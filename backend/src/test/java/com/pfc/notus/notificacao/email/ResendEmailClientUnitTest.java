@@ -29,7 +29,6 @@ class ResendEmailClientUnitTest {
         Map<String, Object> corpo = cliente(" teste@exemplo.com ").montarCorpo("marta@gmail.com", "NOTUS: aviso de falta", "Olá.", null);
 
         assertEquals(List.of("teste@exemplo.com"), corpo.get("to"));
-        // Assunto e texto ficam iguais aos do destinatário real.
         assertEquals("NOTUS: aviso de falta", corpo.get("subject"));
         assertEquals("Olá.", corpo.get("text"));
     }

@@ -15,7 +15,6 @@ public record LecionamentoDTO(
         String professorEmail
 ) {
     public static LecionamentoDTO of(Lecionamento lecionamento) {
-        // O professor vem como proxy lazy de User; sem unproxy o instanceof Professor falha.
         Object professor = Hibernate.unproxy(lecionamento.getProfessor());
         String nome = professor instanceof Professor p ? p.getFullName() : null;
         return new LecionamentoDTO(

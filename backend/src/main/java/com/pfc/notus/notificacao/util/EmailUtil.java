@@ -5,7 +5,6 @@ public final class EmailUtil {
     private EmailUtil() {
     }
 
-    /** Mascara o e-mail para logs e histórico: marta.responsavel@gmail.com -> mar***@gmail.com. */
     public static String mascarar(String email) {
         if (email == null || !email.contains("@")) return "****";
         int arroba = email.indexOf('@');

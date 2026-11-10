@@ -36,7 +36,6 @@ public class Atividade {
     @Getter @Setter
     private Float pontos;
 
-    /** Ano letivo da turma quando a atividade foi publicada (ex.: "2026"). */
     @Column(name = "ano_letivo", length = 4)
     @Getter @Setter
     private String anoLetivo;

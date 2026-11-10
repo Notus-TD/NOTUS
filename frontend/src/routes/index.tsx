@@ -1,8 +1,8 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { PerfilSwitcher } from "@/components/PerfilSwitcher";
+import { PerfilSwitcher } from "@/components/layout/PerfilSwitcher";
 import { CalendarDays, BellRing, ClipboardCheck, ShieldCheck, UserPlus } from "lucide-react";
-import { RodapeSite } from "@/components/LegalPage";
-import { MarcaNotus } from "@/components/AppShell";
+import { RodapeSite } from "@/features/legal/LegalPage";
+import { MarcaNotus } from "@/components/layout/AppShell";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
@@ -67,7 +67,7 @@ function Index() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6">
         <section className="max-w-3xl">
           <p className="text-base font-semibold uppercase tracking-widest text-primary">
-            Gestão escolar do 5º ano ao 9º ano
+            Ensino Fundamental II, do 6º ao 9º ano
           </p>
           <h1 className="mt-3 font-display text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl">
             A vida escolar organizada, em palavras que todos entendem.

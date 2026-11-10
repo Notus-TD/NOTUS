@@ -27,7 +27,6 @@ public class Boletim {
     @Getter @Setter
     private Bimestre bimestre;
 
-    /** Ano letivo da turma do aluno quando a nota final foi lançada (ex.: "2026"). */
     @Column(name = "ano_letivo", length = 9)
     @Getter @Setter
     private String anoLetivo;

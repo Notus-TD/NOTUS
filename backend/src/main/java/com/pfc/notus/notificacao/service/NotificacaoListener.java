@@ -25,7 +25,6 @@ public class NotificacaoListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onFaltaRegistrada(FaltaRegistradaEvent evento) {
         try {
-            // notificarFalta roda em transação própria: ao voltar, a notificação já está salva.
             notificacaoService.notificarFalta(evento.faltaId(), evento.totalFaltasNaDisciplina());
             worker.processarAgora();
         } catch (RuntimeException e) {

@@ -8,10 +8,6 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/**
- * Link de uso único para definir a senha (convite ou redefinição).
- * Só o hash SHA-256 do token fica no banco; o token em texto vai apenas no e-mail.
- */
 @Entity
 @Table(name = "tb_token_senha", indexes = @Index(name = "ix_token_senha_user", columnList = "user_id"))
 @NoArgsConstructor
@@ -39,7 +35,6 @@ public class TokenSenha {
     @Column(nullable = false)
     private LocalDateTime expiraEm;
 
-    /** Preenchido quando o link é usado ou quando um link mais novo do mesmo usuário o substitui. */
     @Setter
     private LocalDateTime encerradoEm;
 

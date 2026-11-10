@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/** Comunicado geral da escola (Módulo de Comunicação), publicado pela secretaria. */
 @Entity
 @Table(name = "tb_comunicado")
 @NoArgsConstructor
@@ -35,12 +34,11 @@ public class Comunicado {
     private String autorEmail;
 
     @Column(length = 20)
-    private String tipoRemetente; // ADMIN ou PROFESSOR
+    private String tipoRemetente;
 
     @Column
-    private Long turmaId; // Null para comunicados do admin, preenchido para recados do professor
+    private Long turmaId;
 
-    /** Ano letivo em que o comunicado foi publicado (ex.: "2026"). */
     @Column(name = "ano_letivo", length = 4)
     private String anoLetivo;
 
@@ -62,7 +60,7 @@ public class Comunicado {
         this.enviadoEm = enviadoEm;
         this.tipoRemetente = "PROFESSOR";
         this.turmaId = turmaId;
-        this.publico = PublicoComunicado.RESPONSAVEIS; // Professor só manda para responsáveis
+        this.publico = PublicoComunicado.RESPONSAVEIS;
         this.anoLetivo = AnoLetivo.atual();
     }
 

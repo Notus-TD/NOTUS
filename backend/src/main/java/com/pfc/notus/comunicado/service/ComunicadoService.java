@@ -11,6 +11,9 @@ import com.pfc.notus.config.AuditMarker;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
 import com.pfc.notus.notificacao.event.ComunicadoPublicadoEvent;
+import com.pfc.notus.user.domain.Responsible;
+import com.pfc.notus.user.domain.Student;
+import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +29,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ComunicadoService {
@@ -45,7 +49,6 @@ public class ComunicadoService {
         this.eventPublisher = eventPublisher;
     }
 
-    /** Salva o comunicado; se o público inclui responsáveis, eles recebem aviso por e-mail após o commit. */
     @Transactional
     public ComunicadoDTO publicar(ComunicadoRequest request, String autorEmail) {
         Comunicado comunicado = comunicadoRepository.save(new Comunicado(
@@ -58,7 +61,6 @@ public class ComunicadoService {
         return ComunicadoDTO.from(comunicado);
     }
 
-    /** Recado do professor para uma turma específica - responsáveis dos alunos da turma recebem e-mail */
     @Transactional
     public ComunicadoDTO publicarRecado(RecadoProfessorRequest request, String autorEmail) {
         var professor = userRepository.findByEmail(autorEmail)
@@ -82,18 +84,33 @@ public class ComunicadoService {
                 .map(ComunicadoDTO::from).toList();
     }
 
-    /** Comunicados que o usuário logado pode ver: os de toda a escola e os do seu perfil. */
     @Transactional(readOnly = true)
     public List<ComunicadoDTO> listarParaUsuario(UserDetails usuario) {
         Set<String> papeis = usuario.getAuthorities().stream().map(GrantedAuthority::getAuthority)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         if (papeis.contains("ROLE_ADMIN")) return listarTodos();
 
         EnumSet<PublicoComunicado> publicos = EnumSet.of(PublicoComunicado.TODOS);
         if (papeis.contains("ROLE_ALUNO")) publicos.add(PublicoComunicado.ALUNOS);
         if (papeis.contains("ROLE_RESPONSAVEL")) publicos.add(PublicoComunicado.RESPONSAVEIS);
         if (papeis.contains("ROLE_PROFESSOR")) publicos.add(PublicoComunicado.PROFESSORES);
+        Set<Long> turmas = turmasDoUsuario(usuario.getUsername());
         return comunicadoRepository.findByPublicoInAndAnoLetivoOrderByEnviadoEmDesc(publicos, AnoLetivo.atual()).stream()
+                .filter(c -> c.getTurmaId() == null || turmas.contains(c.getTurmaId()))
                 .map(ComunicadoDTO::from).toList();
+    }
+
+    private Set<Long> turmasDoUsuario(String email) {
+        User usuario = userRepository.findByEmail(email).orElse(null);
+        if (usuario instanceof Responsible responsavel) {
+            return responsavel.getStudents().stream()
+                    .filter(s -> s.getTurma() != null)
+                    .map(s -> s.getTurma().getId())
+                    .collect(Collectors.toSet());
+        }
+        if (usuario instanceof Student aluno && aluno.getTurma() != null) {
+            return Set.of(aluno.getTurma().getId());
+        }
+        return Set.of();
     }
 }

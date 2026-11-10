@@ -1,5 +1,6 @@
 package com.pfc.notus.boletim.service;
 
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
@@ -21,7 +22,6 @@ import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.user.domain.Professor;
 import com.pfc.notus.turma.domain.Turma;
 import com.pfc.notus.user.domain.Student;
-import com.pfc.notus.user.domain.enums.StatusMatricula;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
@@ -32,7 +32,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -59,6 +58,9 @@ class BoletimServiceUnitTest {
 
     @Mock
     private BoletimRepository boletimRepository;
+
+    @Mock
+    private CalendarioService calendarioService;
 
     @Mock
     private NotaRepository notaRepository;
@@ -173,32 +175,6 @@ class BoletimServiceUnitTest {
     }
 
     @Test
-    void deveCalcularAMediaDaSalaSoComOsAlunosAtivosDaTurma() {
-        Turma turma = new Turma("9º Ano A", "2026");
-        ReflectionTestUtils.setField(turma, "id", 1L);
-        Disciplina matematica = criarDisciplina(5L, "Matemática");
-        Student aluno = criarAluno(10L);
-        Student colega = criarAluno(11L);
-        Student desligado = criarAluno(12L);
-        aluno.setTurma(turma);
-        colega.setTurma(turma);
-        desligado.setTurma(turma);
-        desligado.setStatusMatricula(StatusMatricula.FINALIZADA);
-        when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
-        when(studentRepository.findById(11L)).thenReturn(Optional.of(colega));
-        when(studentRepository.findByTurmaId(1L, Sort.unsorted())).thenReturn(List.of(aluno, colega, desligado));
-        when(boletimRepository.findByStudentIdAndAnoLetivo(10L, ANO))
-                .thenReturn(List.of(criarNotaFinal(1L, 8f, Bimestre.PRIMEIRO, aluno, matematica)));
-        when(boletimRepository.findByStudentIdAndAnoLetivo(11L, ANO))
-                .thenReturn(List.of(criarNotaFinal(2L, 5f, Bimestre.PRIMEIRO, colega, matematica)));
-
-        List<BoletimDisciplinaDTO> resultado = boletimService.getByStudent(10L, PROFESSOR);
-
-        assertEquals(8f, resultado.get(0).mediaFinal());
-        assertEquals(6.5f, resultado.get(0).mediaSala());
-    }
-
-    @Test
     void deveSomarOsPontosDasAtividadesANotaDoBimestreLimitandoA10() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
@@ -225,7 +201,9 @@ class BoletimServiceUnitTest {
         assertEquals(0.5f, bimestres.get(1).pontosAtividades());
         assertEquals(6.5f, bimestres.get(1).nota());
         assertNull(bimestres.get(2).notaFinal());
-        assertEquals(2f, bimestres.get(2).nota());
+        assertEquals(2f, bimestres.get(2).pontosAtividades());
+        assertNull(bimestres.get(2).nota());
+        assertEquals(8.25f, resultado.get(0).mediaFinal());
     }
 
     @Test
@@ -272,7 +250,6 @@ class BoletimServiceUnitTest {
         assertEquals(50L, resultado.id());
         assertEquals(7f, resultado.notaFinal());
         assertNull(resultado.mediaCalculada());
-        // nota mudou (6 -> 7): o responsável recebe o aviso de nota atualizada
         verify(eventPublisher).publishEvent(new NotaFinalLancadaEvent(50L, true));
     }
 
@@ -356,7 +333,6 @@ class BoletimServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
         when(disciplinaRepository.findById(5L)).thenReturn(Optional.of(matematica));
         when(userRepository.findByEmail(PROFESSOR)).thenReturn(Optional.of(criarProfessor()));
-        // Só existe nota final do 1º bimestre de 2026; a busca é feita no ano de 2027.
         when(boletimRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(10L, 5L, Bimestre.PRIMEIRO, "2027"))
                 .thenReturn(Optional.empty());
         when(boletimRepository.save(any(Boletim.class))).thenAnswer(invocacao -> invocacao.getArgument(0));

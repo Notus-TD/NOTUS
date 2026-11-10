@@ -113,10 +113,6 @@ public class TurmaService {
         return associarUm(turma, dto.studentId());
     }
 
-    /**
-     * Aloca vários alunos de uma vez na mesma turma (RF13). Tudo ou nada: se um aluno da lista
-     * falhar na validação, nenhum é alocado, igual ao cadastro de alunos em lote (RF01).
-     */
     @Transactional
     public List<TurmaAlunoResponseDTO> associarAlunosLote(Long turmaId, TurmaAlunosLoteRequestDTO dto) {
         Set<Long> idsUnicos = new HashSet<>(dto.studentIds());
@@ -139,8 +135,6 @@ public class TurmaService {
         if (student.getTurma() != null && student.getTurma().getId().equals(turma.getId())) {
             throw new ConflictException("O aluno já está associado a esta turma.");
         }
-        // Aluno de outra turma é transferido (RF13 RN02 e CA02: uma turma por vez), por exemplo
-        // na passagem do 6º para o 7º ano.
 
         student.setTurma(turma);
         studentRepository.save(student);

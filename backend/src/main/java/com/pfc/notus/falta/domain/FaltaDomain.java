@@ -28,7 +28,6 @@ public class FaltaDomain {
     @Getter @Setter
     private LocalDateTime registradoEm;
 
-    /** Ano letivo da turma do aluno quando a falta foi lançada (ex.: "2026"). */
     @Column(name = "ano_letivo", length = 4)
     @Getter @Setter
     private String anoLetivo;

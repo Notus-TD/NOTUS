@@ -55,7 +55,6 @@ public class LecionamentoService {
         if (lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(professor.getId(), turma.getId(), disciplina.getId())) {
             throw new ConflictException("Este professor já leciona esta disciplina nesta turma.");
         }
-        // Cada disciplina pode ter até dois professores na mesma turma.
         if (lecionamentoRepository.countByTurmaIdAndDisciplinaId(turma.getId(), disciplina.getId()) >= MAX_PROFESSORES_POR_DISCIPLINA) {
             throw new ConflictException("Esta disciplina já tem " + MAX_PROFESSORES_POR_DISCIPLINA + " professores nesta turma.");
         }

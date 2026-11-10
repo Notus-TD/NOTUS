@@ -1,0 +1,37 @@
+# Proxy na porta pública do container (o Render só expõe uma porta).
+#   /loki/api/v1/*  -> Loki (127.0.0.1:3100), só com usuário e senha: é por aqui que o Grafana Cloud lê
+#                      os logs de auditoria. Gravar (push) e apagar (delete) logs de fora é proibido.
+#   todo o resto    -> API Spring Boot (127.0.0.1:8081)
+# Usuário e hash da senha vêm do entrypoint.sh (LOKI_USER / LOKI_PASSWORD).
+{
+	admin off
+	servers {
+		# O container só recebe tráfego pelo proxy do Render, que já preenche o X-Forwarded-For com o IP
+		# do cliente. Confiar nele mantém o IP real nos logs de auditoria (sem isso, o Caddy o trocaria
+		# pelo IP do proxy do Render).
+		trusted_proxies static 0.0.0.0/0 ::/0
+	}
+}
+
+:{$PORT:8080} {
+	@lokiEscrita path /loki/api/v1/push /loki/api/v1/push/* /loki/api/v1/delete /loki/api/v1/delete/*
+	handle @lokiEscrita {
+		respond "Proibido" 403
+	}
+
+	handle /loki/api/v1/* {
+		basic_auth {
+			{$LOKI_USER} {$LOKI_PASSWORD_HASH}
+		}
+		reverse_proxy 127.0.0.1:3100
+	}
+
+	# Qualquer outra rota do Loki (config, métricas, ring...) não sai do container.
+	handle /loki/* {
+		respond "Não encontrado" 404
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8081
+	}
+}

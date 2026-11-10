@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-// Um responsável com um ou mais alunos sob sua responsabilidade, cadastrados de uma vez.
 public record StudentBatchRegistrationRequest(
         @Valid @NotNull ResponsibleRequest responsible,
         @NotEmpty(message = "Informe pelo menos um aluno")

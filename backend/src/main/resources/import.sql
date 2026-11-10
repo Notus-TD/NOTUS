@@ -240,7 +240,7 @@ INSERT INTO tb_turma (name, school_year) VALUES ('7º Ano B', '2026');
 INSERT INTO tb_turma (name, school_year) VALUES ('8º Ano A', '2026');
 INSERT INTO tb_turma (name, school_year) VALUES ('8º Ano B', '2026');
 
-INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000001, 'Ana Aluna', 20260001, '2012-05-10', 'ATIVA', 2026000003, 1);
+INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id, acesso_liberado_em) VALUES (2026000001, 'Ana Aluna', 20260001, '2012-05-10', 'ATIVA', 2026000003, 1, '2026-02-01T08:00:00');
 INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000007, 'Bruno Ferreira', 20260002, '2012-08-15', 'ATIVA', 2026000005, 1);
 INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000008, 'Carla Santos', 20260003, '2013-01-22', 'ATIVA', 2026000006, 1);
 INSERT INTO tb_student (id, full_name, matricula, birth_date, status_matricula, responsible_id, turma_id) VALUES (2026000009, 'Bruno Costa', 20260005, '2012-09-22', 'ATIVA', 2026000005, 2);
@@ -362,16 +362,21 @@ INSERT INTO tb_nota (descricao, rate, bimestre, student_id, disciplina_id, ano_l
 
 INSERT INTO tb_boletim (bimestre, nota_final, lancado_em, student_id, disciplina_id, lancado_por_id, ano_letivo) VALUES ('PRIMEIRO', 9.0, '2026-04-30T18:00:00', 2026000001, 1, 2026000002, '2026');
 
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-02', 1, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-09', 1, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-16', 1, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-23', 1, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-03', 2, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-10', 2, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-17', 2, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-05', 3, 1);
-INSERT INTO tb_aula_registro (data, disciplina_id, turma_id) VALUES ('2026-03-12', 3, 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-02', 1, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-09', 1, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-16', 1, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-23', 1, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-03', 2, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-10', 2, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-17', 2, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-05', 3, 1, '2026', 1);
+INSERT INTO tb_aula_registro (data, disciplina_id, turma_id, ano_letivo, quantidade_aulas) VALUES ('2026-03-12', 3, 1, '2026', 1);
 
-INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id) VALUES ('2026-03-02', 1, '2026-03-02T08:10:00', 2026000001, 1, 2026000002);
-INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id) VALUES ('2026-03-10', 1, '2026-03-10T08:10:00', 2026000001, 2, 2026000002);
-INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id) VALUES ('2026-03-12', 1, '2026-03-12T08:15:00', 2026000007, 3, 2026000002);
+INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id, ano_letivo) VALUES ('2026-03-02', 1, '2026-03-02T08:10:00', 2026000001, 1, 2026000002, '2026');
+INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id, ano_letivo) VALUES ('2026-03-10', 1, '2026-03-10T08:10:00', 2026000001, 2, 2026000002, '2026');
+INSERT INTO tb_falta (data, quantidade, registrado_em, student_id, disciplina_id, registrado_por_id, ano_letivo) VALUES ('2026-03-12', 1, '2026-03-12T08:15:00', 2026000007, 3, 2026000002, '2026');
+
+INSERT INTO tb_periodo_letivo (ano_letivo, bimestre, inicio, fim, reaberto) VALUES ('2026', 'PRIMEIRO', '2026-02-02', '2026-04-24', FALSE);
+INSERT INTO tb_periodo_letivo (ano_letivo, bimestre, inicio, fim, reaberto) VALUES ('2026', 'SEGUNDO', '2026-05-04', '2026-07-10', FALSE);
+INSERT INTO tb_periodo_letivo (ano_letivo, bimestre, inicio, fim, reaberto) VALUES ('2026', 'TERCEIRO', '2026-07-27', '2026-10-02', FALSE);
+INSERT INTO tb_periodo_letivo (ano_letivo, bimestre, inicio, fim, reaberto) VALUES ('2026', 'QUARTO', '2026-10-05', '2026-12-18', FALSE);

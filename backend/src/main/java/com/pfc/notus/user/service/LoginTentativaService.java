@@ -16,13 +16,6 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Limita tentativas de login erradas, em memória:
- * - por e-mail: depois de N senhas erradas seguidas, bloqueia o e-mail por alguns minutos;
- * - por IP: no máximo M senhas erradas por minuto vindas do mesmo endereço.
- * Conta e-mails que não existem do mesmo jeito, para o bloqueio não revelar quem tem conta.
- * Os contadores somem quando o servidor reinicia, o que é aceitável para um bloqueio de minutos.
- */
 @Service
 public class LoginTentativaService {
 
@@ -56,7 +49,6 @@ public class LoginTentativaService {
         this.clock = clock;
     }
 
-    /** Chamado antes de conferir a senha: recusa logo se o e-mail ou o IP estiverem bloqueados. */
     public void verificar(String email, String ip) {
         Instant agora = clock.instant();
 
@@ -73,7 +65,6 @@ public class LoginTentativaService {
         }
     }
 
-    /** Senha errada (ou e-mail inexistente). Devolve true se esta falha bloqueou o e-mail. */
     public boolean registrarFalha(String email, String ip) {
         Instant agora = clock.instant();
         long minuto = agora.getEpochSecond() / 60;
@@ -82,7 +73,6 @@ public class LoginTentativaService {
                 atual.minuto() == minuto ? new JanelaIp(minuto, atual.falhas() + 1) : novo);
 
         EstadoEmail estado = porEmail.compute(chave(email), (k, atual) -> {
-            // Falhas antigas (mais velhas que a janela de bloqueio) não se acumulam com as novas.
             int anteriores = atual == null || atual.ultimaFalha().plus(bloqueio).isBefore(agora) ? 0 : atual.falhas();
             int falhas = anteriores + 1;
             if (falhas >= maxFalhasPorEmail) {
@@ -103,12 +93,10 @@ public class LoginTentativaService {
         return bloqueio.toSeconds();
     }
 
-    /** Login certo ou senha redefinida pelo link: zera o histórico do e-mail. */
     public void limpar(String email) {
         porEmail.remove(chave(email));
     }
 
-    /** Descarta contadores vencidos para a memória não crescer sem limite. */
     @Scheduled(fixedDelay = 300_000)
     public void descartarVencidos() {
         Instant agora = clock.instant();

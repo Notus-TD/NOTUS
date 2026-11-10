@@ -13,10 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Envia o link de senha na hora, sem passar pela fila de notificações (que roda a cada 10 min).
- * É assíncrono para o tempo de resposta de /auth/esqueci-senha não revelar se o e-mail existe.
- */
 @Component
 public class LinkSenhaEmailListener {
 
@@ -42,7 +38,6 @@ public class LinkSenhaEmailListener {
         String link = frontendUrl + "/redefinir-senha?token=" + evento.token();
 
         if (logarLink) {
-            // Só nos profiles de desenvolvimento: o Resend sem domínio verificado não entrega para outros e-mails.
             log.info("[DEV] Link de {} para {}: {}", evento.tipo(), EmailUtil.mascarar(evento.email()), link);
         }
 

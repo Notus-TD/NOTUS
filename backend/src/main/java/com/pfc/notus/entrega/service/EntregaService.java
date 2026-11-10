@@ -1,5 +1,7 @@
 package com.pfc.notus.entrega.service;
 
+import com.pfc.notus.boletim.domain.AnoLetivo;
+import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
 import com.pfc.notus.entrega.domain.Entrega;
@@ -40,6 +42,9 @@ public class EntregaService {
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
 
+    @Autowired
+    private CalendarioService calendarioService;
+
     @Transactional(readOnly = true)
     public List<EntregaDTO> getDoProfessor(String requesterEmail) {
         return entregaRepository.buscarDoProfessor(buscarUsuario(requesterEmail).getId(), null).stream()
@@ -76,6 +81,7 @@ public class EntregaService {
             throw new RegraNegocioException("O aluno não pertence à turma desta atividade.");
         }
         studentAccessGuardService.assertCanTeach(student.getId(), atividade.getDisciplina().getId(), requesterEmail);
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), atividade.getBimestre());
 
         Entrega entity = entregaRepository.findByAtividadeIdAndStudentId(atividade.getId(), student.getId())
                 .orElseGet(() -> new Entrega(atividade, student));
