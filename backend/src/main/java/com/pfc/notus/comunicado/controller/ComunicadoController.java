@@ -32,10 +32,7 @@ public class ComunicadoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(comunicadoService.publicar(request, authentication.getName()));
     }
 
-<<<<<<< HEAD
-=======
     // ! REFC: POST /comunicado/recado - professor publica recado para turma específica; público fixo=RESPONSAVEIS
->>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
     @PreAuthorize("hasRole('PROFESSOR')")
     @PostMapping("/recado")
     public ResponseEntity<ComunicadoDTO> publicarRecado(@Valid @RequestBody RecadoProfessorRequest request, Authentication authentication) {
@@ -49,10 +46,7 @@ public class ComunicadoController {
         return comunicadoService.listarTodos();
     }
 
-<<<<<<< HEAD
-=======
     // ! REFC: GET /comunicado/me - usuário vê comunicados conforme seu papel (TODOS + seu público específico)
->>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
     @GetMapping("/me")
     public List<ComunicadoDTO> meus(Authentication authentication) {
         return comunicadoService.listarParaUsuario((UserDetails) authentication.getPrincipal());

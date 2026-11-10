@@ -28,4 +28,6 @@ public interface EntregaRepository extends JpaRepository<Entrega, Long> {
             ORDER BY e.id
             """)
     List<Entrega> buscarDoProfessor(Long professorId, Long studentId);
+
+    long countByStudentId(Long studentId);
 }

@@ -83,4 +83,8 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
             """)
     List<Notificacao> buscar(TipoNotificacao tipo, StatusNotificacao status, Long responsavelId,
                              LocalDateTime de, LocalDateTime ate);
+
+    long countByStudentId(Long studentId);
+
+    long countByResponsavelId(Long responsavelId);
 }

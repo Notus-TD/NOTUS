@@ -197,7 +197,7 @@ export function MenuHorizontal<Id extends string>({
 }) {
   return (
     <nav aria-label="Menu principal" className="bg-primary text-primary-foreground shadow-md">
-      <div className="mx-auto flex max-w-7xl items-stretch gap-1 overflow-x-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-stretch gap-1 overflow-x-auto px-4 sm:px-6 md:justify-center lg:px-8">
         {grupos.map((g) => {
           const grupoAtivo = g.itens.some((i) => i.id === ativo);
           const classe = `relative flex min-w-24 shrink-0 flex-col items-center justify-center gap-1.5 border-b-[3px] px-4 pb-2.5 pt-3 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-foreground ${

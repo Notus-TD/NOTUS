@@ -21,11 +21,8 @@ export const redefinirMfa = (userId: number) =>
 export const reenviarConvite = (userId: number) =>
   sendJson<void>("POST", `/users/${userId}/reenviar-convite`);
 
-export const cancelarMatricula = (userId: number) =>
-  sendJson<StudentMinDTO>("PUT", `/students/${userId}/matricula/cancelar`);
+export const cancelarMatricula = (userId: number, motivo: string) =>
+  sendJson<StudentMinDTO>("PUT", `/students/${userId}/matricula/cancelar`, { motivo });
 
 export const reativarMatricula = (userId: number) =>
   sendJson<StudentMinDTO>("PUT", `/students/${userId}/matricula/reativar`);
-
-export const anonymizeUser = (userId: number, confirmacao: string) =>
-  sendJson<void>("PUT", `/users/me/anonymize/${userId}`, { confirmacao });

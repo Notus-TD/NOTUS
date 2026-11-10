@@ -6,6 +6,7 @@ import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.privacidade.domain.SolicitacaoTitular;
 import com.pfc.notus.privacidade.domain.StatusSolicitacao;
+import com.pfc.notus.privacidade.domain.TipoSolicitacao;
 import com.pfc.notus.privacidade.dto.RespostaSolicitacaoRequest;
 import com.pfc.notus.privacidade.dto.SolicitacaoDTO;
 import com.pfc.notus.privacidade.dto.SolicitacaoRequest;
@@ -90,6 +91,25 @@ public class SolicitacaoTitularService {
         solicitacao.responder(request.status(), resposta, adminEmail, LocalDateTime.now());
         log.info(AuditMarker.AUDIT, "Pedido {} marcado como {} por {}", id, request.status(), adminEmail);
         return SolicitacaoDTO.from(solicitacao, LocalDate.now());
+    }
+
+    @Transactional
+    public void atenderPorAnonimizacao(Long id, Long usuarioId, String adminEmail) {
+        SolicitacaoTitular solicitacao = solicitacaoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado com o id: " + id));
+        if (!solicitacao.aberta()) {
+            throw new ConflictException("Este pedido já foi respondido.");
+        }
+        if (solicitacao.getTipo() != TipoSolicitacao.ANONIMIZACAO) {
+            throw new RegraNegocioException("Este pedido não é de anonimização.");
+        }
+        Long titular = solicitacao.getAluno() != null ? solicitacao.getAluno().getId() : solicitacao.getSolicitante().getId();
+        if (!titular.equals(usuarioId)) {
+            throw new RegraNegocioException("Este pedido é de outro titular.");
+        }
+
+        solicitacao.responder(StatusSolicitacao.ATENDIDA, "Dados anonimizados pela secretaria.", adminEmail, LocalDateTime.now());
+        log.info(AuditMarker.AUDIT, "Pedido {} atendido por anonimização feita por {}", id, adminEmail);
     }
 
     private Responsible responsavelPorEmail(String email) {

@@ -20,4 +20,6 @@ public interface FaltaRepository extends JpaRepository<FaltaDomain, Long> {
     List<FaltaDomain> findByAlunoIdInAndDisciplinaIdAndData(Collection<Long> alunoIds, Long disciplinaId, LocalDate data);
 
     List<FaltaDomain> findByAlunoIdInAndDisciplinaIdAndAnoLetivo(Collection<Long> alunoIds, Long disciplinaId, String anoLetivo);
+
+    long countByAlunoId(Long alunoId);
 }

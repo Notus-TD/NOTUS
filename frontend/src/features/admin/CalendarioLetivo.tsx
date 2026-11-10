@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { Etiqueta, Painel, classeCabecalhoTabela } from "@/components/layout/LayoutAdmin";
+import { CampoData } from "@/components/layout/CampoData";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -187,23 +187,21 @@ export function CalendarioLetivo() {
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.label}</TableCell>
                   <TableCell>
-                    <Input
-                      type="date"
+                    <CampoData
                       value={datas[b.id].inicio}
                       min={`${ano}-01-01`}
                       max={`${ano}-12-31`}
-                      onChange={(e) => mudar(b.id, "inicio", e.target.value)}
+                      onChange={(v) => mudar(b.id, "inicio", v)}
                       aria-label={`Início do ${b.label}`}
                       className="h-9 w-40 text-sm"
                     />
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="date"
+                    <CampoData
                       value={datas[b.id].fim}
                       min={`${ano}-01-01`}
                       max={`${ano}-12-31`}
-                      onChange={(e) => mudar(b.id, "fim", e.target.value)}
+                      onChange={(v) => mudar(b.id, "fim", v)}
                       aria-label={`Fim do ${b.label}`}
                       className="h-9 w-40 text-sm"
                     />

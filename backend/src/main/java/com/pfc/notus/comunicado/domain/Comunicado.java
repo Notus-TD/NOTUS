@@ -7,10 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-<<<<<<< HEAD
-=======
 // ! REFC: Entidade JPA mapeada em tb_comunicado - suporta comunicados globais (admin) e recados de turma (professor)
->>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
 @Entity
 @Table(name = "tb_comunicado")
 @NoArgsConstructor
@@ -44,10 +41,7 @@ public class Comunicado {
     @Column
     private Long turmaId;
 
-<<<<<<< HEAD
-=======
     // ! REFC: Rastreia em qual ano letivo o comunicado foi publicado
->>>>>>> eb86b0c86e7803a1df276d182ae1cf843dd8d402
     @Column(name = "ano_letivo", length = 4)
     private String anoLetivo;
 

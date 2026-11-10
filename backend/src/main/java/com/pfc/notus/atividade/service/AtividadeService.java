@@ -110,8 +110,10 @@ public class AtividadeService {
                 .filter(e -> e.getStatus() == StatusEntrega.ENTREGUE || e.getStatus() == StatusEntrega.ATRASADA)
                 .map(e -> e.getAtividade().getId())
                 .collect(Collectors.toSet());
+        LocalDate desde = aluno.getTurmaDesde();
         return atividadeRepository.findByTurmaIdAndAnoLetivoOrderByPrazoAsc(
                         aluno.getTurma().getId(), AnoLetivo.doAluno(aluno)).stream()
+                .filter(a -> desde == null || !a.getPrazo().isBefore(desde))
                 .map(a -> toDTO(a, entregues.contains(a.getId())))
                 .toList();
     }

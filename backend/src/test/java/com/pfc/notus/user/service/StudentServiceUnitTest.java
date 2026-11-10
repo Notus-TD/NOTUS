@@ -124,7 +124,7 @@ class StudentServiceUnitTest {
         student.setTurma(new Turma("9º Ano A", "2026"));
         when(studentRepository.findById(10L)).thenReturn(Optional.of(student));
 
-        StudentMinDTO resultado = studentService.cancelarMatricula(10L, "admin@notus.com");
+        StudentMinDTO resultado = studentService.cancelarMatricula(10L, "Transferência de escola", "admin@notus.com");
 
         assertEquals(StatusMatricula.CANCELADA, resultado.matriculaStatus());
         assertNull(student.getTurma());
@@ -139,7 +139,7 @@ class StudentServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(alunoComMatricula(StatusMatricula.FINALIZADA, null)));
 
         ConflictException excecao = assertThrows(ConflictException.class,
-                () -> studentService.cancelarMatricula(10L, "admin@notus.com"));
+                () -> studentService.cancelarMatricula(10L, "Transferência de escola", "admin@notus.com"));
 
         assertEquals("Só matrícula ativa pode ser cancelada.", excecao.getMessage());
         verify(studentRepository, never()).save(any());
@@ -152,7 +152,7 @@ class StudentServiceUnitTest {
         when(studentRepository.findById(10L)).thenReturn(Optional.of(student));
 
         ConflictException excecao = assertThrows(ConflictException.class,
-                () -> studentService.cancelarMatricula(10L, "admin@notus.com"));
+                () -> studentService.cancelarMatricula(10L, "Transferência de escola", "admin@notus.com"));
 
         assertEquals("Usuário já foi anonimizado.", excecao.getMessage());
     }
@@ -162,7 +162,7 @@ class StudentServiceUnitTest {
         when(studentRepository.findById(99L)).thenReturn(Optional.empty());
 
         ResourceNotFoundException excecao = assertThrows(ResourceNotFoundException.class,
-                () -> studentService.cancelarMatricula(99L, "admin@notus.com"));
+                () -> studentService.cancelarMatricula(99L, "Transferência de escola", "admin@notus.com"));
 
         assertEquals("Aluno não encontrado com o id: 99", excecao.getMessage());
     }

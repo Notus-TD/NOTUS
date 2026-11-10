@@ -20,7 +20,9 @@ public record StudentDetalheDTO(
         String responsibleName,
         String responsibleEmail,
         String responsiblePhone,
-        LocalDateTime acessoLiberadoEm
+        LocalDateTime acessoLiberadoEm,
+        String motivoCancelamento,
+        LocalDateTime matriculaCanceladaEm
 ) {
     public static StudentDetalheDTO of(Student s) {
         Responsible r = s.getResponsible();
@@ -32,7 +34,9 @@ public record StudentDetalheDTO(
                 r == null ? null : r.getName(),
                 r == null ? null : r.getEmail(),
                 r == null ? null : r.getPhone(),
-                s.getAcessoLiberadoEm()
+                s.getAcessoLiberadoEm(),
+                s.getMotivoCancelamento(),
+                s.getMatriculaCanceladaEm()
         );
     }
 }

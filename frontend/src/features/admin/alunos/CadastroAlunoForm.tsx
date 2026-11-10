@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent, type ComponentProps, type FormEv
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CampoData } from "@/components/layout/CampoData";
 import {
   Card,
   CardContent,
@@ -165,7 +166,7 @@ export function CadastroAlunoForm({
     erro: errosResponsavel[chave],
   });
 
-  const propsAluno = (aluno: Aluno, chave: CampoAluno) => {
+  const controleAluno = (aluno: Aluno, chave: CampoAluno) => {
     const tocado = `aluno.${aluno.chave}.${chave}`;
     const definirErro = (a: Aluno) =>
       setErrosAlunos((atual) => ({
@@ -182,8 +183,8 @@ export function CadastroAlunoForm({
       }));
     return {
       value: aluno[chave],
-      onChange: (e: ChangeEvent<HTMLInputElement>) => {
-        const valor = mascarasAluno[chave]?.(e.target.value) ?? e.target.value;
+      aplicar: (bruto: string) => {
+        const valor = mascarasAluno[chave]?.(bruto) ?? bruto;
         const atualizado = { ...aluno, [chave]: valor };
         setAlunos((lista) => lista.map((a) => (a.chave === aluno.chave ? atualizado : a)));
         if (tocados[tocado]) definirErro(atualizado);
@@ -194,6 +195,11 @@ export function CadastroAlunoForm({
       },
       erro: errosAlunos[aluno.chave]?.[chave],
     };
+  };
+
+  const propsAluno = (aluno: Aluno, chave: CampoAluno) => {
+    const { aplicar, ...resto } = controleAluno(aluno, chave);
+    return { ...resto, onChange: (e: ChangeEvent<HTMLInputElement>) => aplicar(e.target.value) };
   };
 
   function limpar() {
@@ -350,12 +356,10 @@ export function CadastroAlunoForm({
                 placeholder="20260001"
                 {...propsAluno(aluno, "matricula")}
               />
-              <Campo
+              <CampoDataAluno
                 id={idCampoAluno(indice, "nascimento")}
                 rotulo="Data de nascimento"
-                type="date"
-                max={new Date().toISOString().slice(0, 10)}
-                {...propsAluno(aluno, "nascimento")}
+                controle={controleAluno(aluno, "nascimento")}
               />
             </CardContent>
           </Card>
@@ -421,6 +425,45 @@ export function CadastroAlunoForm({
             </ul>
           </CardContent>
         </Card>
+      )}
+    </div>
+  );
+}
+
+function CampoDataAluno({
+  id,
+  rotulo,
+  controle,
+}: {
+  id: string;
+  rotulo: string;
+  controle: {
+    value: string;
+    aplicar: (v: string) => void;
+    onBlur: () => void;
+    erro?: string | undefined;
+  };
+}) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className="block text-sm font-semibold text-foreground">
+        {rotulo}
+      </label>
+      <CampoData
+        id={id}
+        required
+        value={controle.value}
+        max={new Date().toISOString().slice(0, 10)}
+        onChange={controle.aplicar}
+        onBlur={controle.onBlur}
+        aria-invalid={controle.erro ? true : undefined}
+        aria-describedby={controle.erro ? `${id}-erro` : undefined}
+        className={`h-12 text-lg ${controle.erro ? "border-destructive focus-visible:ring-destructive" : ""}`}
+      />
+      {controle.erro && (
+        <p id={`${id}-erro`} className="text-sm font-medium text-destructive">
+          {controle.erro}
+        </p>
       )}
     </div>
   );

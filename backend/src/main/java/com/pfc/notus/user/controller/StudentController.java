@@ -1,6 +1,7 @@
 package com.pfc.notus.user.controller;
 
 import com.pfc.notus.user.dto.AcessoAlunoRequest;
+import com.pfc.notus.user.dto.CancelamentoMatriculaRequest;
 import com.pfc.notus.user.dto.StudentBatchRegistrationRequest;
 import com.pfc.notus.user.dto.StudentDetalheDTO;
 import com.pfc.notus.user.dto.StudentMinDTO;
@@ -71,8 +72,10 @@ public class StudentController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/matricula/cancelar")
-    public ResponseEntity<StudentMinDTO> cancelarMatricula(@PathVariable Long id, Authentication authentication) {
-        return ResponseEntity.ok(studentService.cancelarMatricula(id, authentication.getName()));
+    public ResponseEntity<StudentMinDTO> cancelarMatricula(@PathVariable Long id,
+                                                           @RequestBody @Valid CancelamentoMatriculaRequest request,
+                                                           Authentication authentication) {
+        return ResponseEntity.ok(studentService.cancelarMatricula(id, request.motivo(), authentication.getName()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

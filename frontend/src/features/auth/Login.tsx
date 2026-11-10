@@ -403,7 +403,7 @@ export function LoginPage() {
           </div>
         </main>
 
-        <RodapeSite />
+        <RodapeSite largura="centro" />
       </div>
     </div>
   );
