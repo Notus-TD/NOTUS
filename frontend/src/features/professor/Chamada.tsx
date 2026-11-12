@@ -5,13 +5,6 @@ import { CampoData } from "@/components/layout/CampoData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -112,19 +105,16 @@ export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: 
           <label htmlFor="aulas-no-dia" className="text-sm font-semibold text-foreground">
             Aulas no dia
           </label>
-          <Select
-            value={String(aulas)}
-            onValueChange={(v) => setAulas(Number(v))}
+          <Input
+            id="aulas-no-dia"
+            type="number"
+            min="1"
+            max="10"
+            value={aulas}
+            onChange={(e) => setAulas(Number(e.target.value) || 1)}
             disabled={bloqueio !== null}
-          >
-            <SelectTrigger id="aulas-no-dia" className="h-9 w-24 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 aula</SelectItem>
-              <SelectItem value="2">2 aulas</SelectItem>
-            </SelectContent>
-          </Select>
+            className="h-9 w-24 text-sm"
+          />
         </>
       }
       rodape={
