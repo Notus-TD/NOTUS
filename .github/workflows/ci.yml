@@ -29,7 +29,7 @@ jobs:
           cache: maven
 
       - name: Executar testes unitários
-        run: mvn test -Dtest='!*IT,!*IntegrationTest' -DfailIfNoTests=false
+        run: mvn test -Dtest='!*IT,!*IntegrationTest' -Dsurefire.failIfNoSpecifiedTests=false
 
   testes-integracao:
     name: Testes de integração
@@ -50,7 +50,7 @@ jobs:
           cache: maven
 
       - name: Executar testes de integração
-        run: mvn test -Dtest='*IT,*IntegrationTest' -DfailIfNoTests=false
+        run: mvn test -Dtest='*IT,*IntegrationTest' -Dsurefire.failIfNoSpecifiedTests=false
 
   Linter:
     name: Linter
