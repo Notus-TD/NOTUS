@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="warning"/>
+
+    <!-- Arquivos -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="module\-info\.java$"/>
+    </module>
+
+    <!-- Tamanho (deve estar em Checker, não em TreeWalker) -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://"/>
+    </module>
+
+    <!-- TreeWalker -->
+    <module name="TreeWalker">
+        <!-- Imports -->
+        <module name="UnusedImports"/>
+        <module name="IllegalImport"/>
+
+        <!-- Whitespace -->
+        <module name="EmptyLineSeparator"/>
+        <module name="NoWhitespaceAfter"/>
+        <module name="NoWhitespaceBefore"/>
+
+        <!-- Naming -->
+        <module name="ClassTypeParameterName"/>
+        <module name="InterfaceTypeParameterName"/>
+        <module name="MethodTypeParameterName"/>
+
+        <!-- Simplicidade -->
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="NestedIfDepth">
+            <property name="max" value="3"/>
+        </module>
+
+        <!-- Modificadores -->
+        <module name="ModifierOrder"/>
+        <module name="RedundantModifier"/>
+    </module>
+</module>
