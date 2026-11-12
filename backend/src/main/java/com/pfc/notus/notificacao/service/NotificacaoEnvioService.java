@@ -73,7 +73,11 @@ public class NotificacaoEnvioService {
         }
 
         List<String> variaveis = Arrays.asList(objectMapper.readValue(notificacao.getVariaveis(), String[].class));
-        return Optional.of(new EnvioPreparado(id, notificacao.getResponsavel().getEmail(), notificacao.getTemplate(), variaveis));
+        // Determina para qual email enviar - aluno ou responsável
+        String emailDestino = notificacao.getResponsavel() != null
+            ? notificacao.getResponsavel().getEmail()
+            : notificacao.getStudent().getEmail();
+        return Optional.of(new EnvioPreparado(id, emailDestino, notificacao.getTemplate(), variaveis));
     }
 
     @Transactional
@@ -83,7 +87,11 @@ public class NotificacaoEnvioService {
             return;
         }
         notificacao.setTentativas(notificacao.getTentativas() + 1);
-        String destino = EmailUtil.mascarar(notificacao.getResponsavel().getEmail());
+        // Obtém o email de destino (responsável ou aluno)
+        String emailDestino = notificacao.getResponsavel() != null
+            ? notificacao.getResponsavel().getEmail()
+            : notificacao.getStudent().getEmail();
+        String destino = EmailUtil.mascarar(emailDestino);
 
         switch (resultado.tipo()) {
             case SUCESSO -> {

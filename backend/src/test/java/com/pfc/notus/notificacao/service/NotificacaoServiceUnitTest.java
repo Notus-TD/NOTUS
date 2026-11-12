@@ -180,4 +180,85 @@ class NotificacaoServiceUnitTest {
         assertFalse(limite.getValue().isBefore(antes));
         assertTrue(limite.getValue().isBefore(LocalDateTime.now().minusMonths(NotificacaoService.MESES_RETENCAO).plusSeconds(1)));
     }
+
+    // Testes para notificações de alunos
+
+    @Test
+    void notaFinalCriaNotificacaoParaAlunoComAcessoLiberado() {
+        // Aluno com acesso liberado
+        aluno.setAcessoLiberadoEm(LocalDateTime.now());
+        aluno.setStatusMatricula(com.pfc.notus.user.domain.enums.StatusMatricula.ATIVA);
+
+        Disciplina matematica = new Disciplina("Matemática", "Álgebra");
+        Boletim boletim = new Boletim(aluno, matematica, Bimestre.PRIMEIRO);
+        ReflectionTestUtils.setField(boletim, "id", 50L);
+        boletim.setNotaFinal(7f);
+        boletim.setLancadoEm(LocalDateTime.now());
+        when(boletimRepository.findById(50L)).thenReturn(Optional.of(boletim));
+
+        notificacaoService.notificarNotaFinal(50L, false);
+
+        // Deve criar 2 notificações: uma para responsável, uma para aluno
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+
+        List<Notificacao> notificacoes = captor.getAllValues();
+        // Primeira é para responsável
+        assertEquals(responsavel.getId(), notificacoes.get(0).getResponsavel().getId());
+        assertEquals(aluno.getId(), notificacoes.get(0).getStudent().getId());
+        // Segunda é para aluno (responsável null)
+        assertNull(notificacoes.get(1).getResponsavel());
+        assertEquals(aluno.getId(), notificacoes.get(1).getStudent().getId());
+    }
+
+    @Test
+    void notaFinalNaoCriaNotificacaoParaAlunoSemAcessoLiberado() {
+        // Aluno SEM acesso liberado
+        aluno.setAcessoLiberadoEm(null);
+        aluno.setStatusMatricula(com.pfc.notus.user.domain.enums.StatusMatricula.ATIVA);
+
+        Disciplina matematica = new Disciplina("Matemática", "Álgebra");
+        Boletim boletim = new Boletim(aluno, matematica, Bimestre.PRIMEIRO);
+        ReflectionTestUtils.setField(boletim, "id", 50L);
+        boletim.setNotaFinal(7f);
+        boletim.setLancadoEm(LocalDateTime.now());
+        when(boletimRepository.findById(50L)).thenReturn(Optional.of(boletim));
+
+        notificacaoService.notificarNotaFinal(50L, false);
+
+        // Deve criar apenas 1 notificação: para responsável
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(1)).save(captor.capture());
+
+        Notificacao notificacao = captor.getValue();
+        assertEquals(responsavel.getId(), notificacao.getResponsavel().getId());
+        assertEquals(aluno.getId(), notificacao.getStudent().getId());
+    }
+
+    @Test
+    void notificacaoParaAlunoTemChaveUnicaDiferente() {
+        aluno.setAcessoLiberadoEm(LocalDateTime.now());
+        aluno.setStatusMatricula(com.pfc.notus.user.domain.enums.StatusMatricula.ATIVA);
+
+        Disciplina matematica = new Disciplina("Matemática", "Álgebra");
+        Boletim boletim = new Boletim(aluno, matematica, Bimestre.PRIMEIRO);
+        ReflectionTestUtils.setField(boletim, "id", 50L);
+        boletim.setNotaFinal(7f);
+        boletim.setLancadoEm(LocalDateTime.now());
+        when(boletimRepository.findById(50L)).thenReturn(Optional.of(boletim));
+
+        notificacaoService.notificarNotaFinal(50L, false);
+
+        ArgumentCaptor<Notificacao> captor = ArgumentCaptor.forClass(Notificacao.class);
+        verify(notificacaoRepository, times(2)).save(captor.capture());
+
+        List<Notificacao> notificacoes = captor.getAllValues();
+        String chaveResponsavel = notificacoes.get(0).getChaveIdempotencia();
+        String chaveAluno = notificacoes.get(1).getChaveIdempotencia();
+
+        // Chaves devem ser diferentes
+        assertNotEquals(chaveResponsavel, chaveAluno);
+        assertTrue(chaveResponsavel.contains("RESPONSAVEL"));
+        assertTrue(chaveAluno.contains("ALUNO"));
+    }
 }

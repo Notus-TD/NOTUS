@@ -92,17 +92,30 @@ public class NotificacaoService {
         }
         Student aluno = falta.getAluno();
         Responsible responsavel = aluno.getResponsible();
-        if (!elegivel(responsavel, aluno)) return;
 
         String chave = "FALTA:%d:%d:%s".formatted(aluno.getId(), falta.getDisciplina().getId(), falta.getData());
-        List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.FALTA,
-                responsavel.getName(),
-                aluno.getFullName(),
-                falta.getDisciplina().getTitle(),
-                falta.getData().format(DATA_BR),
-                String.valueOf(totalFaltasNaDisciplina));
 
-        criar(TipoNotificacao.FALTA, responsavel, aluno, REF_FALTA, falta.getId(), chave, variaveis);
+        // Notifica responsável (se elegível)
+        if (elegivel(responsavel, aluno)) {
+            List<String> variaveisResponsavel = templateRegistry.variaveis(TipoNotificacao.FALTA,
+                    responsavel.getName(),
+                    aluno.getFullName(),
+                    falta.getDisciplina().getTitle(),
+                    falta.getData().format(DATA_BR),
+                    String.valueOf(totalFaltasNaDisciplina));
+            criar(TipoNotificacao.FALTA, responsavel, aluno, REF_FALTA, falta.getId(), chave + ":RESPONSAVEL", variaveisResponsavel);
+        }
+
+        // Notifica aluno (se elegível)
+        if (elegivelAluno(aluno)) {
+            List<String> variaveisAluno = templateRegistry.variaveis(TipoNotificacao.FALTA,
+                    aluno.getFullName(),
+                    aluno.getFullName(),
+                    falta.getDisciplina().getTitle(),
+                    falta.getData().format(DATA_BR),
+                    String.valueOf(totalFaltasNaDisciplina));
+            criar(TipoNotificacao.FALTA, null, aluno, REF_FALTA, falta.getId(), chave + ":ALUNO", variaveisAluno);
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -114,18 +127,32 @@ public class NotificacaoService {
         }
         Student aluno = boletim.getStudent();
         Responsible responsavel = aluno.getResponsible();
-        if (!elegivel(responsavel, aluno)) return;
 
         String chave = "NOTA_FINAL:%d:%s".formatted(boletim.getId(), boletim.getLancadoEm());
-        List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.NOTA_FINAL,
-                responsavel.getName(),
-                aluno.getFullName(),
-                boletim.getDisciplina().getTitle(),
-                boletim.getBimestre().getDescricao(),
-                String.format(PT_BR, "%.1f", boletim.getNotaFinal()));
 
-        criar(TipoNotificacao.NOTA_FINAL, atualizada ? "nota_atualizada" : null, responsavel, aluno,
-                REF_BOLETIM, boletim.getId(), chave, variaveis);
+        // Notifica responsável (se elegível)
+        if (elegivel(responsavel, aluno)) {
+            List<String> variaveisResponsavel = templateRegistry.variaveis(TipoNotificacao.NOTA_FINAL,
+                    responsavel.getName(),
+                    aluno.getFullName(),
+                    boletim.getDisciplina().getTitle(),
+                    boletim.getBimestre().getDescricao(),
+                    String.format(PT_BR, "%.1f", boletim.getNotaFinal()));
+            criar(TipoNotificacao.NOTA_FINAL, atualizada ? "nota_atualizada" : null, responsavel, aluno,
+                    REF_BOLETIM, boletim.getId(), chave + ":RESPONSAVEL", variaveisResponsavel);
+        }
+
+        // Notifica aluno (se elegível)
+        if (elegivelAluno(aluno)) {
+            List<String> variaveisAluno = templateRegistry.variaveis(TipoNotificacao.NOTA_FINAL,
+                    aluno.getFullName(),
+                    aluno.getFullName(),
+                    boletim.getDisciplina().getTitle(),
+                    boletim.getBimestre().getDescricao(),
+                    String.format(PT_BR, "%.1f", boletim.getNotaFinal()));
+            criar(TipoNotificacao.NOTA_FINAL, atualizada ? "nota_atualizada" : null, null, aluno,
+                    REF_BOLETIM, boletim.getId(), chave + ":ALUNO", variaveisAluno);
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -143,6 +170,7 @@ public class NotificacaoService {
     @Transactional
     public void notificarAtividade(Long atividadeId, Collection<Student> alunosDaTurma,
                                    String disciplina, String titulo, LocalDate prazo) {
+        // Agrupa responsáveis elegíveis
         Map<Long, Student> primeiroAlunoPorResponsavel = new LinkedHashMap<>();
         for (Student aluno : alunosDaTurma) {
             Responsible responsavel = aluno.getResponsible();
@@ -151,16 +179,32 @@ public class NotificacaoService {
             }
         }
 
+        // Notifica responsáveis
         for (Student aluno : primeiroAlunoPorResponsavel.values()) {
             Responsible responsavel = aluno.getResponsible();
-            String chave = "ATIVIDADE:%d:%d".formatted(atividadeId, responsavel.getId());
-            List<String> variaveis = templateRegistry.variaveis(TipoNotificacao.ATIVIDADE,
+            String chaveBase = "ATIVIDADE:%d:%d".formatted(atividadeId, responsavel.getId());
+
+            List<String> variaveisResponsavel = templateRegistry.variaveis(TipoNotificacao.ATIVIDADE,
                     responsavel.getName(),
                     aluno.getFullName(),
                     disciplina,
                     titulo,
                     prazo == null ? "sem prazo" : prazo.format(DATA_BR));
-            criar(TipoNotificacao.ATIVIDADE, responsavel, aluno, REF_ATIVIDADE, atividadeId, chave, variaveis);
+            criar(TipoNotificacao.ATIVIDADE, responsavel, aluno, REF_ATIVIDADE, atividadeId, chaveBase + ":RESPONSAVEL", variaveisResponsavel);
+        }
+
+        // Notifica alunos elegíveis
+        for (Student aluno : alunosDaTurma) {
+            if (elegivelAluno(aluno)) {
+                String chaveBase = "ATIVIDADE:%d:%d".formatted(atividadeId, aluno.getId());
+                List<String> variaveisAluno = templateRegistry.variaveis(TipoNotificacao.ATIVIDADE,
+                        aluno.getFullName(),
+                        aluno.getFullName(),
+                        disciplina,
+                        titulo,
+                        prazo == null ? "sem prazo" : prazo.format(DATA_BR));
+                criar(TipoNotificacao.ATIVIDADE, null, aluno, REF_ATIVIDADE, atividadeId, chaveBase + ":ALUNO", variaveisAluno);
+            }
         }
     }
 
@@ -295,6 +339,15 @@ public class NotificacaoService {
         return true;
     }
 
+    // Verifica se aluno é elegível para receber notificação (acesso liberado pelo responsável)
+    private boolean elegivelAluno(Student aluno) {
+        if (aluno == null) return false;
+        // Acesso só liberado se acessoLiberadoEm foi definido (aluno pode acessar portal)
+        if (aluno.getAcessoLiberadoEm() == null) return false;
+        if (aluno.getStatusMatricula() != StatusMatricula.ATIVA) return false;
+        return true;
+    }
+
     private void criar(TipoNotificacao tipo, Responsible responsavel, Student aluno, String referenciaTipo,
                        Long referenciaId, String chave, List<String> variaveis) {
         criar(tipo, null, responsavel, aluno, referenciaTipo, referenciaId, chave, variaveis);
@@ -311,8 +364,13 @@ public class NotificacaoService {
         Notificacao notificacao = new Notificacao(tipo, responsavel, aluno, referenciaTipo, referenciaId,
                 chave, template, objectMapper.writeValueAsString(variaveis));
         notificacao = notificacaoRepository.save(notificacao);
-        log.info(AuditMarker.AUDIT, "Notificação {} criada | {} | responsável {} | {}",
-                notificacao.getId(), tipo, responsavel.getId(), EmailUtil.mascarar(responsavel.getEmail()));
+        // Log para responsável ou aluno
+        String destino = responsavel != null
+            ? EmailUtil.mascarar(responsavel.getEmail())
+            : (aluno != null ? EmailUtil.mascarar(aluno.getEmail()) : "desconhecido");
+        String destinatario = responsavel != null ? "responsável " + responsavel.getId() : "aluno " + aluno.getId();
+        log.info(AuditMarker.AUDIT, "Notificação {} criada | {} | {} | {}",
+                notificacao.getId(), tipo, destinatario, destino);
     }
 
     @Scheduled(cron = "${notificacao.retencao-cron:0 0 3 * * *}")

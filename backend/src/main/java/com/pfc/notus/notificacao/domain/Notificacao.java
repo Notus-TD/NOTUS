@@ -29,7 +29,7 @@ public class Notificacao {
     private TipoNotificacao tipo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "responsavel_id", nullable = false)
+    @JoinColumn(name = "responsavel_id")
     @Getter @Setter
     private Responsible responsavel;
 
