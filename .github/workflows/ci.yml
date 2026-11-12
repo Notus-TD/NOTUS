@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  Testes unitários:
+  testes-unitarios:
     name: Testes unitários
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -31,7 +31,7 @@ jobs:
       - name: Executar testes unitários
         run: mvn test -Dtest='!*IT,!*IntegrationTest' -DfailIfNoTests=false
 
-  Testes de integração:
+  testes-integracao:
     name: Testes de integração
     runs-on: ubuntu-latest
     timeout-minutes: 15
