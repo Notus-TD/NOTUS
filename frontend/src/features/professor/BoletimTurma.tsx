@@ -1,20 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { classeCabecalhoTabela } from "@/components/layout/LayoutAdmin";
 import { Card, CardContent } from "@/components/layout/blocos";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -24,14 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  getBoletimDoAluno,
-  lancarNotaFinal,
-  removerNotaFinal,
-  type Bimestre,
-  type BoletimDisciplinaDTO,
-  type BoletimDTO,
-} from "@/api/boletim";
+import { getNotasDoAluno, type Bimestre } from "@/api/nota";
+import type { BoletimDisciplinaDTO, BoletimDTO } from "@/api/boletim";
 import { ApiError } from "@/api/cliente";
 import { nomeBimestre } from "@/lib/bimestres";
 import { normalizar } from "@/lib/busca";
@@ -78,12 +60,69 @@ export function BoletimTurma({
       const carga = (ultimaCarga.current[studentId] ?? 0) + 1;
       ultimaCarga.current[studentId] = carga;
       try {
-        const boletim = await getBoletimDoAluno(studentId);
+        // REFN: busca notas do aluno e reconstrói estrutura para exibição
+        const notas = await getNotasDoAluno(studentId);
         if (ultimaCarga.current[studentId] !== carga) return;
-        const daDisciplina = boletim.find((b) => b.disciplinaId === disciplina.id) ?? null;
+
+        // REFN: agrupa notas por disciplina/bimestre
+        const notasDaDisciplina = notas.filter((n) => n.disciplinaId === disciplina.id);
+
+        if (notasDaDisciplina.length === 0) {
+          setBoletins((atual) => ({
+            ...atual,
+            [studentId]: {
+              estado: "ok",
+              disciplina: {
+                disciplinaId: disciplina.id,
+                disciplinaTitle: disciplina.title,
+                bimestres: [],
+                mediaFinal: null,
+              },
+            },
+          }));
+          return;
+        }
+
+        // REFN: reconstrói estrutura BoletimDisciplinaDTO com médias por bimestre
+        const bimestres = ["PRIMEIRO", "SEGUNDO", "TERCEIRO", "QUARTO"] as const;
+        const bimestresData: BoletimDTO[] = [];
+
+        for (const bimestre of bimestres) {
+          const notasDoB = notasDaDisciplina.filter((n) => n.bimestre === bimestre);
+          if (notasDoB.length === 0) continue;
+
+          const media =
+            notasDoB.reduce((sum, n) => sum + n.rate, 0) / notasDoB.length;
+
+          bimestresData.push({
+            id: null,
+            studentId,
+            disciplinaId: disciplina.id,
+            disciplinaTitle: disciplina.title,
+            bimestre,
+            mediaCalculada: media,
+            notaFinal: null,
+            nota: media,
+            lancadoEm: null,
+            pontosAtividades: null,
+          });
+        }
+
+        const mediaFinal = bimestresData.length > 0
+          ? bimestresData.reduce((sum, b) => sum + (b.nota ?? 0), 0) / bimestresData.length
+          : null;
+
         setBoletins((atual) => ({
           ...atual,
-          [studentId]: { estado: "ok", disciplina: daDisciplina },
+          [studentId]: {
+            estado: "ok",
+            disciplina: {
+              disciplinaId: disciplina.id,
+              disciplinaTitle: disciplina.title,
+              bimestres: bimestresData,
+              mediaFinal,
+            },
+          },
         }));
       } catch (e) {
         if (ultimaCarga.current[studentId] !== carga) return;
@@ -96,7 +135,7 @@ export function BoletimTurma({
         }));
       }
     },
-    [disciplina.id],
+    [disciplina.id, disciplina.title],
   );
 
   useEffect(() => {
@@ -195,15 +234,8 @@ export function BoletimTurma({
                       COLUNAS.map((c) =>
                         c.tipo === "bimestre" ? (
                           <TableCell key={c.label} className="text-center">
-                            <NotaEditavel
-                              studentId={a.userId}
-                              disciplina={disciplina}
-                              bimestre={c.bimestre}
-                              linha={linhaDe(a.userId, c.bimestre)}
-                              rotulo={`Nota de ${a.studentName} no ${c.label}`}
-                              bloqueado={fechados.includes(c.bimestre)}
-                              aoMudar={() => carregarAluno(a.userId)}
-                            />
+                            {/* REFN: exibe média do bimestre (calculada das notas individuais) */}
+                            <CelulaMedia valor={linhaDe(a.userId, c.bimestre)?.nota ?? null} />
                           </TableCell>
                         ) : (
                           <TableCell key={c.label} className="bg-primary/5 text-center">
@@ -261,22 +293,10 @@ function formatarNota(valor: number | null) {
   return valor === null ? "—" : valor.toFixed(1).replace(".", ",");
 }
 
-function corFundo(valor: number) {
-  if (valor >= NOTA_APROVACAO) return "bg-success text-success-foreground";
-  if (valor >= NOTA_ATENCAO) return "bg-warning text-warning-foreground";
-  return "bg-destructive text-destructive-foreground";
-}
-
 function corTexto(valor: number) {
   if (valor >= NOTA_APROVACAO) return "text-success";
   if (valor >= NOTA_ATENCAO) return "text-warning";
   return "text-destructive";
-}
-
-function corBorda(valor: number) {
-  if (valor >= NOTA_APROVACAO) return "border-success text-success";
-  if (valor >= NOTA_ATENCAO) return "border-warning text-warning";
-  return "border-destructive text-destructive";
 }
 
 function CelulaMedia({ valor }: { valor: number | null }) {
@@ -292,228 +312,3 @@ function CelulaMedia({ valor }: { valor: number | null }) {
   );
 }
 
-const CLASSE_CELULA =
-  "inline-flex min-w-14 items-center justify-center rounded-lg px-3 py-1.5 text-base font-semibold tabular-nums";
-
-function detalheNota(linha: BoletimDTO) {
-  const base = linha.notaFinal ?? linha.mediaCalculada;
-  const partes = [];
-  if (base !== null) partes.push(`Nota do bimestre ${formatarNota(base)}`);
-  if (linha.pontosAtividades !== null)
-    partes.push(`atividades ${formatarNota(linha.pontosAtividades)}`);
-  return partes.join(" + ");
-}
-
-function conteudoCelula(linha: BoletimDTO | null, editable: boolean) {
-  const nota = linha?.nota ?? null;
-  if (linha && nota !== null) {
-    return (
-      <span
-        className={cn(
-          CLASSE_CELULA,
-          linha.notaFinal !== null ? corFundo(nota) : cn("border-2 bg-card", corBorda(nota)),
-        )}
-      >
-        {formatarNota(nota)}
-      </span>
-    );
-  }
-  if (editable) {
-    return (
-      <span
-        className={cn(
-          CLASSE_CELULA,
-          "border border-dashed border-muted-foreground/40 text-muted-foreground",
-        )}
-      >
-        <Plus className="size-4" aria-label="Lançar nota" />
-      </span>
-    );
-  }
-  return <span className={cn(CLASSE_CELULA, "bg-muted text-muted-foreground")}>—</span>;
-}
-
-function NotaEditavel({
-  studentId,
-  disciplina,
-  bimestre,
-  linha,
-  rotulo,
-  bloqueado,
-  aoMudar,
-}: {
-  studentId: number;
-  disciplina: DisciplinaRef;
-  bimestre: Bimestre;
-  linha: BoletimDTO | null;
-  rotulo: string;
-  bloqueado: boolean;
-  aoMudar: () => Promise<void>;
-}) {
-  const notaFinal = linha?.notaFinal ?? null;
-  const [editando, setEditando] = useState(false);
-  const [valor, setValor] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
-  const finalizado = useRef(false);
-
-  function iniciar() {
-    finalizado.current = false;
-    setValor(notaFinal === null ? "" : formatarNota(notaFinal));
-    setEditando(true);
-  }
-
-  function cancelar() {
-    finalizado.current = true;
-    setEditando(false);
-  }
-
-  async function salvar() {
-    if (finalizado.current) return;
-    finalizado.current = true;
-
-    const texto = valor.trim();
-    if (!texto) {
-      if (notaFinal === null) setEditando(false);
-      else setConfirmandoRemocao(true);
-      return;
-    }
-    const resultado = interpretarNota(texto);
-    if ("erro" in resultado) {
-      toast.error(resultado.erro);
-      setEditando(false);
-      return;
-    }
-    if (resultado.nota === notaFinal || texto === formatarNota(notaFinal)) {
-      setEditando(false);
-      return;
-    }
-
-    setSalvando(true);
-    try {
-      await lancarNotaFinal({
-        studentId,
-        disciplinaId: disciplina.id,
-        bimestre,
-        notaFinal: resultado.nota,
-      });
-      await aoMudar();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao lançar a nota do bimestre.");
-    } finally {
-      setSalvando(false);
-      setEditando(false);
-    }
-  }
-
-  async function remover() {
-    if (!linha?.id) return;
-    setSalvando(true);
-    try {
-      await removerNotaFinal(linha.id);
-      await aoMudar();
-      toast.success("Nota do bimestre removida.");
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Erro ao remover a nota do bimestre.");
-    } finally {
-      setSalvando(false);
-      setEditando(false);
-    }
-  }
-
-  if (bloqueado) {
-    return (
-      <span
-        title={`${nomeBimestre(bimestre)} fechado${linha ? `. ${detalheNota(linha)}` : ""}`}
-        aria-label={`${rotulo}, bimestre fechado`}
-        className="inline-block opacity-80"
-      >
-        {conteudoCelula(linha, false)}
-      </span>
-    );
-  }
-
-  if (!editando) {
-    return (
-      <button
-        type="button"
-        onClick={iniciar}
-        onFocus={iniciar}
-        title={linha ? detalheNota(linha) || "Digitar nota" : "Digitar nota"}
-        aria-label={rotulo}
-        className="rounded-lg transition-all hover:scale-105 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
-        {conteudoCelula(linha, true)}
-      </button>
-    );
-  }
-
-  return (
-    <>
-      <Input
-        autoFocus
-        inputMode="decimal"
-        value={valor}
-        disabled={salvando}
-        onChange={(e) => setValor(e.target.value)}
-        onFocus={(e) => e.target.select()}
-        onBlur={() => void salvar()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") cancelar();
-          if (e.key === "Enter") {
-            e.preventDefault();
-            const texto = valor.trim();
-            const resultado = texto ? interpretarNota(texto) : null;
-            if (resultado && "erro" in resultado) {
-              toast.error(resultado.erro);
-              return;
-            }
-            const celulaAtual = e.currentTarget.closest("td");
-            const abaixo =
-              celulaAtual?.parentElement?.nextElementSibling?.children[
-                celulaAtual.cellIndex
-              ]?.querySelector("button");
-            void salvar();
-            if (texto) abaixo?.focus();
-          }
-        }}
-        aria-label={rotulo}
-        className="mx-auto h-9 w-16 px-1 text-center text-base font-semibold tabular-nums"
-      />
-      <AlertDialog
-        open={confirmandoRemocao}
-        onOpenChange={(aberto) => {
-          if (aberto) return;
-          setConfirmandoRemocao(false);
-          setEditando(false);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover a nota do bimestre?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {disciplina.title} no {nomeBimestre(bimestre)} fica só com os pontos das atividades
-              para o aluno e o responsável.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={remover}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
-}
-
-function interpretarNota(texto: string): { nota: number } | { erro: string } {
-  const numero = Number(texto.replace(",", "."));
-  if (!texto.trim() || Number.isNaN(numero)) return { erro: "Informe uma nota válida." };
-  if (numero < 0 || numero > 10) return { erro: "A nota do bimestre deve estar entre 0 e 10." };
-  return { nota: numero };
-}

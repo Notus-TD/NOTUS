@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+// REFN: DTO de entrada para nota (requisição do cliente)
 public record NotaRequestDTO(
         @NotBlank String descricao,
         @NotNull @DecimalMin("0.0") @DecimalMax("10.0") Float rate,

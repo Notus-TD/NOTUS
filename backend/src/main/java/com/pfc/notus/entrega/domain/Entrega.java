@@ -18,13 +18,11 @@ public class Entrega {
     @Getter
     private Long id;
 
+    // REFN: status da entrega (ENTREGUE, ATRASADA, NÃO_ENTREGUE)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Getter @Setter
     private StatusEntrega status;
-
-    @Getter @Setter
-    private Float pontosObtidos;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "atividade_id", nullable = false)

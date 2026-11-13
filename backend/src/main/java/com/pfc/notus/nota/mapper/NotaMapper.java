@@ -9,6 +9,7 @@ import com.pfc.notus.user.domain.Student;
 
 public class NotaMapper {
 
+    // REFN: converter DTO de entrada para entidade
     public static Nota toEntity(NotaRequestDTO dto, Student student, Disciplina disciplina) {
         Nota nota = new Nota(dto.descricao().trim(), dto.rate(), dto.bimestre());
         nota.setStudent(student);
@@ -17,6 +18,7 @@ public class NotaMapper {
         return nota;
     }
 
+    // REFN: converter entidade para DTO de saída
     public static NotaDTO toDto(Nota nota) {
         return new NotaDTO(
                 nota.getId(),

@@ -1,6 +1,8 @@
-import { getJson, sendJson } from "@/api/cliente";
+// REFN: tipos para compatibilidade com BoletimTurma.tsx
+// Nota: tipos Boletim removidos, usar nota.ts para funções de Nota
+// Bimestre agora está definido em nota.ts
 
-export type Bimestre = "PRIMEIRO" | "SEGUNDO" | "TERCEIRO" | "QUARTO";
+import type { Bimestre } from "@/api/nota";
 
 export type BoletimDTO = {
   id: number | null;
@@ -21,40 +23,3 @@ export type BoletimDisciplinaDTO = {
   bimestres: BoletimDTO[];
   mediaFinal: number | null;
 };
-
-export type NotaFinalRequest = {
-  studentId: number;
-  disciplinaId: number;
-  bimestre: Bimestre;
-  notaFinal: number;
-};
-
-export type NotaDTO = {
-  id: number;
-  descricao: string;
-  rate: number;
-  bimestre: Bimestre;
-  studentId: number;
-  disciplinaId: number;
-  disciplinaTitle: string;
-};
-
-export type NotaRequest = Omit<NotaDTO, "id" | "disciplinaTitle">;
-
-export const getBoletimDoAluno = (studentId: number) =>
-  getJson<BoletimDisciplinaDTO[]>(`/boletim/student/${studentId}`);
-
-export const lancarNotaFinal = (dto: NotaFinalRequest) =>
-  sendJson<BoletimDTO>("PUT", "/boletim/nota-final", dto);
-
-export const removerNotaFinal = (id: number) => sendJson<void>("DELETE", `/boletim/${id}`);
-
-export const getNotasDoAluno = (studentId: number) =>
-  getJson<NotaDTO[]>(`/nota/student/${studentId}`);
-
-export const createNota = (dto: NotaRequest) => sendJson<NotaDTO>("POST", "/nota", dto);
-
-export const updateNota = (id: number, dto: NotaRequest) =>
-  sendJson<NotaDTO>("PUT", `/nota/${id}`, dto);
-
-export const deleteNota = (id: number) => sendJson<void>("DELETE", `/nota/${id}`);

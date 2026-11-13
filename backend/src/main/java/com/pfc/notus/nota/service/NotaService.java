@@ -3,7 +3,6 @@ package com.pfc.notus.nota.service;
 import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.boletim.domain.Bimestre;
-import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -39,9 +38,6 @@ public class NotaService {
 
     @Autowired
     private StudentAccessGuardService studentAccessGuardService;
-
-    @Autowired
-    private BoletimRepository boletimRepository;
 
     @Autowired
     private CalendarioService calendarioService;
@@ -98,16 +94,9 @@ public class NotaService {
         notaRepository.delete(entity);
     }
 
+    // REFN: valida se o bimestre está aberto para lançamento de notas
     private void assertBimestreAberto(Student student, Long disciplinaId, Bimestre bimestre) {
         calendarioService.exigirBimestreAberto(AnoLetivo.doAluno(student), bimestre);
-        boolean fechado = boletimRepository
-                .findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
-                        student.getId(), disciplinaId, bimestre, AnoLetivo.doAluno(student))
-                .isPresent();
-        if (fechado) {
-            throw new RegraNegocioException(
-                    "Este bimestre já tem nota final lançada no boletim. Remova a nota final para reabrir e corrigir as notas.");
-        }
     }
 
     private void validarAvaliacao(NotaRequestDTO dto) {
@@ -135,5 +124,15 @@ public class NotaService {
     private Disciplina buscarDisciplina(Long id) {
         return disciplinaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + id));
+    }
+
+    // REFN: obter média do aluno em uma disciplina/bimestre
+    public Double getMediaDoAluno(Long studentId, Long disciplinaId, Bimestre bimestre) {
+        return notaRepository.getMediaDoAluno(studentId, disciplinaId, bimestre);
+    }
+
+    // REFN: obter média da sala em uma disciplina/bimestre
+    public Double getMediaDaSala(Long disciplinaId, Bimestre bimestre) {
+        return notaRepository.getMediaDaSala(disciplinaId, bimestre);
     }
 }

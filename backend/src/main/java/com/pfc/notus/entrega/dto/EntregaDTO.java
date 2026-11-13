@@ -3,6 +3,7 @@ package com.pfc.notus.entrega.dto;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.entrega.domain.StatusEntrega;
 
+// REFN: DTO de saída para entrega (status + info da atividade)
 public record EntregaDTO(
         Long id,
         StatusEntrega status,
@@ -11,7 +12,6 @@ public record EntregaDTO(
         Long disciplinaId,
         Bimestre bimestre,
         Long studentId,
-        Float pontos,
-        Float pontosObtidos
+        Float pontos
 ) {
 }

@@ -26,10 +26,15 @@ public class ComunicadoController {
     }
 
     // ! REFC: POST /comunicado - admin publica comunicado global (público escolhido); @PreAuthorize restringe a ADMIN
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
-    public ResponseEntity<ComunicadoDTO> publicar(@Valid @RequestBody ComunicadoRequest request, Authentication authentication) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(comunicadoService.publicar(request, authentication.getName()));
+    @PreAuthorize("hasRole('ADMIN')") //so adm acessa 
+    @PostMapping // rota post comunicado
+    public ResponseEntity<ComunicadoDTO> publicar( // vai retornar como DTO
+        @Valid // valida os dados 
+        @RequestBody //recebe json do cliente
+        ComunicadoRequest request, //  json -> java 
+        Authentication authentication) { //dados user logado
+        return ResponseEntity.status(HttpStatus.CREATED) //vai retornar um 201 
+        .body(comunicadoService.publicar(request, authentication.getName())); //chama service 
     }
 
     // ! REFC: POST /comunicado/recado - professor publica recado para turma específica; público fixo=RESPONSAVEIS
