@@ -1,0 +1,48 @@
+name: Backend
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yaml"
+  push:
+    branches: [ "main" ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yaml"
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configura JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: maven
+
+      - name: Testes unitários
+        working-directory: ./backend
+        run: mvn -B test
+
+      - name: Login no Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: nawszera
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build e envio da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            nawszera/notus-backend:latest
+            nawszera/notus-backend:${{ github.sha }}
