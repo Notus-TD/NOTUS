@@ -1,0 +1,31 @@
+name: Frontend - Docker Hub
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yaml"
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: nawszera
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build e envio da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            nawszera/notus-frontend:latest
+            nawszera/notus-frontend:${{ github.sha }}
