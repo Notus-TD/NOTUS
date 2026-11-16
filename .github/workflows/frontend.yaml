@@ -29,3 +29,8 @@ jobs:
           tags: |
             nawszera/notus-frontend:latest
             nawszera/notus-frontend:${{ github.sha }}
+
+      - name: Deploy no Railway
+        run: npx -y @railway/cli redeploy --service notus-frontend --yes
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
