@@ -1,10 +1,10 @@
 package com.pfc.notus.nota.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.dto.NotaRequestDTO;
 import com.pfc.notus.nota.service.NotaService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -14,10 +14,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/nota")
+@RequiredArgsConstructor
 public class NotaController {
 
-    @Autowired
-    private NotaService notaService;
+    private final NotaService notaService;
 
     @GetMapping("/{id}")
     public ResponseEntity<NotaDTO> getById(@PathVariable Long id, Authentication authentication) {

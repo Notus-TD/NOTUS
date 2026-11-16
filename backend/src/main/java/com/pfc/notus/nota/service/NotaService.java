@@ -1,56 +1,50 @@
 package com.pfc.notus.nota.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.nota.domain.Nota;
 import com.pfc.notus.nota.dto.NotaDTO;
 import com.pfc.notus.nota.dto.NotaRequestDTO;
-import com.pfc.notus.nota.mapper.NotaMapper;
 import com.pfc.notus.nota.repository.NotaRepository;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class NotaService {
 
     private static final float NOTA_MINIMA = 0f;
     private static final float NOTA_MAXIMA = 10f;
 
-    @Autowired
-    private NotaRepository notaRepository;
+    private final NotaRepository notaRepository;
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final StudentRepository studentRepository;
 
-    @Autowired
-    private DisiciplinaRepository disciplinaRepository;
+    private final DisciplinaRepository disciplinaRepository;
 
-    @Autowired
-    private StudentAccessGuardService studentAccessGuardService;
+    private final StudentAccessGuardService studentAccessGuardService;
 
-    @Autowired
-    private BoletimRepository boletimRepository;
+    private final BoletimRepository boletimRepository;
 
-    @Autowired
-    private CalendarioService calendarioService;
+    private final CalendarioService calendarioService;
 
     @Transactional(readOnly = true)
     public NotaDTO getById(Long id, String requesterEmail) {
         Nota entity = buscarNota(id);
         studentAccessGuardService.assertCanView(entity.getStudent().getId(), requesterEmail);
-        return NotaMapper.toDto(entity);
+        return NotaDTO.from(entity);
     }
 
     @Transactional(readOnly = true)
@@ -58,7 +52,7 @@ public class NotaService {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
         Student aluno = buscarAluno(studentId);
         return notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(studentId, AnoLetivo.doAluno(aluno)).stream()
-                .map(NotaMapper::toDto)
+                .map(NotaDTO::from)
                 .toList();
     }
 
@@ -70,8 +64,11 @@ public class NotaService {
         Disciplina disciplina = buscarDisciplina(dto.disciplinaId());
         assertBimestreAberto(student, dto.disciplinaId(), dto.bimestre());
 
-        Nota entity = notaRepository.save(NotaMapper.toEntity(dto, student, disciplina));
-        return NotaMapper.toDto(entity);
+        Nota nota = new Nota(dto.descricao().trim(), dto.rate(), dto.bimestre());
+        nota.setStudent(student);
+        nota.setDisciplina(disciplina);
+        nota.setAnoLetivo(AnoLetivo.doAluno(student));
+        return NotaDTO.from(notaRepository.save(nota));
     }
 
     @Transactional
@@ -87,7 +84,7 @@ public class NotaService {
         entity.setDescricao(dto.descricao().trim());
         entity.setRate(dto.rate());
         entity.setBimestre(dto.bimestre());
-        return NotaMapper.toDto(notaRepository.save(entity));
+        return NotaDTO.from(notaRepository.save(entity));
     }
 
     @Transactional

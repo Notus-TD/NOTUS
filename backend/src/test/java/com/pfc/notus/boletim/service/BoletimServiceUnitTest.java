@@ -8,7 +8,7 @@ import com.pfc.notus.boletim.dto.BoletimDisciplinaDTO;
 import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.entrega.domain.Entrega;
 import com.pfc.notus.entrega.domain.StatusEntrega;
@@ -72,7 +72,7 @@ class BoletimServiceUnitTest {
     private StudentRepository studentRepository;
 
     @Mock
-    private DisiciplinaRepository disciplinaRepository;
+    private DisciplinaRepository disciplinaRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -175,7 +175,7 @@ class BoletimServiceUnitTest {
     }
 
     @Test
-    void deveSomarOsPontosDasAtividadesANotaDoBimestreLimitandoA10() {
+    void deveSomarAtividadesSoNaNotaParcialEUsarANotaFinalComoEstaLancada() {
         Student aluno = criarAluno(10L);
         Disciplina matematica = criarDisciplina(5L, "Matemática");
         when(studentRepository.findById(10L)).thenReturn(Optional.of(aluno));
@@ -197,13 +197,13 @@ class BoletimServiceUnitTest {
         assertEquals(3, bimestres.size());
         assertEquals(8f, bimestres.get(0).notaFinal());
         assertEquals(2.5f, bimestres.get(0).pontosAtividades());
-        assertEquals(10f, bimestres.get(0).nota());
+        assertEquals(8f, bimestres.get(0).nota()); // nota final vale como lançada, sem somar atividades
         assertEquals(0.5f, bimestres.get(1).pontosAtividades());
         assertEquals(6.5f, bimestres.get(1).nota());
         assertNull(bimestres.get(2).notaFinal());
         assertEquals(2f, bimestres.get(2).pontosAtividades());
         assertNull(bimestres.get(2).nota());
-        assertEquals(8.25f, resultado.get(0).mediaFinal());
+        assertEquals(7.25f, resultado.get(0).mediaFinal());
     }
 
     @Test

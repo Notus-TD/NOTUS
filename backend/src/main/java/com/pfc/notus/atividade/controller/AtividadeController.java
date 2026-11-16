@@ -1,9 +1,9 @@
 package com.pfc.notus.atividade.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.service.AtividadeService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -13,10 +13,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/atividade")
+@RequiredArgsConstructor
 public class AtividadeController {
 
-    @Autowired
-    private AtividadeService atividadeService;
+    private final AtividadeService atividadeService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping

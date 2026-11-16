@@ -21,13 +21,10 @@ import {
 } from "@/components/ui/table";
 import { type Bimestre } from "@/api/boletim";
 import {
-  fecharBimestre,
   getCalendario,
-  reabrirBimestre,
   salvarCalendario,
   type CalendarioDTO,
   type PeriodoDTO,
-  type SituacaoPeriodo,
 } from "@/api/calendario";
 import { ApiError } from "@/api/cliente";
 import { BIMESTRES } from "@/lib/bimestres";
@@ -42,20 +39,6 @@ const vazio = (): Datas => ({
   TERCEIRO: { inicio: "", fim: "" },
   QUARTO: { inicio: "", fim: "" },
 });
-
-const tomSituacao: Record<SituacaoPeriodo, "sucesso" | "neutro" | "alerta" | "perigo"> = {
-  NAO_INICIADO: "neutro",
-  EM_ANDAMENTO: "sucesso",
-  FECHADO: "perigo",
-  REABERTO: "alerta",
-};
-
-const rotuloSituacao: Record<SituacaoPeriodo, string> = {
-  NAO_INICIADO: "Não iniciado",
-  EM_ANDAMENTO: "Em andamento",
-  FECHADO: "Fechado",
-  REABERTO: "Reaberto",
-};
 
 const anoAtual = new Date().getFullYear();
 const ANOS = [anoAtual - 1, anoAtual, anoAtual + 1].map(String);
@@ -108,22 +91,6 @@ export function CalendarioLetivo() {
     }
   }
 
-  async function alternar(periodo: PeriodoDTO) {
-    try {
-      if (periodo.situacao === "FECHADO") {
-        await reabrirBimestre(ano, periodo.bimestre);
-        toast.success(`${periodo.descricao} reaberto para lançamentos.`);
-      }
-      if (periodo.situacao === "REABERTO") {
-        await fecharBimestre(ano, periodo.bimestre);
-        toast.success(`${periodo.descricao} fechado.`);
-      }
-      setVersao((v) => v + 1);
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Erro ao mudar o bimestre.");
-    }
-  }
-
   return (
     <Painel
       titulo={`Ano letivo de ${ano}`}
@@ -146,8 +113,9 @@ export function CalendarioLetivo() {
       rodape={
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="max-w-prose text-sm text-muted-foreground">
-            O bimestre fecha no dia seguinte ao fim. Com ele fechado, ninguém lança chamada, nota,
-            atividade ou entrega daquele período, até a secretaria reabrir.
+            O bimestre fecha sozinho no dia seguinte ao fim. Com ele fechado, ninguém lança chamada,
+            nota, atividade ou entrega daquele período. Para liberar uma correção, adie a data de
+            fim e salve.
           </p>
           <Button onClick={salvar} disabled={salvando || carga.estado !== "ok"}>
             {salvando ? "Salvando..." : "Salvar calendário"}
@@ -176,7 +144,6 @@ export function CalendarioLetivo() {
               <TableHead>Bimestre</TableHead>
               <TableHead>Início</TableHead>
               <TableHead>Fim</TableHead>
-              <TableHead>Situação</TableHead>
               <TableHead className="text-right">Lançamentos</TableHead>
             </TableRow>
           </TableHeader>
@@ -206,31 +173,14 @@ export function CalendarioLetivo() {
                       className="h-9 w-40 text-sm"
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right">
                     {periodo ? (
-                      <Etiqueta tom={tomSituacao[periodo.situacao]}>
-                        {rotuloSituacao[periodo.situacao]}
+                      <Etiqueta tom={periodo.lancamentoAberto ? "sucesso" : "perigo"}>
+                        {periodo.lancamentoAberto ? "Abertos" : "Fechados"}
                       </Etiqueta>
                     ) : (
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {periodo?.situacao === "FECHADO" && (
-                      <Button size="sm" variant="outline" onClick={() => alternar(periodo)}>
-                        Reabrir
-                      </Button>
-                    )}
-                    {periodo?.situacao === "REABERTO" && (
-                      <Button size="sm" variant="outline" onClick={() => alternar(periodo)}>
-                        Fechar de novo
-                      </Button>
-                    )}
-                    {periodo &&
-                      periodo.situacao !== "FECHADO" &&
-                      periodo.situacao !== "REABERTO" && (
-                        <span className="text-sm text-muted-foreground">Abertos</span>
-                      )}
                   </TableCell>
                 </TableRow>
               );

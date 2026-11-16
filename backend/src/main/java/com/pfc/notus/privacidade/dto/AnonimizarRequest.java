@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Size;
 public record AnonimizarRequest(
         @NotBlank String confirmacao,
         @NotNull MotivoAnonimizacao motivo,
-        @Size(max = 500) String detalhe,
-        Long solicitacaoId
+        @Size(max = 500) String detalhe
 ) {
 }

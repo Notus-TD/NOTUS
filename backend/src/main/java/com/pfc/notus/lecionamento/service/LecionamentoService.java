@@ -1,7 +1,8 @@
-package com.pfc.notus.Service;
+package com.pfc.notus.lecionamento.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.lecionamento.domain.Lecionamento;
@@ -14,31 +15,27 @@ import com.pfc.notus.turma.repository.TurmaRepository;
 import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class LecionamentoService {
 
     static final int MAX_PROFESSORES_POR_DISCIPLINA = 2;
 
-    @Autowired
-    private LecionamentoRepository lecionamentoRepository;
+    private final LecionamentoRepository lecionamentoRepository;
 
-    @Autowired
-    private TurmaRepository turmaRepository;
+    private final TurmaRepository turmaRepository;
 
-    @Autowired
-    private DisiciplinaRepository disciplinaRepository;
+    private final DisciplinaRepository disciplinaRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public LecionamentoDTO create(LecionamentoRequestDTO dto) {
@@ -49,9 +46,7 @@ public class LecionamentoService {
         User professor = userRepository.findById(dto.professorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Professor não encontrado com o id: " + dto.professorId()));
 
-        if (!professor.hasRole("ROLE_PROFESSOR")) {
-            throw new ConflictException("Usuário informado não é um professor.");
-        }
+        exigirProfessorAtivo(professor);
         if (lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(professor.getId(), turma.getId(), disciplina.getId())) {
             throw new ConflictException("Este professor já leciona esta disciplina nesta turma.");
         }
@@ -81,29 +76,31 @@ public class LecionamentoService {
         User professor = userRepository.findByEmail(professorEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + professorEmail));
 
-        List<Lecionamento> vinculos = lecionamentoRepository.findByProfessorId(professor.getId());
-
-        Map<Long, Turma> turmasPorId = new LinkedHashMap<>();
-        Map<Long, List<Disciplina>> disciplinasPorTurma = new LinkedHashMap<>();
-
-        vinculos.stream()
+        Map<Long, List<Lecionamento>> vinculosPorTurma = lecionamentoRepository.findByProfessorId(professor.getId()).stream()
                 .sorted(Comparator.comparing(l -> l.getTurma().getName()))
-                .forEach(l -> {
-                    Long turmaId = l.getTurma().getId();
-                    turmasPorId.putIfAbsent(turmaId, l.getTurma());
-                    disciplinasPorTurma.computeIfAbsent(turmaId, k -> new ArrayList<>()).add(l.getDisciplina());
-                });
-
-        return turmasPorId.values().stream()
-                .map(turma -> new TurmaComDisciplinasDTO(
-                        turma.getId(),
-                        turma.getName(),
-                        turma.getSchoolYear(),
-                        disciplinasPorTurma.get(turma.getId()).stream()
-                                .sorted(Comparator.comparing(Disciplina::getTitle))
-                                .map(d -> new TurmaComDisciplinasDTO.DisciplinaResumoDTO(d.getId(), d.getTitle()))
-                                .toList()
-                ))
+                .collect(Collectors.groupingBy(l -> l.getTurma().getId(), LinkedHashMap::new, Collectors.toList()));
+        return vinculosPorTurma.values().stream()
+                .map(LecionamentoService::turmaComDisciplinas)
                 .toList();
+    }
+
+    private static void exigirProfessorAtivo(User professor) {
+        if (!professor.hasRole("ROLE_PROFESSOR")) {
+            throw new ConflictException("Usuário informado não é um professor.");
+        }
+        if (!professor.isAtivo()) {
+            throw new ConflictException("Este professor está desligado e não pode receber vínculos.");
+        }
+    }
+
+    /** Uma turma com as disciplinas que o professor dá nela, em ordem alfabética. */
+    private static TurmaComDisciplinasDTO turmaComDisciplinas(List<Lecionamento> vinculosDaTurma) {
+        Turma turma = vinculosDaTurma.getFirst().getTurma();
+        List<TurmaComDisciplinasDTO.DisciplinaResumoDTO> disciplinas = vinculosDaTurma.stream()
+                .map(Lecionamento::getDisciplina)
+                .sorted(Comparator.comparing(Disciplina::getTitle))
+                .map(d -> new TurmaComDisciplinasDTO.DisciplinaResumoDTO(d.getId(), d.getTitle()))
+                .toList();
+        return new TurmaComDisciplinasDTO(turma.getId(), turma.getName(), turma.getSchoolYear(), disciplinas);
     }
 }

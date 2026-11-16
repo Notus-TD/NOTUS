@@ -22,7 +22,6 @@ public record ResumoAnonimizacaoDTO(
         long faltas,
         long entregas,
         long avisos,
-        List<SolicitacaoDTO> pedidosAbertos,
         LocalDateTime anonimizadoEm,
         RegistroAnonimizacaoDTO registro,
         String bloqueio

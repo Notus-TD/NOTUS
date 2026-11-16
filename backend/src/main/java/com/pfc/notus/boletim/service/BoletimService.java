@@ -1,5 +1,6 @@
 package com.pfc.notus.boletim.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.boletim.domain.Bimestre;
@@ -7,10 +8,9 @@ import com.pfc.notus.boletim.domain.Boletim;
 import com.pfc.notus.boletim.dto.BoletimDTO;
 import com.pfc.notus.boletim.dto.BoletimDisciplinaDTO;
 import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
-import com.pfc.notus.boletim.mapper.BoletimMapper;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.entrega.domain.Entrega;
 import com.pfc.notus.entrega.repository.EntregaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -24,7 +24,6 @@ import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +32,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,40 +42,31 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class BoletimService {
 
     private static final float NOTA_MINIMA = 0f;
     private static final float NOTA_MAXIMA = 10f;
 
-    @Autowired
-    private BoletimRepository boletimRepository;
+    private final BoletimRepository boletimRepository;
 
-    @Autowired
-    private NotaRepository notaRepository;
+    private final NotaRepository notaRepository;
 
-    @Autowired
-    private EntregaRepository entregaRepository;
+    private final EntregaRepository entregaRepository;
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final StudentRepository studentRepository;
 
-    @Autowired
-    private DisiciplinaRepository disciplinaRepository;
+    private final DisciplinaRepository disciplinaRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private StudentAccessGuardService studentAccessGuardService;
+    private final StudentAccessGuardService studentAccessGuardService;
 
-    @Autowired
-    private NotificacaoService notificacaoService;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
-    @Autowired
-    private CalendarioService calendarioService;
+    private final CalendarioService calendarioService;
 
     @Transactional(readOnly = true)
     public List<BoletimDisciplinaDTO> getByStudent(Long studentId, String requesterEmail) {
@@ -90,11 +81,6 @@ public class BoletimService {
         List<Boletim> boletins = boletimRepository.findByStudentIdAndAnoLetivo(studentId, ano);
         List<Entrega> pontuadas = entregasPontuadas(studentId, ano);
 
-        Map<Long, Disciplina> disciplinas = new HashMap<>();
-        notas.forEach(n -> disciplinas.putIfAbsent(n.getDisciplina().getId(), n.getDisciplina()));
-        boletins.forEach(b -> disciplinas.putIfAbsent(b.getDisciplina().getId(), b.getDisciplina()));
-        pontuadas.forEach(e -> disciplinas.putIfAbsent(e.getAtividade().getDisciplina().getId(), e.getAtividade().getDisciplina()));
-
         Map<Celula, Double> medias = notas.stream()
                 .collect(Collectors.groupingBy(n -> new Celula(n.getDisciplina().getId(), n.getBimestre()),
                         Collectors.averagingDouble(Nota::getRate)));
@@ -104,20 +90,24 @@ public class BoletimService {
                 .collect(Collectors.groupingBy(BoletimService::celulaDaEntrega,
                         Collectors.summingDouble(Entrega::getPontosObtidos)));
 
-        return disciplinas.values().stream()
+        return disciplinasComLancamento(notas, boletins, pontuadas).stream()
                 .sorted(Comparator.comparing(Disciplina::getTitle))
                 .map(d -> montarDisciplina(studentId, d, medias, notasFinais, pontos))
                 .toList();
     }
 
+    /** Uma disciplina aparece no boletim se tem nota, nota final ou atividade pontuada no ano. */
+    private static Collection<Disciplina> disciplinasComLancamento(List<Nota> notas, List<Boletim> boletins, List<Entrega> pontuadas) {
+        Map<Long, Disciplina> disciplinas = new HashMap<>();
+        notas.forEach(n -> disciplinas.putIfAbsent(n.getDisciplina().getId(), n.getDisciplina()));
+        boletins.forEach(b -> disciplinas.putIfAbsent(b.getDisciplina().getId(), b.getDisciplina()));
+        pontuadas.forEach(e -> disciplinas.putIfAbsent(e.getAtividade().getDisciplina().getId(), e.getAtividade().getDisciplina()));
+        return disciplinas.values();
+    }
+
     @Transactional
     public BoletimDTO lancarNotaFinal(NotaFinalRequestDTO dto, String requesterEmail) {
-        if (dto.notaFinal() == null || dto.notaFinal().isNaN() || dto.notaFinal() < NOTA_MINIMA || dto.notaFinal() > NOTA_MAXIMA) {
-            throw new RegraNegocioException("A nota final deve estar entre 0 e 10.");
-        }
-        if (dto.bimestre() == null) {
-            throw new RegraNegocioException("Informe o bimestre da nota final.");
-        }
+        validarNotaFinal(dto);
         Student student = studentRepository.findById(dto.studentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + dto.studentId()));
         studentAccessGuardService.assertCanTeach(student.getId(), dto.disciplinaId(), requesterEmail);
@@ -131,17 +121,26 @@ public class BoletimService {
                         student.getId(), disciplina.getId(), dto.bimestre(), AnoLetivo.doAluno(student))
                 .orElseGet(() -> new Boletim(student, disciplina, dto.bimestre()));
         Float notaAnterior = entity.getNotaFinal();
-        boolean mudou = notaAnterior == null || !notaAnterior.equals(dto.notaFinal());
         entity.setNotaFinal(dto.notaFinal());
         entity.setLancadoPor(lancadoPor);
         entity.setLancadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         entity = boletimRepository.save(entity);
 
-        if (mudou) {
+        // Só avisa o responsável quando a nota é nova ou mudou de valor.
+        if (!dto.notaFinal().equals(notaAnterior)) {
             eventPublisher.publishEvent(new NotaFinalLancadaEvent(entity.getId(), notaAnterior != null));
         }
-        return BoletimMapper.toDto(entity, mediaCalculada(student.getId(), disciplina.getId(), dto.bimestre()),
+        return BoletimDTO.comNotaFinal(entity, mediaCalculada(student.getId(), disciplina.getId(), dto.bimestre()),
                 pontosAtividades(student.getId(), disciplina.getId(), dto.bimestre()));
+    }
+
+    private static void validarNotaFinal(NotaFinalRequestDTO dto) {
+        if (dto.notaFinal() == null || dto.notaFinal().isNaN() || dto.notaFinal() < NOTA_MINIMA || dto.notaFinal() > NOTA_MAXIMA) {
+            throw new RegraNegocioException("A nota final deve estar entre 0 e 10.");
+        }
+        if (dto.bimestre() == null) {
+            throw new RegraNegocioException("Informe o bimestre da nota final.");
+        }
     }
 
     @Transactional
@@ -195,7 +194,7 @@ public class BoletimService {
                 .filter(c -> medias.containsKey(c) || notasFinais.containsKey(c) || pontos.containsKey(c))
                 .map(c -> montarLinha(studentId, disciplina, c.bimestre(), medias.get(c), notasFinais.get(c), pontos.get(c)))
                 .toList();
-        return BoletimMapper.toDisciplinaDto(disciplina, bimestres, mediaFinal(bimestres));
+        return new BoletimDisciplinaDTO(disciplina.getId(), disciplina.getTitle(), bimestres, mediaFinal(bimestres));
     }
 
     private Float mediaFinal(List<BoletimDTO> bimestres) {
@@ -212,9 +211,9 @@ public class BoletimService {
         Float mediaCalculada = media == null ? null : media.floatValue();
         Float pontosAtividades = pontos == null ? null : pontos.floatValue();
         if (notaFinal == null) {
-            return BoletimMapper.toDtoSemNotaFinal(studentId, disciplina, bimestre, mediaCalculada, pontosAtividades);
+            return BoletimDTO.semNotaFinal(studentId, disciplina, bimestre, mediaCalculada, pontosAtividades);
         }
-        return BoletimMapper.toDto(notaFinal, mediaCalculada, pontosAtividades);
+        return BoletimDTO.comNotaFinal(notaFinal, mediaCalculada, pontosAtividades);
     }
 
     private record Celula(Long disciplinaId, Bimestre bimestre) {

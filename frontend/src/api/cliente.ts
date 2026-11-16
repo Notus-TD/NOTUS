@@ -35,6 +35,16 @@ export class ApiError extends Error {
   }
 }
 
+// Usa a mensagem que a API manda (StandardError). 401 = sessão vencida ou ausente; 403 = sem permissão.
+async function erroDaResposta(res: Response, padrao: string): Promise<ApiError> {
+  const err = (await res.json().catch(() => null)) as StandardError | null;
+  if (res.status === 401) return new ApiError(401, "Sua sessão expirou. Faça login novamente.");
+  if (res.status === 403 && !err?.message) {
+    return new ApiError(403, "Você não tem permissão para esta operação.");
+  }
+  return new ApiError(res.status, err?.message ?? padrao, err?.errors ?? []);
+}
+
 export async function getJson<T>(path: string): Promise<T> {
   const token = getToken();
   if (!token) throw new ApiError(401, "Faça login para continuar.");
@@ -44,9 +54,8 @@ export async function getJson<T>(path: string): Promise<T> {
   } catch {
     throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
-  if (res.status === 401 || res.status === 403)
-    throw new ApiError(res.status, `Sem permissão para ${path}.`);
-  if (!res.ok) throw new ApiError(res.status, `Falha em GET ${path}: ${res.status}`);
+  if (!res.ok)
+    throw await erroDaResposta(res, `Não foi possível carregar os dados (erro ${res.status}).`);
   return res.json();
 }
 
@@ -67,16 +76,8 @@ export async function sendJson<T>(
   } catch {
     throw new ApiError(0, "Não foi possível conectar ao servidor. Tente novamente em instantes.");
   }
-  if (res.status === 401 || res.status === 403)
-    throw new ApiError(res.status, `Sem permissão para ${path}.`);
-  if (!res.ok) {
-    const err = (await res.json().catch(() => null)) as StandardError | null;
-    throw new ApiError(
-      res.status,
-      err?.message ?? `Falha em ${method} ${path}: ${res.status}`,
-      err?.errors ?? [],
-    );
-  }
+  if (!res.ok)
+    throw await erroDaResposta(res, `Não foi possível concluir a operação (erro ${res.status}).`);
   if (res.status === 204) return undefined as T;
   return res.json();
 }

@@ -1,9 +1,9 @@
 package com.pfc.notus.disciplina.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.disciplina.dto.DisciplinaDTO;
 import com.pfc.notus.disciplina.service.DisciplinaService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -12,10 +12,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/disciplina")
+@RequiredArgsConstructor
 public class DisciplinaController {
     
-    @Autowired
-    private DisciplinaService disciplinaService;
+    private final DisciplinaService disciplinaService;
 
     @GetMapping
     public List<DisciplinaDTO> getAllDisciplina(){

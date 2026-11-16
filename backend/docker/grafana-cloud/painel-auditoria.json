@@ -1,0 +1,221 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki do NOTUS",
+      "description": "Fonte de dados Loki apontando para a API do NOTUS no Render",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "__requires": [
+    { "type": "datasource", "id": "loki", "name": "Loki", "version": "1.0.0" }
+  ],
+  "title": "NOTUS · Auditoria",
+  "uid": "notus-auditoria",
+  "description": "Registro de todas as requisições à API do NOTUS (RNF6): usuário, IP, data, horário, rota, resultado e tempo de resposta.",
+  "tags": ["notus", "auditoria"],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "usuario",
+        "label": "Usuário (e-mail contém)",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" },
+        "hide": 0
+      },
+      {
+        "name": "ip",
+        "label": "IP (contém)",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" },
+        "hide": 0
+      },
+      {
+        "name": "status",
+        "label": "Status HTTP (regex, ex.: 4.. ou 403)",
+        "type": "textbox",
+        "query": ".*",
+        "current": { "text": ".*", "value": ".*" },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Requisições no período",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "instant",
+          "expr": "sum(count_over_time({type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status=~`${status}` [$__range]))"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Respostas com erro (4xx/5xx)",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "instant",
+          "expr": "sum(count_over_time({type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status >= 400 [$__range]))"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "red" } }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Tempo de resposta p95 (RNF9: até 2 s)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "instant",
+          "expr": "quantile_over_time(0.95, {type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status=~`${status}` | unwrap ms [$__range]) by (type)"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 1000 }, { "color": "red", "value": 2000 } ] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Usuários distintos",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "instant",
+          "expr": "count(sum by (usuario) (count_over_time({type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario!=`anonymous` | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status=~`${status}` [$__range])))"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "purple" } }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Requisições por status HTTP",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "range",
+          "legendFormat": "{{status}}",
+          "expr": "sum by (status) (count_over_time({type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status=~`${status}` [$__interval]))"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 80, "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 6,
+      "type": "bargauge",
+      "title": "Usuários com mais requisições",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "instant",
+          "legendFormat": "{{usuario}}",
+          "expr": "topk(10, sum by (usuario) (count_over_time({type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status=~`${status}` [$__range])))"
+        }
+      ],
+      "options": { "orientation": "horizontal", "displayMode": "basic", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "IPs com mais requisições",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "instant",
+          "legendFormat": "{{ip}}",
+          "expr": "topk(10, sum by (ip) (count_over_time({type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status=~`${status}` [$__range])))"
+        }
+      ],
+      "options": { "orientation": "horizontal", "displayMode": "basic", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Acessos negados e erros por rota (401, 403, 4xx, 5xx)",
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "instant",
+          "expr": "topk(20, sum by (usuario, ip, metodo, rota, status) (count_over_time({type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status >= 400 [$__range])))"
+        }
+      ],
+      "transformations": [
+        { "id": "labelsToFields", "options": { "mode": "columns" } },
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "usuario": "Usuário", "ip": "IP", "metodo": "Método", "rota": "Rota", "status": "Status", "Value": "Ocorrências" } } },
+        { "id": "sortBy", "options": { "sort": [ { "field": "Ocorrências", "desc": true } ] } }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "showHeader": true }
+    },
+    {
+      "id": 9,
+      "type": "logs",
+      "title": "Registro de auditoria (usuário · IP · método rota · status · tempo)",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 14 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "queryType": "range",
+          "expr": "{type=\"audit\"} | json msg=\"message\", ip=\"ip\", usuario=\"user\", requestId=\"requestId\" | line_format `{{.msg}}` | regexp `^\\S+ \\| (?P<metodo>[A-Z]+) (?P<rota>\\S+) \\| (?P<status>\\d+) \\| (?P<ms>\\d+)ms` | __error__=\"\" | usuario=~`(?i).*${usuario}.*` | ip=~`.*${ip}.*` | status=~`${status}` | line_format `{{.usuario}} · {{.ip}} · {{.metodo}} {{.rota}} · {{.status}} · {{.ms}} ms`"
+        }
+      ],
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending", "enableLogDetails": true, "dedupStrategy": "none" }
+    }
+  ]
+}

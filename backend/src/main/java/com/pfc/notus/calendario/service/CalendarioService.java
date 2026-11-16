@@ -2,7 +2,6 @@ package com.pfc.notus.calendario.service;
 
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.calendario.domain.PeriodoLetivo;
-import com.pfc.notus.calendario.domain.SituacaoPeriodo;
 import com.pfc.notus.calendario.dto.CalendarioDTO;
 import com.pfc.notus.calendario.dto.CalendarioRequest;
 import com.pfc.notus.calendario.dto.PeriodoDTO;
@@ -10,10 +9,9 @@ import com.pfc.notus.calendario.dto.PeriodoRequest;
 import com.pfc.notus.calendario.repository.PeriodoLetivoRepository;
 import com.pfc.notus.config.AuditMarker;
 import com.pfc.notus.exception.RegraNegocioException;
-import com.pfc.notus.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +24,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Calendário letivo: as datas dos quatro bimestres de cada ano. Um bimestre fica aberto para lançamentos até a
+ * data de fim e fecha sozinho depois dela; para corrigir algo, a secretaria muda a data de fim.
+ */
 @Service
+@RequiredArgsConstructor
 public class CalendarioService {
 
     private static final Logger log = LoggerFactory.getLogger(CalendarioService.class);
     private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    @Autowired
-    private PeriodoLetivoRepository periodoRepository;
+    private final PeriodoLetivoRepository periodoRepository;
 
     @Transactional(readOnly = true)
     public CalendarioDTO getCalendario(String anoLetivo) {
@@ -52,28 +53,8 @@ public class CalendarioService {
     @Transactional
     public CalendarioDTO salvar(String anoLetivo, CalendarioRequest request, String adminEmail) {
         validarAno(anoLetivo);
-        int ano = Integer.parseInt(anoLetivo);
-        Set<Bimestre> informados = request.periodos().stream().map(PeriodoRequest::bimestre).collect(Collectors.toSet());
-        if (!informados.equals(EnumSet.allOf(Bimestre.class))) {
-            throw new RegraNegocioException("Informe as datas dos quatro bimestres.");
-        }
-        List<PeriodoRequest> ordenados = request.periodos().stream().sorted(Comparator.comparing(PeriodoRequest::bimestre)).toList();
-        for (PeriodoRequest p : ordenados) {
-            if (p.inicio().getYear() != ano || p.fim().getYear() != ano) {
-                throw new RegraNegocioException("As datas do " + p.bimestre().getDescricao() + " precisam ser de " + anoLetivo + ".");
-            }
-            if (p.fim().isBefore(p.inicio())) {
-                throw new RegraNegocioException("No " + p.bimestre().getDescricao() + ", o fim vem antes do início.");
-            }
-        }
-        for (int i = 1; i < ordenados.size(); i++) {
-            if (!ordenados.get(i).inicio().isAfter(ordenados.get(i - 1).fim())) {
-                throw new RegraNegocioException("O " + ordenados.get(i).bimestre().getDescricao()
-                        + " precisa começar depois do fim do " + ordenados.get(i - 1).bimestre().getDescricao() + ".");
-            }
-        }
-
-        for (PeriodoRequest p : ordenados) {
+        List<PeriodoRequest> bimestres = validarBimestres(anoLetivo, request.periodos());
+        for (PeriodoRequest p : bimestres) {
             PeriodoLetivo periodo = periodoRepository.findByAnoLetivoAndBimestre(anoLetivo, p.bimestre())
                     .orElseGet(() -> new PeriodoLetivo(anoLetivo, p.bimestre(), p.inicio(), p.fim()));
             periodo.setInicio(p.inicio());
@@ -84,30 +65,37 @@ public class CalendarioService {
         return getCalendario(anoLetivo);
     }
 
-    @Transactional
-    public CalendarioDTO reabrir(String anoLetivo, Bimestre bimestre, String adminEmail) {
-        PeriodoLetivo periodo = periodo(anoLetivo, bimestre);
-        if (periodo.situacao(LocalDate.now()) != SituacaoPeriodo.FECHADO) {
-            throw new RegraNegocioException("Só um bimestre fechado pode ser reaberto.");
+    /**
+     * Os 4 bimestres informados, com datas do próprio ano, fim depois do início e um começando
+     * depois do fim do anterior. Devolve os bimestres em ordem (1º ao 4º).
+     */
+    private static List<PeriodoRequest> validarBimestres(String anoLetivo, List<PeriodoRequest> periodos) {
+        Set<Bimestre> informados = periodos.stream().map(PeriodoRequest::bimestre).collect(Collectors.toSet());
+        if (!informados.equals(EnumSet.allOf(Bimestre.class))) {
+            throw new RegraNegocioException("Informe as datas dos quatro bimestres.");
         }
-
-        periodo.setReaberto(true);
-        log.info(AuditMarker.AUDIT, "{} de {} reaberto por {}", bimestre.getDescricao(), anoLetivo, adminEmail);
-        return getCalendario(anoLetivo);
+        int ano = Integer.parseInt(anoLetivo);
+        List<PeriodoRequest> ordenados = periodos.stream().sorted(Comparator.comparing(PeriodoRequest::bimestre)).toList();
+        for (PeriodoRequest p : ordenados) {
+            if (p.inicio().getYear() != ano || p.fim().getYear() != ano) {
+                throw new RegraNegocioException("As datas do " + p.bimestre().getDescricao() + " precisam ser de " + anoLetivo + ".");
+            }
+            if (p.fim().isBefore(p.inicio())) {
+                throw new RegraNegocioException("No " + p.bimestre().getDescricao() + ", o fim vem antes do início.");
+            }
+        }
+        for (int i = 1; i < ordenados.size(); i++) {
+            PeriodoRequest anterior = ordenados.get(i - 1);
+            PeriodoRequest atual = ordenados.get(i);
+            if (!atual.inicio().isAfter(anterior.fim())) {
+                throw new RegraNegocioException("O " + atual.bimestre().getDescricao()
+                        + " precisa começar depois do fim do " + anterior.bimestre().getDescricao() + ".");
+            }
+        }
+        return ordenados;
     }
 
-    @Transactional
-    public CalendarioDTO fechar(String anoLetivo, Bimestre bimestre, String adminEmail) {
-        PeriodoLetivo periodo = periodo(anoLetivo, bimestre);
-        if (periodo.situacao(LocalDate.now()) != SituacaoPeriodo.REABERTO) {
-            throw new RegraNegocioException("Só um bimestre reaberto pode ser fechado de novo.");
-        }
-
-        periodo.setReaberto(false);
-        log.info(AuditMarker.AUDIT, "{} de {} fechado de novo por {}", bimestre.getDescricao(), anoLetivo, adminEmail);
-        return getCalendario(anoLetivo);
-    }
-
+    /** Por que a data não aceita lançamento (fora do ano, recesso ou bimestre fechado). Vazio = pode lançar. */
     @Transactional(readOnly = true)
     public Optional<String> motivoBloqueioDaData(String anoLetivo, LocalDate data) {
         List<PeriodoLetivo> periodos = periodoRepository.findByAnoLetivoOrderByInicio(anoLetivo);
@@ -123,7 +111,7 @@ public class CalendarioService {
         if (periodo.isEmpty()) {
             return Optional.of("A data cai no recesso entre bimestres.");
         }
-        if (periodo.get().situacao(LocalDate.now()) == SituacaoPeriodo.FECHADO) {
+        if (!periodo.get().aberto(LocalDate.now())) {
             return Optional.of(mensagemFechado(periodo.get().getBimestre()));
         }
         return Optional.empty();
@@ -141,19 +129,12 @@ public class CalendarioService {
     public void exigirBimestreAberto(String anoLetivo, Bimestre bimestre) {
         Optional<PeriodoLetivo> periodo = periodoRepository.findByAnoLetivoAndBimestre(anoLetivo, bimestre);
         if (periodo.isEmpty()) return;
-        if (periodo.get().situacao(LocalDate.now()) == SituacaoPeriodo.FECHADO) {
+        if (!periodo.get().aberto(LocalDate.now())) {
             throw new RegraNegocioException(mensagemFechado(bimestre));
         }
     }
-
-    private PeriodoLetivo periodo(String anoLetivo, Bimestre bimestre) {
-        validarAno(anoLetivo);
-        return periodoRepository.findByAnoLetivoAndBimestre(anoLetivo, bimestre)
-                .orElseThrow(() -> new ResourceNotFoundException("O calendário de " + anoLetivo + " ainda não foi cadastrado."));
-    }
-
     private static String mensagemFechado(Bimestre bimestre) {
-        return "O " + bimestre.getDescricao() + " está fechado. Peça à secretaria para reabrir.";
+        return "O " + bimestre.getDescricao() + " já terminou e está fechado. Se precisar corrigir algo, peça à secretaria para ajustar a data de fim no calendário.";
     }
 
     private static void validarAno(String anoLetivo) {

@@ -26,11 +26,12 @@ import { Button } from "@/components/ui/button";
 import { FormularioEdicaoAluno } from "@/features/admin/alunos/FormularioEdicaoAluno";
 import { rotuloSituacao, tomSituacao } from "@/features/admin/alunos/situacao";
 import { FormAnonimizacao } from "@/features/admin/anonimizacao/FormAnonimizacao";
+import { useNavegacaoAdmin } from "@/features/admin/navegacao";
 import { useCarga } from "@/hooks/use-carga";
 import { MensagemErro } from "@/components/layout/MensagemErro";
 import { formatarTelefone } from "@/lib/validacao";
-import { ArrowLeft, Pencil, RotateCcw, UserX } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Pencil, RotateCcw, School, UserX } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 function BotaoMatricula({ aluno, aoMudar }: { aluno: StudentDetalheDTO; aoMudar: () => void }) {
@@ -122,6 +123,7 @@ function BotaoMatricula({ aluno, aoMudar }: { aluno: StudentDetalheDTO; aoMudar:
 }
 
 export function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: () => void }) {
+  const navegacao = useNavegacaoAdmin();
   const [versao, setVersao] = useState(0);
   const [editando, setEditando] = useState(false);
   const detalhe = useCarga<StudentDetalheDTO>(() => getStudentDetalhe(aluno.userId), versao);
@@ -173,7 +175,20 @@ export function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: ()
                 rotulo="Data de nascimento"
                 valor={new Date(`${detalhe.dados.birthDate}T00:00:00`).toLocaleDateString("pt-BR")}
               />
-              <Dado rotulo="Turma" valor={detalhe.dados.turmaName ?? "Sem turma"} />
+              <Dado
+                rotulo="Turma"
+                valor={
+                  detalhe.dados.turmaName ??
+                  (detalhe.dados.matriculaStatus === "ATIVA" && navegacao ? (
+                    <Button size="sm" variant="outline" onClick={() => navegacao.irPara("turmas")}>
+                      <School className="size-4" aria-hidden="true" />
+                      Sem turma: escolher turma
+                    </Button>
+                  ) : (
+                    "Sem turma"
+                  ))
+                }
+              />
               {detalhe.dados.motivoCancelamento && (
                 <Dado
                   rotulo="Matrícula cancelada"
@@ -228,7 +243,6 @@ export function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: ()
                   nome={detalhe.dados.fullName}
                   codigo={String(detalhe.dados.matricula)}
                   rotuloCodigo="a matrícula"
-                  pedidos={[]}
                   aoConcluir={voltar}
                 />
               )}
@@ -247,11 +261,11 @@ export function FichaAluno({ aluno, voltar }: { aluno: StudentMinDTO; voltar: ()
   );
 }
 
-function Dado({ rotulo, valor }: { rotulo: string; valor: string }) {
+function Dado({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
   return (
     <div>
       <p className="text-sm text-muted-foreground">{rotulo}</p>
-      <p className="text-sm font-semibold text-foreground">{valor}</p>
+      <div className="text-sm font-semibold text-foreground">{valor}</div>
     </div>
   );
 }

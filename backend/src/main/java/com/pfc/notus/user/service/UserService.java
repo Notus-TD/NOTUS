@@ -1,5 +1,6 @@
 package com.pfc.notus.user.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.config.AuditMarker;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -19,54 +20,45 @@ import com.pfc.notus.user.repository.ResponsibleRepository;
 import com.pfc.notus.user.repository.RoleRepository;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
-import com.pfc.notus.user.service.util.AuthUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
 @Service
+@RequiredArgsConstructor
 public class UserService implements UserDetailsService {
 
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final StudentRepository studentRepository;
 
-    @Autowired
-    private ResponsibleRepository responsibleRepository;
+    private final ResponsibleRepository responsibleRepository;
 
-    @Autowired
-    private NotificacaoService notificacaoService;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private RoleRepository roleRepository;
+    private final RoleRepository roleRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private AuthUtil authUtil;
-
-    @Autowired
-    private SenhaService senhaService;
+    private final SenhaService senhaService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -110,7 +102,7 @@ public class UserService implements UserDetailsService {
     }
 
     public void atualizarEmail(User user, String novoEmail) {
-        String emailLimpo = novoEmail.trim();
+        String emailLimpo = User.normalizarEmail(novoEmail);
         userRepository.findByEmail(emailLimpo).ifPresent(outro -> {
             if (!outro.getId().equals(user.getId())) {
                 throw new ConflictException("E-mail já cadastrado: " + emailLimpo);
@@ -144,9 +136,7 @@ public class UserService implements UserDetailsService {
             throw new ConflictException("Este usuário ainda não ativou a verificação em duas etapas.");
         }
 
-        user.setMfaSegredo(null);
-        user.setMfaAtivo(false);
-        user.setMfaUltimoPasso(null);
+        user.limparMfa();
         userRepository.save(user);
         log.info(AuditMarker.AUDIT, "Verificação em duas etapas do usuário {} redefinida por {}", user.getId(), requesterEmail);
     }
@@ -175,7 +165,7 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void onBoarding (String newPassword, Boolean acceptTerms){
-        User user = authUtil.getLoggedUser();
+        User user = usuarioLogado();
 
         if(!user.isFirstLogin()){
             throw new ConflictException("Usuário já fez login no sistema");
@@ -210,8 +200,9 @@ public class UserService implements UserDetailsService {
                 .toList();
     }
 
+    /** LGPD: apaga os dados pessoais de um aluno ou responsável. Cada entidade sabe o que apagar (anonimizar()). */
     @Transactional
-    public void anonimyzeUser(Long userId, String confirmacao, String requesterEmail) {
+    public void anonymizeUser(Long userId, String confirmacao, String requesterEmail) {
         if (confirmacao == null || confirmacao.isBlank()) {
             throw new RegraNegocioException("Digite a matrícula do aluno ou o registro do responsável para confirmar.");
         }
@@ -220,44 +211,45 @@ public class UserService implements UserDetailsService {
         if (user.getAnonimizadoEm() != null) {
             throw new ConflictException("Usuário já foi anonimizado.");
         }
-        if (!(user instanceof Student) && !(user instanceof Responsible)) {
-            throw new RegraNegocioException("Só alunos e responsáveis podem ser anonimizados.");
-        }
-        if (user instanceof Student student && !String.valueOf(student.getMatricula()).equals(confirmacao.trim())) {
-            throw new RegraNegocioException("A matrícula digitada não confere com a do aluno.");
-        }
-        if (user instanceof Responsible && !String.valueOf(user.getId()).equals(confirmacao.trim())) {
-            throw new RegraNegocioException("O registro digitado não confere com o do responsável.");
-        }
-        if (user instanceof Student student && student.getStatusMatricula() == StatusMatricula.ATIVA) {
-            throw new ConflictException("Cancele a matrícula do aluno antes de anonimizar.");
-        }
-        if (user instanceof Responsible && studentRepository.existsByResponsibleIdAndStatusMatricula(user.getId(), StatusMatricula.ATIVA)) {
-            throw new ConflictException("Não é possível anonimizar: o responsável tem aluno com matrícula ativa.");
+
+        switch (user) {
+            case Student aluno -> validarAnonimizacaoDoAluno(aluno, confirmacao.trim());
+            case Responsible responsavel -> validarAnonimizacaoDoResponsavel(responsavel, confirmacao.trim());
+            default -> throw new RegraNegocioException("Só alunos e responsáveis podem ser anonimizados.");
         }
 
-        if (user instanceof Student student) {
-            student.setFullName(null);
-            student.setBirthDate(null);
-            student.setResponsible(null);
-            student.setTurma(null);
-            student.setAcessoLiberadoEm(null);
-            notificacaoService.cancelarPendentesDoAluno(student.getId(), "Aluno anonimizado");
-            notificacaoService.apagarDadosDoAluno(student.getId());
-        }
-        if (user instanceof Responsible responsible) {
-            responsible.setName(null);
-            responsible.setPhone(null);
-            notificacaoService.cancelarPendentesDoResponsavel(responsible.getId(), "Responsável anonimizado");
-            notificacaoService.apagarDadosDoResponsavel(responsible.getId());
-        }
-        user.setEmail(null);
-        user.setPassword(null);
-        user.setTermsAcceptedAt(null);
-        user.setAtivo(false);
-        user.setAnonimizadoEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        user.anonimizar();
+        apagarDadosDasNotificacoes(user);
         userRepository.save(user);
         log.info(AuditMarker.AUDIT, "Usuário {} anonimizado por {}", user.getId(), requesterEmail);
+    }
+
+    private void validarAnonimizacaoDoAluno(Student aluno, String confirmacao) {
+        if (!String.valueOf(aluno.getMatricula()).equals(confirmacao)) {
+            throw new RegraNegocioException("A matrícula digitada não confere com a do aluno.");
+        }
+        if (aluno.getStatusMatricula() == StatusMatricula.ATIVA) {
+            throw new ConflictException("Cancele a matrícula do aluno antes de anonimizar.");
+        }
+    }
+
+    private void validarAnonimizacaoDoResponsavel(Responsible responsavel, String confirmacao) {
+        if (!String.valueOf(responsavel.getId()).equals(confirmacao)) {
+            throw new RegraNegocioException("O registro digitado não confere com o do responsável.");
+        }
+        if (studentRepository.existsByResponsibleIdAndStatusMatricula(responsavel.getId(), StatusMatricula.ATIVA)) {
+            throw new ConflictException("Não é possível anonimizar: o responsável tem aluno com matrícula ativa.");
+        }
+    }
+
+    private void apagarDadosDasNotificacoes(User user) {
+        if (user instanceof Student) {
+            notificacaoService.cancelarPendentesDoAluno(user.getId(), "Aluno anonimizado");
+            notificacaoService.apagarDadosDoAluno(user.getId());
+        } else {
+            notificacaoService.cancelarPendentesDoResponsavel(user.getId(), "Responsável anonimizado");
+            notificacaoService.apagarDadosDoResponsavel(user.getId());
+        }
     }
 
     private Long gerarProximoId() {
@@ -268,5 +260,9 @@ public class UserService implements UserDetailsService {
             return base + 1;
         }
         return ultimo + 1;
+    }
+
+    private static User usuarioLogado() {
+        return (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
     }
 }

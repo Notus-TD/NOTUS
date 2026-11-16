@@ -23,6 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends tini \
     && chmod +x /app/entrypoint.sh && mkdir -p /loki
 VOLUME ["/loki"]
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=50 -XX:+UseSerialGC -Xss512k"
-ENV RESEND_REDIRECIONAR_PARA=gaalvarenga.dev@gmail.com
+# RESEND_REDIRECIONAR_PARA (e-mail que recebe tudo na demonstração) é configurado no Railway, não na imagem.
 EXPOSE 8080
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/app/entrypoint.sh"]

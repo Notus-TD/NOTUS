@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmarAcao } from "@/features/admin/comum/ConfirmarAcao";
+import { useNavegacaoAdmin } from "@/features/admin/navegacao";
 import { useCarga } from "@/hooks/use-carga";
 import { MensagemErro } from "@/components/layout/MensagemErro";
 import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
@@ -19,6 +20,7 @@ import { useId, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 export function Disciplinas() {
+  const navegacao = useNavegacaoAdmin();
   const [versao, setVersao] = useState(0);
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [criando, setCriando] = useState(false);
@@ -28,7 +30,13 @@ export function Disciplinas() {
 
   async function criar(dados: { title: string; description: string }) {
     const criada = await criarDisciplina(dados);
-    toast.success(`Disciplina ${criada.title} criada.`);
+    toast.success(`Disciplina ${criada.title} criada.`, {
+      description:
+        "Próximo passo: defina quais professores lecionam essa disciplina em cada turma.",
+      action: navegacao
+        ? { label: "Vincular professor", onClick: () => navegacao.irPara("professores") }
+        : undefined,
+    });
     setCriando(false);
     atualizar();
   }

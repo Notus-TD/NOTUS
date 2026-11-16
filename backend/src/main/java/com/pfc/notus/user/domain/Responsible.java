@@ -30,4 +30,12 @@ public class Responsible extends User {
         this.name = name;
         this.phone = phone;
     }
+
+    /** LGPD: apaga nome e telefone, além dos dados de acesso. */
+    @Override
+    public void anonimizar() {
+        super.anonimizar();
+        this.name = null;
+        this.phone = null;
+    }
 }

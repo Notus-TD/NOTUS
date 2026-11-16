@@ -27,7 +27,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 			LEFT JOIN tb_student ON tb_student.id = tb_user.id
 			INNER JOIN tb_user_role ON tb_user.id = tb_user_role.user_id
 			INNER JOIN tb_role ON tb_role.id = tb_user_role.role_id
-			WHERE tb_user.email = :email
+			WHERE lower(tb_user.email) = lower(:email)
 		""")
     List<UserDetailsProjection> searchUserAndRolesByEmail(String email);
 }

@@ -1,7 +1,7 @@
-package com.pfc.notus.Service;
+package com.pfc.notus.lecionamento.service;
 
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.lecionamento.domain.Lecionamento;
@@ -45,7 +45,7 @@ class LecionamentoServiceUnitTest {
     private TurmaRepository turmaRepository;
 
     @Mock
-    private DisiciplinaRepository disciplinaRepository;
+    private DisciplinaRepository disciplinaRepository;
 
     @Mock
     private UserRepository userRepository;

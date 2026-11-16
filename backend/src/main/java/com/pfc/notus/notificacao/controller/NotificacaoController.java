@@ -1,12 +1,12 @@
 package com.pfc.notus.notificacao.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.notificacao.domain.StatusNotificacao;
 import com.pfc.notus.notificacao.domain.TipoNotificacao;
 import com.pfc.notus.notificacao.dto.AvisoDTO;
 import com.pfc.notus.notificacao.dto.NotificacaoDTO;
 import com.pfc.notus.notificacao.service.NotificacaoService;
 import com.pfc.notus.notificacao.service.NotificacaoWorker;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,13 +17,12 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/notificacao")
+@RequiredArgsConstructor
 public class NotificacaoController {
 
-    @Autowired
-    private NotificacaoService notificacaoService;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private NotificacaoWorker worker;
+    private final NotificacaoWorker worker;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping

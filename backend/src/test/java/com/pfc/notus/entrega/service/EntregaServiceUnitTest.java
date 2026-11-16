@@ -239,4 +239,18 @@ class EntregaServiceUnitTest {
         assertEquals("Sem permissão para esta disciplina nesta turma.", excecao.getMessage());
         verify(entregaRepository, never()).findByAtividadeId(anyLong());
     }
+
+    @Test
+    void naoDeveExcluirEntregaDeBimestreFechado() {
+        Turma turma = criarTurma(1L);
+        Entrega entrega = new Entrega(criarAtividade(turma), criarAluno(turma));
+        ReflectionTestUtils.setField(entrega, "id", 3L);
+        when(entregaRepository.findById(3L)).thenReturn(Optional.of(entrega));
+        doThrow(new RegraNegocioException("O 4º bimestre já terminou e está fechado."))
+                .when(calendarioService).exigirBimestreAberto("2026", Bimestre.QUARTO);
+
+        assertThrows(RegraNegocioException.class, () -> entregaService.delete(3L, PROFESSOR));
+
+        verify(entregaRepository, never()).delete(any());
+    }
 }

@@ -1,5 +1,6 @@
 package com.pfc.notus.user.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.config.AuditMarker;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.RegraNegocioException;
@@ -17,7 +18,6 @@ import com.pfc.notus.user.dto.StudentRequest;
 import com.pfc.notus.user.repository.StudentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -30,24 +30,20 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class StudentService {
 
     private static final Logger log = LoggerFactory.getLogger(StudentService.class);
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired
-    private ResponsibleService responsibleService;
+    private final ResponsibleService responsibleService;
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final StudentRepository studentRepository;
 
-    @Autowired
-    private NotificacaoService notificacaoService;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private SenhaService senhaService;
+    private final SenhaService senhaService;
 
     @Transactional
     public StudentRegistrationResponse createStudent(ResponsibleRequest responsibleDto, StudentRequest studentDto) {
@@ -71,9 +67,17 @@ public class StudentService {
 
     @Transactional
     public List<StudentRegistrationResponse> createStudents(ResponsibleRequest responsibleDto, List<StudentRequest> studentDtos) {
+        validarSemRepetidos(studentDtos);
+        return studentDtos.stream()
+                .map(dto -> createStudent(responsibleDto, dto))
+                .toList();
+    }
+
+    /** No cadastro de irmãos, a mesma matrícula ou o mesmo e-mail não podem aparecer duas vezes. */
+    private static void validarSemRepetidos(List<StudentRequest> alunos) {
         Set<Long> matriculas = new HashSet<>();
         Set<String> emails = new HashSet<>();
-        for (StudentRequest dto : studentDtos) {
+        for (StudentRequest dto : alunos) {
             if (!matriculas.add(dto.matricula())) {
                 throw new ConflictException("Matrícula repetida no cadastro: " + dto.matricula());
             }
@@ -82,10 +86,6 @@ public class StudentService {
                 throw new ConflictException("E-mail repetido no cadastro: " + dto.educationalEmail());
             }
         }
-
-        return studentDtos.stream()
-                .map(dto -> createStudent(responsibleDto, dto))
-                .toList();
     }
 
     @Transactional
@@ -143,21 +143,12 @@ public class StudentService {
         if (motivo == null || motivo.isBlank()) {
             throw new RegraNegocioException("Informe o motivo do cancelamento da matrícula.");
         }
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
-        if (student.getAnonimizadoEm() != null) {
-            throw new ConflictException("Usuário já foi anonimizado.");
-        }
+        Student student = buscarAlunoNaoAnonimizado(studentId);
         if (student.getStatusMatricula() != StatusMatricula.ATIVA) {
             throw new ConflictException("Só matrícula ativa pode ser cancelada.");
         }
 
-        student.setStatusMatricula(StatusMatricula.CANCELADA);
-        student.setTurma(null);
-        student.setTurmaDesde(null);
-        student.setAtivo(false);
-        student.setMotivoCancelamento(motivo.trim());
-        student.setMatriculaCanceladaEm(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        student.cancelarMatricula(motivo.trim());
         studentRepository.save(student);
         notificacaoService.cancelarPendentesDoAluno(student.getId(), "Matrícula cancelada");
         log.info(AuditMarker.AUDIT, "Matrícula do aluno {} cancelada por {}. Motivo: {}", student.getId(), requesterEmail, motivo.trim());
@@ -166,11 +157,7 @@ public class StudentService {
 
     @Transactional
     public StudentMinDTO reativarMatricula(Long studentId, String requesterEmail) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
-        if (student.getAnonimizadoEm() != null) {
-            throw new ConflictException("Usuário já foi anonimizado.");
-        }
+        Student student = buscarAlunoNaoAnonimizado(studentId);
         if (student.getStatusMatricula() != StatusMatricula.CANCELADA) {
             throw new ConflictException("Só matrícula cancelada pode ser reativada.");
         }
@@ -178,10 +165,7 @@ public class StudentService {
             throw new ConflictException("Não é possível reativar: o responsável deste aluno foi anonimizado.");
         }
 
-        student.setStatusMatricula(StatusMatricula.ATIVA);
-        student.setAtivo(true);
-        student.setMotivoCancelamento(null);
-        student.setMatriculaCanceladaEm(null);
+        student.reativarMatricula();
         studentRepository.save(student);
         log.info(AuditMarker.AUDIT, "Matrícula do aluno {} reativada por {}", student.getId(), requesterEmail);
         return StudentMinDTO.of(student);
@@ -189,33 +173,47 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public StudentDetalheDTO getDetalhe(Long studentId) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
-        return StudentDetalheDTO.of(student);
+        return StudentDetalheDTO.of(buscarAluno(studentId));
     }
 
     @Transactional
     public StudentDetalheDTO updateStudent(Long studentId, StudentRequest dto) {
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+        Student student = buscarAluno(studentId);
         if (studentRepository.existsByMatriculaAndIdNot(dto.matricula(), studentId)) {
             throw new ConflictException("Matrícula já cadastrada: " + dto.matricula());
         }
-        String email = dto.educationalEmail() == null ? "" : dto.educationalEmail().trim();
-        if (email.isEmpty() && student.getAcessoLiberadoEm() != null) {
-            throw new RegraNegocioException("O aluno tem acesso ao portal e precisa de um e-mail.");
-        }
-        if (email.isEmpty()) {
-            student.setEmail(null);
-        }
-        if (!email.isEmpty()) {
-            userService.atualizarEmail(student, email);
-        }
+        trocarEmail(student, dto.educationalEmail());
         student.setFullName(dto.fullName().trim());
         student.setMatricula(dto.matricula());
         student.setBirthDate(dto.birthDate());
         studentRepository.save(student);
         return StudentDetalheDTO.of(student);
+    }
+
+    /** E-mail vazio apaga o e-mail do aluno, mas não se ele tem acesso ao portal (o login é o e-mail). */
+    private void trocarEmail(Student student, String novoEmail) {
+        String email = novoEmail == null ? "" : novoEmail.trim();
+        if (!email.isEmpty()) {
+            userService.atualizarEmail(student, email);
+            return;
+        }
+        if (student.getAcessoLiberadoEm() != null) {
+            throw new RegraNegocioException("O aluno tem acesso ao portal e precisa de um e-mail.");
+        }
+        student.setEmail(null);
+    }
+
+    private Student buscarAluno(Long studentId) {
+        return studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
+    }
+
+    private Student buscarAlunoNaoAnonimizado(Long studentId) {
+        Student student = buscarAluno(studentId);
+        if (student.getAnonimizadoEm() != null) {
+            throw new ConflictException("Usuário já foi anonimizado.");
+        }
+        return student;
     }
 
     @Transactional(readOnly = true)

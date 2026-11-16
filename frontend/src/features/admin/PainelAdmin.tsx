@@ -1,3 +1,4 @@
+import type { StudentMinDTO } from "@/api/alunos";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   CabecalhoPagina,
@@ -18,6 +19,7 @@ import { Notificacoes } from "@/features/admin/notificacoes/Notificacoes";
 import { Professores } from "@/features/admin/professores/Professores";
 import { Turmas } from "@/features/admin/turmas/Turmas";
 import { VisaoGeralAdmin } from "@/features/admin/VisaoGeralAdmin";
+import { NavegacaoAdminProvider, type SecaoAdmin } from "@/features/admin/navegacao";
 import {
   ArrowLeft,
   BarChart3,
@@ -35,17 +37,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-type SecaoId =
-  | "dashboard"
-  | "graficos"
-  | "alunos"
-  | "professores"
-  | "turmas"
-  | "disciplinas"
-  | "usuarios"
-  | "calendario"
-  | "comunicados"
-  | "notificacoes";
+type SecaoId = SecaoAdmin;
 
 const grupos: GrupoMenu<SecaoId>[] = [
   {
@@ -102,8 +94,8 @@ const descricoes: Record<SecaoId, string> = {
   professores: "Professores cadastrados e as turmas em que lecionam.",
   turmas: "Turmas do ano letivo, com alunos e professores.",
   disciplinas: "Disciplinas oferecidas pela escola.",
-  usuarios: "Pedidos dos titulares e anonimização de dados pessoais (LGPD).",
-  calendario: "Início e fim de cada bimestre. Bimestre encerrado fica fechado para lançamentos.",
+  usuarios: "Cópia dos dados e anonimização de alunos e responsáveis, a pedido do titular (LGPD).",
+  calendario: "Início e fim de cada bimestre. O bimestre fecha sozinho depois da data de fim.",
   comunicados: "Avisos publicados para a escola.",
   notificacoes: "E-mails automáticos enviados aos responsáveis.",
 };
@@ -177,32 +169,39 @@ export function PainelAdmin() {
     setSecao(s);
   }
 
+  const navegacao = {
+    irPara,
+    abrirAluno: (aluno: StudentMinDTO) => irParaAlunos({ tipo: "ficha", aluno }),
+  };
+
   return (
-    <AppShell
-      role="ROLE_ADMIN"
-      navegacao={<MenuHorizontal grupos={grupos} ativo={secao} aoSelecionar={irPara} />}
-    >
-      <div className="space-y-6">
-        <CabecalhoPagina trilha={trilha} titulo={titulo} descricao={descricao} acoes={acoes} />
-        {secao === "dashboard" && (
-          <VisaoGeralAdmin
-            aoCadastrarAluno={() => irParaAlunos({ tipo: "cadastro" })}
-            aoAbrirAluno={(aluno) => irParaAlunos({ tipo: "ficha", aluno })}
-            aoVerAlunos={() => irPara("alunos")}
-            aoVerComunicados={() => irPara("comunicados")}
-            formComunicado={<FormComunicado compacto />}
-          />
-        )}
-        {secao === "graficos" && <DashboardAdmin />}
-        {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
-        {secao === "professores" && <Professores />}
-        {secao === "turmas" && <Turmas />}
-        {secao === "disciplinas" && <Disciplinas />}
-        {secao === "usuarios" && <ExcluirUsuarios />}
-        {secao === "calendario" && <CalendarioLetivo />}
-        {secao === "comunicados" && <Comunicados />}
-        {secao === "notificacoes" && <Notificacoes />}
-      </div>
-    </AppShell>
+    <NavegacaoAdminProvider value={navegacao}>
+      <AppShell
+        role="ROLE_ADMIN"
+        navegacao={<MenuHorizontal grupos={grupos} ativo={secao} aoSelecionar={irPara} />}
+      >
+        <div className="space-y-6">
+          <CabecalhoPagina trilha={trilha} titulo={titulo} descricao={descricao} acoes={acoes} />
+          {secao === "dashboard" && (
+            <VisaoGeralAdmin
+              aoCadastrarAluno={() => irParaAlunos({ tipo: "cadastro" })}
+              aoAbrirAluno={(aluno) => irParaAlunos({ tipo: "ficha", aluno })}
+              aoVerAlunos={() => irPara("alunos")}
+              aoVerComunicados={() => irPara("comunicados")}
+              formComunicado={<FormComunicado compacto />}
+            />
+          )}
+          {secao === "graficos" && <DashboardAdmin />}
+          {secao === "alunos" && <Alunos modo={modo} setModo={setModo} />}
+          {secao === "professores" && <Professores />}
+          {secao === "turmas" && <Turmas />}
+          {secao === "disciplinas" && <Disciplinas />}
+          {secao === "usuarios" && <ExcluirUsuarios />}
+          {secao === "calendario" && <CalendarioLetivo />}
+          {secao === "comunicados" && <Comunicados />}
+          {secao === "notificacoes" && <Notificacoes />}
+        </div>
+      </AppShell>
+    </NavegacaoAdminProvider>
   );
 }

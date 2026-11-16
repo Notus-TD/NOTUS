@@ -9,7 +9,6 @@ public record ExportacaoDadosDTO(
         LocalDateTime geradoEm,
         DadosResponsavelDTO responsavel,
         List<DadosAlunoDTO> alunos,
-        List<AvisoDTO> avisos,
-        List<SolicitacaoDTO> solicitacoes
+        List<AvisoDTO> avisos
 ) {
 }

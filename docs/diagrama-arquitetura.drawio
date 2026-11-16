@@ -1,0 +1,154 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Arquitetura NOTUS" id="notus-arquitetura-2026-11">
+    <mxGraphModel grid="0" page="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="usuarios" value="USUÁRIOS (navegador)" style="swimlane;whiteSpace=wrap;html=1;rounded=1;arcSize=6;fillColor=#8c8c8c;fontColor=#000000;fontStyle=1;fontSize=12;swimlaneFillColor=#eeeeee;startSize=28;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="20" y="60" width="270" height="600" as="geometry" />
+        </mxCell>
+        <mxCell id="ator-admin" style="shape=actor;html=1;fillColor=#1a1a1a;strokeColor=none;" parent="usuarios" vertex="1">
+          <mxGeometry x="15" y="50" width="30" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="txt-admin" value="&lt;b&gt;ADMINISTRADOR&lt;/b&gt;&lt;br&gt;Cadastros (alunos, responsáveis, professores, turmas, disciplinas), vínculos, comunicados, notificações, calendário, painel e LGPD. Login com MFA." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;whiteSpace=wrap;fontSize=11;" parent="usuarios" vertex="1">
+          <mxGeometry x="55" y="40" width="205" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ator-prof" style="shape=actor;html=1;fillColor=#1a1a1a;strokeColor=none;" parent="usuarios" vertex="1">
+          <mxGeometry x="15" y="185" width="30" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="txt-prof" value="&lt;b&gt;PROFESSOR&lt;/b&gt;&lt;br&gt;Chamada e faltas, notas e nota final do bimestre, atividades e entregas, recados para a turma. Login com MFA." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;whiteSpace=wrap;fontSize=11;" parent="usuarios" vertex="1">
+          <mxGeometry x="55" y="175" width="205" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ator-resp" style="shape=actor;html=1;fillColor=#1a1a1a;strokeColor=none;" parent="usuarios" vertex="1">
+          <mxGeometry x="15" y="320" width="30" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="txt-resp" value="&lt;b&gt;RESPONSÁVEL&lt;/b&gt;&lt;br&gt;Acompanha faltas, frequência, notas, boletim, atividades e avisos dos filhos. Recebe as notificações por e-mail." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;whiteSpace=wrap;fontSize=11;" parent="usuarios" vertex="1">
+          <mxGeometry x="55" y="310" width="205" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ator-aluno" style="shape=actor;html=1;fillColor=#1a1a1a;strokeColor=none;" parent="usuarios" vertex="1">
+          <mxGeometry x="15" y="455" width="30" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="txt-aluno" value="&lt;b&gt;ALUNO&lt;/b&gt;&lt;br&gt;Consulta as próprias notas, frequência, boletim e atividades." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;whiteSpace=wrap;fontSize=11;" parent="usuarios" vertex="1">
+          <mxGeometry x="55" y="445" width="205" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="railway" value="DEPLOY NO RAILWAY (PaaS · HTTPS automático · reinício em caso de falha)" style="swimlane;whiteSpace=wrap;html=1;rounded=1;arcSize=4;fillColor=#8c8c8c;fontColor=#000000;fontStyle=1;fontSize=12;swimlaneFillColor=#f5f5f5;startSize=28;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="350" y="20" width="830" height="720" as="geometry" />
+        </mxCell>
+        <mxCell id="front" value="FRONTEND · contêiner notus-frontend" style="swimlane;whiteSpace=wrap;html=1;rounded=1;arcSize=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;startSize=26;swimlaneFillColor=#ffffff;" parent="railway" vertex="1">
+          <mxGeometry x="20" y="50" width="250" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="front-txt" value="&lt;b&gt;React · TypeScript · Tailwind CSS&lt;/b&gt;&lt;br&gt;TanStack Start (SSR em servidor Node.js)&lt;br&gt;&lt;br&gt;- Uma tela por perfil&lt;br&gt;- Validação dos formulários&lt;br&gt;- Interface responsiva&lt;br&gt;- Chama a API com o token JWT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;whiteSpace=wrap;fontSize=11;" parent="front" vertex="1">
+          <mxGeometry x="5" y="30" width="240" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="back" value="BACKEND · contêiner notus-backend (uma imagem Docker, 3 processos)" style="swimlane;whiteSpace=wrap;html=1;rounded=1;arcSize=4;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;startSize=26;swimlaneFillColor=#ffffff;" parent="railway" vertex="1">
+          <mxGeometry x="300" y="50" width="510" height="650" as="geometry" />
+        </mxCell>
+        <mxCell id="caddy" value="&lt;b&gt;Caddy&lt;/b&gt; · proxy reverso (única porta pública: 8080)&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;/loki/api/v1/* → Loki (usuário e senha, só leitura) · demais rotas → API&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=11;align=center;verticalAlign=middle;" parent="back" vertex="1">
+          <mxGeometry x="20" y="40" width="470" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="spring" value="API · Java 21 + Spring Boot (monolito modular)" style="swimlane;whiteSpace=wrap;html=1;rounded=1;arcSize=4;fillColor=#ffffff;strokeColor=#999999;fontStyle=1;fontSize=11;startSize=24;" parent="back" vertex="1">
+          <mxGeometry x="20" y="110" width="470" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="sec" value="Spring Security · JWT (1 h) · MFA (TOTP) para admin e professor · limite de tentativas de login · BCrypt" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontStyle=2;" parent="spring" vertex="1">
+          <mxGeometry x="10" y="28" width="450" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" value="AUTH / MFA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="15" y="70" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m2" value="USUÁRIOS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="128" y="70" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m3" value="TURMA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="241" y="70" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m4" value="DISCIPLINA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="354" y="70" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m5" value="VÍNCULO&lt;br&gt;(LECIONAMENTO)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="15" y="120" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m6" value="CHAMADA / FALTA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#e51400;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="128" y="120" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m7" value="NOTA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="241" y="120" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m8" value="BOLETIM&lt;br&gt;(NOTA FINAL)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="354" y="120" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m9" value="ATIVIDADE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="15" y="170" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m10" value="ENTREGA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="128" y="170" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m11" value="COMUNICADO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="241" y="170" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m12" value="NOTIFICAÇÃO&lt;br&gt;(fila + worker)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="354" y="170" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m13" value="CALENDÁRIO&lt;br&gt;LETIVO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="15" y="220" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m14" value="PRIVACIDADE&lt;br&gt;(LGPD)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="128" y="220" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m15" value="AUDITORIA&lt;br&gt;(filtro de requisições)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="241" y="220" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="m16" value="PAINEL DE&lt;br&gt;INDICADORES" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=1;" parent="spring" vertex="1"><mxGeometry x="354" y="220" width="105" height="40" as="geometry" /></mxCell>
+        <mxCell id="camadas" value="Cada módulo: controller → service (regras de negócio) → repository (Spring Data JPA / Hibernate)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontStyle=2;" parent="spring" vertex="1">
+          <mxGeometry x="10" y="275" width="450" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="loki" value="&lt;b&gt;Grafana Loki&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;logs de auditoria · retenção de 6 meses · escuta só em 127.0.0.1&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="back" vertex="1">
+          <mxGeometry x="20" y="470" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="volume" value="Volume persistente&lt;br&gt;/loki" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="back" vertex="1">
+          <mxGeometry x="355" y="465" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="tini" value="tini (PID 1) sobe os três processos; Loki e Caddy reiniciam sozinhos se caírem" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontStyle=2;" parent="back" vertex="1">
+          <mxGeometry x="20" y="560" width="470" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="envs" value="Segredos só em variáveis de ambiente: banco, JWT, chave do MFA, Resend, senha do Loki" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=10;fontStyle=2;" parent="back" vertex="1">
+          <mxGeometry x="20" y="595" width="470" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="externos" value="SERVIÇOS EXTERNOS" style="swimlane;whiteSpace=wrap;html=1;rounded=1;arcSize=6;fillColor=#8c8c8c;fontColor=#000000;fontStyle=1;fontSize=12;swimlaneFillColor=#eeeeee;startSize=28;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1240" y="20" width="300" height="720" as="geometry" />
+        </mxCell>
+        <mxCell id="supabase" value="&lt;b&gt;Supabase&lt;/b&gt;&lt;br&gt;PostgreSQL (esquema notus)&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;connection pooler · SSL · backups&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="externos" vertex="1">
+          <mxGeometry x="40" y="60" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="resend" value="&lt;b&gt;Resend&lt;/b&gt;&lt;br&gt;API de e-mails transacionais&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;falta, nota final, atividade, comunicado, convite e senha&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=11;" parent="externos" vertex="1">
+          <mxGeometry x="40" y="220" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="grafana" value="&lt;b&gt;Grafana Cloud&lt;/b&gt;&lt;br&gt;Painel &quot;NOTUS · Auditoria&quot;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;usuário, IP, rota, status e tempo de resposta&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="externos" vertex="1">
+          <mxGeometry x="40" y="350" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="github" value="&lt;b&gt;GitHub + GitHub Actions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;push na main: testes do back-end e build das imagens&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=11;" parent="externos" vertex="1">
+          <mxGeometry x="40" y="490" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="dockerhub" value="&lt;b&gt;Docker Hub&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;nawszera/notus-backend · nawszera/notus-frontend&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="externos" vertex="1">
+          <mxGeometry x="40" y="610" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="HTTPS · páginas" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="usuarios" target="front" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="320" y="185" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="HTTPS · API REST (JSON + token JWT)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="usuarios" target="caddy" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="310" y="400" /><mxPoint x="610" y="400" /><mxPoint x="610" y="135" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="rotas da API" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="caddy" target="spring" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="logs de auditoria (push)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="spring" target="loki" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="loki" target="volume" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="JDBC · SSL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="spring" target="supabase" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="envio de e-mails" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="spring" target="resend" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="consulta /loki/api/v1 (HTTPS + senha)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;dashed=1;" parent="1" source="grafana" target="caddy" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1228" y="410" /><mxPoint x="1228" y="135" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="publica as imagens" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;" parent="1" source="github" target="dockerhub" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="deploy (imagem :latest)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;dashed=1;" parent="1" source="dockerhub" target="railway" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="1210" y="665" /><mxPoint x="1210" y="720" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1" value="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e51400;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" parent="1" vertex="1"><mxGeometry x="262" y="226" width="28" height="28" as="geometry" /></mxCell>
+        <mxCell id="p2" value="2" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e51400;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" parent="1" vertex="1"><mxGeometry x="596" y="372" width="28" height="28" as="geometry" /></mxCell>
+        <mxCell id="p3" value="3" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e51400;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" parent="1" vertex="1"><mxGeometry x="1196" y="96" width="28" height="28" as="geometry" /></mxCell>
+        <mxCell id="p4" value="4" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e51400;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" parent="1" vertex="1"><mxGeometry x="842" y="508" width="28" height="28" as="geometry" /></mxCell>
+        <mxCell id="p5" value="5" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e51400;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" parent="1" vertex="1"><mxGeometry x="1196" y="232" width="28" height="28" as="geometry" /></mxCell>
+        <mxCell id="p6" value="6" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e51400;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=13;" parent="1" vertex="1"><mxGeometry x="1252" y="318" width="28" height="28" as="geometry" /></mxCell>
+        <mxCell id="legenda" value="&lt;b&gt;Fluxo principal: o responsável fica sabendo da falta do filho&lt;/b&gt;&lt;br&gt;&lt;b style=&quot;color:#e51400&quot;&gt;1&lt;/b&gt; O professor faz a chamada no front-end e marca o aluno ausente.&amp;nbsp;&amp;nbsp; &lt;b style=&quot;color:#e51400&quot;&gt;2&lt;/b&gt; O navegador envia a chamada para a API por HTTPS, com o token JWT; o Caddy encaminha para o Spring Boot, que confere o perfil e o vínculo do professor com a turma.&amp;nbsp;&amp;nbsp; &lt;b style=&quot;color:#e51400&quot;&gt;3&lt;/b&gt; A API grava a aula e a falta no PostgreSQL (Supabase) e cria a notificação na fila.&lt;br&gt;&lt;b style=&quot;color:#e51400&quot;&gt;4&lt;/b&gt; A requisição fica registrada no Loki (usuário, IP, rota, resultado e tempo), consultável no Grafana Cloud.&amp;nbsp;&amp;nbsp; &lt;b style=&quot;color:#e51400&quot;&gt;5&lt;/b&gt; O worker de notificações envia o e-mail pelo Resend, com até 3 tentativas.&amp;nbsp;&amp;nbsp; &lt;b style=&quot;color:#e51400&quot;&gt;6&lt;/b&gt; O responsável recebe o aviso por e-mail e acompanha as faltas e a frequência no portal." style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#e51400;strokeWidth=2;align=left;verticalAlign=middle;spacing=12;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="20" y="770" width="1520" height="90" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCarga } from "@/hooks/use-carga";
-import { formatarDataHora } from "@/lib/solicitacoes";
+import { formatarDataHora } from "@/lib/anonimizacao";
 
 export function HistoricoAnonimizacoes({ versao }: { versao: number }) {
   const carga = useCarga(getHistoricoAnonimizacoes, versao);
@@ -37,7 +37,6 @@ export function HistoricoAnonimizacoes({ versao }: { versao: number }) {
               <TableHead>Data</TableHead>
               <TableHead>Titular</TableHead>
               <TableHead>Motivo</TableHead>
-              <TableHead>Pedido</TableHead>
               <TableHead>Executada por</TableHead>
             </TableRow>
           </TableHeader>
@@ -58,7 +57,6 @@ export function HistoricoAnonimizacoes({ versao }: { versao: number }) {
                   <p>{r.motivoDescricao}</p>
                   {r.detalhe && <p className="text-xs text-muted-foreground">{r.detalhe}</p>}
                 </TableCell>
-                <TableCell>{r.solicitacaoId ? `nº ${r.solicitacaoId}` : "—"}</TableCell>
                 <TableCell className="text-sm">{r.executadoPor}</TableCell>
               </TableRow>
             ))}

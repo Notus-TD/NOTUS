@@ -2,7 +2,7 @@ package com.pfc.notus.turma.controller;
 
 
 import com.pfc.notus.lecionamento.dto.TurmaComDisciplinasDTO;
-import com.pfc.notus.Service.LecionamentoService;
+import com.pfc.notus.lecionamento.service.LecionamentoService;
 import com.pfc.notus.turma.dto.TurmaAlunoRequestDTO;
 import com.pfc.notus.turma.dto.TurmaAlunoResponseDTO;
 import com.pfc.notus.turma.dto.TurmaAlunosLoteRequestDTO;

@@ -22,7 +22,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ALUNOS_POR_PAGINA, rotuloSituacao, tomSituacao } from "@/features/admin/alunos/situacao";
-import { PedidosTitulares } from "@/features/admin/anonimizacao/PedidosTitulares";
 import { DetalheAnonimizacao } from "@/features/admin/anonimizacao/DetalheAnonimizacao";
 import { HistoricoAnonimizacoes } from "@/features/admin/anonimizacao/HistoricoAnonimizacoes";
 import { BotaoReenviarConvite } from "@/features/admin/comum/BotoesUsuario";
@@ -80,7 +79,6 @@ export function ExcluirUsuarios() {
 
   return (
     <div className="space-y-6">
-      <PedidosTitulares />
       <Painel
         titulo="Usuários"
         icone={UserX}

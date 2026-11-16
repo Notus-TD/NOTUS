@@ -31,8 +31,6 @@ public class RegistroAnonimizacao {
     @Column(length = 500)
     private String detalhe;
 
-    private Long solicitacaoId;
-
     @Column(nullable = false)
     private String executadoPor;
 
@@ -40,13 +38,12 @@ public class RegistroAnonimizacao {
     private LocalDateTime executadoEm;
 
     public RegistroAnonimizacao(Long usuarioId, String perfil, Long matricula, MotivoAnonimizacao motivo, String detalhe,
-                                Long solicitacaoId, String executadoPor, LocalDateTime executadoEm) {
+                                String executadoPor, LocalDateTime executadoEm) {
         this.usuarioId = usuarioId;
         this.perfil = perfil;
         this.matricula = matricula;
         this.motivo = motivo;
         this.detalhe = detalhe;
-        this.solicitacaoId = solicitacaoId;
         this.executadoPor = executadoPor;
         this.executadoEm = executadoEm;
     }

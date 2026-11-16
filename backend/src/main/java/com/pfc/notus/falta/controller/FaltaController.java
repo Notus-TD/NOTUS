@@ -1,12 +1,12 @@
 package com.pfc.notus.falta.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.falta.dto.ChamadaDTO;
 import com.pfc.notus.falta.dto.ChamadaRequestDTO;
 import com.pfc.notus.falta.dto.FaltaDTO;
 import com.pfc.notus.falta.dto.FrequenciaDisciplinaDTO;
 import com.pfc.notus.falta.service.FaltaService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -17,10 +17,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/falta")
+@RequiredArgsConstructor
 public class FaltaController {
 
-    @Autowired
-    private FaltaService faltaService;
+    private final FaltaService faltaService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping

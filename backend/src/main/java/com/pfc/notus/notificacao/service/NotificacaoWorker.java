@@ -1,11 +1,11 @@
 package com.pfc.notus.notificacao.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.notificacao.config.NotificacaoProperties;
 import com.pfc.notus.notificacao.port.NotificadorPort;
 import com.pfc.notus.notificacao.port.ResultadoEnvio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -16,18 +16,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Component
+@RequiredArgsConstructor
 public class NotificacaoWorker {
 
     private static final Logger log = LoggerFactory.getLogger(NotificacaoWorker.class);
 
-    @Autowired
-    private NotificacaoEnvioService envioService;
+    private final NotificacaoEnvioService envioService;
 
-    @Autowired
-    private NotificadorPort notificador;
+    private final NotificadorPort notificador;
 
-    @Autowired
-    private NotificacaoProperties properties;
+    private final NotificacaoProperties properties;
 
     private final ReentrantLock emExecucao = new ReentrantLock();
     private final AtomicBoolean pedidoPendente = new AtomicBoolean(false);
@@ -72,26 +70,34 @@ public class NotificacaoWorker {
         long pausaMs = Math.max(1, 1000L / properties.taxaPorSegundo());
         for (Long id : ids) {
             try {
-                envioService.preparar(id).ifPresent(envio -> {
-                    ResultadoEnvio resultado;
-                    try {
-                        resultado = notificador.enviar(envio.email(), envio.template(), envio.variaveis());
-                    } catch (RuntimeException e) {
-                        resultado = ResultadoEnvio.temporario("Erro inesperado no envio: " + e.getMessage());
-                    }
-                    envioService.registrarResultado(id, resultado);
-                });
+                envioService.preparar(id).ifPresent(envio -> envioService.registrarResultado(id, enviar(envio)));
             } catch (RuntimeException e) {
                 log.error("Erro ao processar notificação {}", id, e);
             }
-
-            try {
-                Thread.sleep(pausaMs);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            if (!pausar(pausaMs)) {
                 return false;
             }
         }
         return true;
+    }
+
+    /** Erro inesperado do provedor conta como temporário: a notificação volta para a fila. */
+    private ResultadoEnvio enviar(NotificacaoEnvioService.EnvioPreparado envio) {
+        try {
+            return notificador.enviar(envio.email(), envio.template(), envio.variaveis());
+        } catch (RuntimeException e) {
+            return ResultadoEnvio.temporario("Erro inesperado no envio: " + e.getMessage());
+        }
+    }
+
+    /** Respeita o limite de envios por segundo do provedor. Retorna false se o servidor está desligando. */
+    private static boolean pausar(long pausaMs) {
+        try {
+            Thread.sleep(pausaMs);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 }

@@ -8,3 +8,11 @@
 # Anotacoes locais de decisoes (nao versionar)
 DECISOES.md
 CONTEXTO.md
+ALTERACOES-MONOGRAFIA.md
+PASSAGEM-DE-CONTEXTO.md
+docs/revisao-metodos.md
+
+# Variáveis de ambiente locais (segredos)
+.env
+.env.*
+!.env.example

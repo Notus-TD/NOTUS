@@ -4,7 +4,7 @@ import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.disciplina.domain.AulaRegistro;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.falta.domain.FaltaDomain;
 import com.pfc.notus.falta.dto.ChamadaDTO;
@@ -66,7 +66,7 @@ class FaltaServiceUnitTest {
     private StudentRepository studentRepository;
 
     @Mock
-    private DisiciplinaRepository disciplinaRepository;
+    private DisciplinaRepository disciplinaRepository;
 
     @Mock
     private TurmaRepository turmaRepository;
@@ -296,5 +296,28 @@ class FaltaServiceUnitTest {
 
         assertEquals("O 3º bimestre está fechado. Peça à secretaria para reabrir.", erro.getMessage());
         verify(aulaRegistroRepository, never()).save(any());
+    }
+
+    @Test
+    void naoDeveExcluirFaltaDeBimestreFechado() {
+        FaltaDomain falta = criarFalta(9L, 1, criarAluno(10L, "Ana Aluna", criarTurma()), criarDisciplina());
+        when(faltaRepository.findById(9L)).thenReturn(Optional.of(falta));
+        doThrow(new RegraNegocioException("O 1º bimestre já terminou e está fechado."))
+                .when(calendarioService).exigirDataLetiva(falta.getAnoLetivo(), falta.getData());
+
+        assertThrows(RegraNegocioException.class, () -> faltaService.delete(9L, PROFESSOR));
+
+        verify(faltaRepository, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void deveExcluirFaltaDeBimestreAbertoECancelarOAviso() {
+        FaltaDomain falta = criarFalta(9L, 1, criarAluno(10L, "Ana Aluna", criarTurma()), criarDisciplina());
+        when(faltaRepository.findById(9L)).thenReturn(Optional.of(falta));
+
+        faltaService.delete(9L, PROFESSOR);
+
+        verify(faltaRepository).deleteById(9L);
+        verify(notificacaoService).cancelarPorReferencia(eq(NotificacaoService.REF_FALTA), eq(9L), anyString());
     }
 }

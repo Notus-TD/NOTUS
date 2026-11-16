@@ -5,10 +5,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDate;
 
+/**
+ * Um bimestre do calendário letivo. Ele fica aberto para lançamentos até a data de fim e fecha sozinho no dia
+ * seguinte. Para corrigir algo depois disso, a secretaria muda a data de fim.
+ */
 @Entity
 @Table(name = "tb_periodo_letivo",
         uniqueConstraints = @UniqueConstraint(name = "uk_periodo_ano_bimestre", columnNames = {"ano_letivo", "bimestre"}))
@@ -35,10 +38,6 @@ public class PeriodoLetivo {
     @Column(nullable = false)
     private LocalDate fim;
 
-    @Setter
-    @ColumnDefault("false")
-    private boolean reaberto;
-
     public PeriodoLetivo(String anoLetivo, Bimestre bimestre, LocalDate inicio, LocalDate fim) {
         this.anoLetivo = anoLetivo;
         this.bimestre = bimestre;
@@ -50,10 +49,8 @@ public class PeriodoLetivo {
         return !data.isBefore(inicio) && !data.isAfter(fim);
     }
 
-    public SituacaoPeriodo situacao(LocalDate hoje) {
-        if (hoje.isBefore(inicio)) return SituacaoPeriodo.NAO_INICIADO;
-        if (!hoje.isAfter(fim)) return SituacaoPeriodo.EM_ANDAMENTO;
-        if (reaberto) return SituacaoPeriodo.REABERTO;
-        return SituacaoPeriodo.FECHADO;
+    /** Aberto para lançamentos até o último dia do bimestre (inclusive). */
+    public boolean aberto(LocalDate hoje) {
+        return !hoje.isAfter(fim);
     }
 }

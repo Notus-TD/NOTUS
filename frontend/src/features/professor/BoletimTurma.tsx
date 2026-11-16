@@ -295,10 +295,12 @@ function CelulaMedia({ valor }: { valor: number | null }) {
 const CLASSE_CELULA =
   "inline-flex min-w-14 items-center justify-center rounded-lg px-3 py-1.5 text-base font-semibold tabular-nums";
 
+// Com nota final, vale exatamente a nota que o professor lançou; sem ela, a nota parcial soma as atividades.
 function detalheNota(linha: BoletimDTO) {
-  const base = linha.notaFinal ?? linha.mediaCalculada;
+  if (linha.notaFinal !== null)
+    return `Nota final ${formatarNota(linha.notaFinal)}, lançada pelo professor`;
   const partes = [];
-  if (base !== null) partes.push(`Nota do bimestre ${formatarNota(base)}`);
+  if (linha.mediaCalculada !== null) partes.push(`Média ${formatarNota(linha.mediaCalculada)}`);
   if (linha.pontosAtividades !== null)
     partes.push(`atividades ${formatarNota(linha.pontosAtividades)}`);
   return partes.join(" + ");

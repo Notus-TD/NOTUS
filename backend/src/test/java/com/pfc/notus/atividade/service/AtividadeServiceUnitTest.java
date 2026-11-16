@@ -6,7 +6,7 @@ import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.entrega.domain.Entrega;
 import com.pfc.notus.entrega.domain.StatusEntrega;
 import com.pfc.notus.entrega.repository.EntregaRepository;
@@ -63,7 +63,7 @@ class AtividadeServiceUnitTest {
     private TurmaRepository turmaRepository;
 
     @Mock
-    private DisiciplinaRepository disciplinaRepository;
+    private DisciplinaRepository disciplinaRepository;
 
     @Mock
     private LecionamentoRepository lecionamentoRepository;

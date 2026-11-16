@@ -148,7 +148,7 @@ export function PainelResponsavel() {
           ? `Você tem ${naoLidos} ${naoLidos === 1 ? "aviso novo" : "avisos novos"}.`
           : "Nenhum aviso novo. Você está em dia."
         : secao === "dados"
-          ? "Baixe uma cópia dos seus dados ou peça correção e anonimização à secretaria (LGPD, art. 18)."
+          ? "Como pedir cópia, correção ou anonimização dos seus dados (LGPD, art. 18)."
           : filho
             ? `${filho.studentName}, matrícula ${filho.matricula}${filho.turmaName ? `, ${filho.turmaName}` : ""}.`
             : undefined;
@@ -257,7 +257,7 @@ export function PainelResponsavel() {
           </Painel>
         )}
 
-        {secao === "dados" && <PrivacidadeResponsavel filhos={listaFilhos} />}
+        {secao === "dados" && <PrivacidadeResponsavel />}
       </div>
     </AppShell>
   );

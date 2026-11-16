@@ -1,11 +1,11 @@
 package com.pfc.notus.boletim.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.boletim.dto.BoletimDTO;
 import com.pfc.notus.boletim.dto.BoletimDisciplinaDTO;
 import com.pfc.notus.boletim.dto.NotaFinalRequestDTO;
 import com.pfc.notus.boletim.service.BoletimService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -15,10 +15,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/boletim")
+@RequiredArgsConstructor
 public class BoletimController {
 
-    @Autowired
-    private BoletimService boletimService;
+    private final BoletimService boletimService;
 
     @GetMapping("/student/{studentId}")
     public ResponseEntity<List<BoletimDisciplinaDTO>> getByStudent(@PathVariable Long studentId, Authentication authentication) {

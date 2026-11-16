@@ -13,12 +13,11 @@ public record RegistroAnonimizacaoDTO(
         MotivoAnonimizacao motivo,
         String motivoDescricao,
         String detalhe,
-        Long solicitacaoId,
         String executadoPor,
         LocalDateTime executadoEm
 ) {
     public static RegistroAnonimizacaoDTO from(RegistroAnonimizacao r) {
         return new RegistroAnonimizacaoDTO(r.getId(), r.getUsuarioId(), r.getPerfil(), r.getMatricula(), r.getMotivo(),
-                r.getMotivo().getDescricao(), r.getDetalhe(), r.getSolicitacaoId(), r.getExecutadoPor(), r.getExecutadoEm());
+                r.getMotivo().getDescricao(), r.getDetalhe(), r.getExecutadoPor(), r.getExecutadoEm());
     }
 }

@@ -1,47 +1,6 @@
 import type { StatusMatricula } from "@/api/alunos";
 import { getJson, sendJson } from "@/api/cliente";
 
-export type TipoSolicitacao = "ANONIMIZACAO" | "CORRECAO";
-
-export type StatusSolicitacao = "ABERTA" | "ATENDIDA" | "RECUSADA";
-
-export type SolicitacaoDTO = {
-  id: number;
-  tipo: TipoSolicitacao;
-  status: StatusSolicitacao;
-  solicitanteId: number;
-  solicitanteNome: string;
-  alunoId: number | null;
-  alunoNome: string | null;
-  detalhe: string | null;
-  solicitadaEm: string;
-  prazoEm: string;
-  atrasada: boolean;
-  respondidaEm: string | null;
-  resposta: string | null;
-};
-
-export type SolicitacaoRequest = {
-  tipo: TipoSolicitacao;
-  alunoId: number | null;
-  detalhe: string | null;
-};
-
-export const getMeusDados = () => getJson<unknown>("/privacidade/meus-dados");
-
-export const solicitarPedidoTitular = (dto: SolicitacaoRequest) =>
-  sendJson<SolicitacaoDTO>("POST", "/privacidade/solicitacoes", dto);
-
-export const getMinhasSolicitacoes = () =>
-  getJson<SolicitacaoDTO[]>("/privacidade/solicitacoes/me");
-
-export const getSolicitacoes = () => getJson<SolicitacaoDTO[]>("/privacidade/solicitacoes");
-
-export const responderSolicitacao = (
-  id: number,
-  dto: { status: Exclude<StatusSolicitacao, "ABERTA">; resposta: string | null },
-) => sendJson<SolicitacaoDTO>("PUT", `/privacidade/solicitacoes/${id}/responder`, dto);
-
 export type MotivoAnonimizacao =
   "PEDIDO_DO_TITULAR" | "FIM_DO_PRAZO_DE_GUARDA" | "DETERMINACAO_LEGAL" | "OUTRO";
 
@@ -53,7 +12,6 @@ export type RegistroAnonimizacaoDTO = {
   motivo: MotivoAnonimizacao;
   motivoDescricao: string;
   detalhe: string | null;
-  solicitacaoId: number | null;
   executadoPor: string;
   executadoEm: string;
 };
@@ -83,7 +41,6 @@ export type ResumoAnonimizacaoDTO = {
   faltas: number;
   entregas: number;
   avisos: number;
-  pedidosAbertos: SolicitacaoDTO[];
   anonimizadoEm: string | null;
   registro: RegistroAnonimizacaoDTO | null;
   bloqueio: string | null;
@@ -93,7 +50,6 @@ export type AnonimizarRequest = {
   confirmacao: string;
   motivo: MotivoAnonimizacao;
   detalhe: string | null;
-  solicitacaoId: number | null;
 };
 
 export const getResumoAnonimizacao = (userId: number) =>
@@ -102,3 +58,7 @@ export const anonimizarUsuario = (userId: number, dto: AnonimizarRequest) =>
   sendJson<RegistroAnonimizacaoDTO>("PUT", `/privacidade/usuarios/${userId}/anonimizar`, dto);
 export const getHistoricoAnonimizacoes = () =>
   getJson<RegistroAnonimizacaoDTO[]>("/privacidade/anonimizacoes");
+
+// Cópia dos dados pessoais de um aluno ou responsável (LGPD, art. 18), gerada pelo admin a pedido do titular.
+export const getDadosDoUsuario = (userId: number) =>
+  getJson<unknown>(`/privacidade/usuarios/${userId}/dados`);

@@ -4,7 +4,7 @@ import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.disciplina.domain.AulaRegistro;
 import com.pfc.notus.disciplina.domain.Disciplina;
 import com.pfc.notus.disciplina.repository.AulaRegistroRepository;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.falta.domain.FaltaDomain;
 import com.pfc.notus.falta.dto.FrequenciaDisciplinaDTO;
 import com.pfc.notus.falta.repository.FaltaRepository;
@@ -43,7 +43,7 @@ class FaltaServiceFrequenciaUnitTest {
     private CalendarioService calendarioService;
 
     @Mock
-    private DisiciplinaRepository disciplinaRepository;
+    private DisciplinaRepository disciplinaRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -122,5 +122,39 @@ class FaltaServiceFrequenciaUnitTest {
         assertThat(frequencia.get(0).totalAulas()).isEqualTo(4L);
         assertThat(frequencia.get(0).totalFaltas()).isEqualTo(2L);
         assertThat(frequencia.get(0).percentualPresenca()).isEqualTo(50.0);
+    }
+
+    @Test
+    void frequencia_alunoTransferidoComecaDoZeroNaTurmaNova() {
+        Student aluno = alunoNaTurma(1L);
+        aluno.setTurmaDesde(LocalDate.of(2026, 3, 10)); // entrou na turma no dia 10
+        Disciplina matematica = disciplina(1L, "Matemática");
+        when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findAll()).thenReturn(List.of(matematica));
+        when(faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), "2026")).thenReturn(List.of(
+                new FaltaDomain(1, LocalDate.of(2026, 3, 5), LocalDateTime.now(), aluno, null, matematica),   // turma antiga
+                new FaltaDomain(1, LocalDate.of(2026, 3, 11), LocalDateTime.now(), aluno, null, matematica)));
+        List<AulaRegistro> aulas = new ArrayList<>();
+        for (int dia = 2; dia <= 13; dia++) aulas.add(new AulaRegistro(LocalDate.of(2026, 3, dia), matematica, aluno.getTurma(), 1));
+        when(aulaRegistroRepository.findByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 1L, "2026")).thenReturn(aulas);
+
+        FrequenciaDisciplinaDTO f = faltaService.getFrequenciaParaUsuarioLogado(ALUNO).get(0);
+
+        assertThat(f.totalAulas()).isEqualTo(4L);   // dias 10 a 13
+        assertThat(f.totalFaltas()).isEqualTo(1L);  // só a falta do dia 11
+        assertThat(f.percentualPresenca()).isEqualTo(75.0);
+    }
+
+    @Test
+    void frequencia_alunoTransferidoSemAulaNaTurmaNovaNaoTemPercentual() {
+        Student aluno = alunoNaTurma(1L);
+        aluno.setTurmaDesde(LocalDate.of(2026, 4, 1));
+        Disciplina matematica = disciplina(1L, "Matemática");
+        when(userRepository.findByEmail(ALUNO)).thenReturn(Optional.of(aluno));
+        when(disciplinaRepository.findAll()).thenReturn(List.of(matematica));
+        when(aulaRegistroRepository.findByTurmaIdAndDisciplinaIdAndAnoLetivo(1L, 1L, "2026")).thenReturn(List.of(
+                new AulaRegistro(LocalDate.of(2026, 3, 2), matematica, aluno.getTurma(), 1)));
+
+        assertThat(faltaService.getFrequenciaParaUsuarioLogado(ALUNO)).isEmpty();
     }
 }

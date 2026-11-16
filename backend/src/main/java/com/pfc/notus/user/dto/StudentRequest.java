@@ -1,5 +1,6 @@
 package com.pfc.notus.user.dto;
 
+import com.pfc.notus.user.domain.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,4 +14,8 @@ public record StudentRequest(
         @NotNull Long matricula,
         @NotNull @Past LocalDate birthDate
 ) {
+    public StudentRequest {
+        fullName = fullName == null ? null : fullName.trim();
+        educationalEmail = User.normalizarEmail(educationalEmail);
+    }
 }

@@ -1,5 +1,6 @@
 package com.pfc.notus.notificacao.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.config.AuditMarker;
 import com.pfc.notus.notificacao.config.NotificacaoProperties;
 import com.pfc.notus.notificacao.domain.Notificacao;
@@ -9,7 +10,6 @@ import com.pfc.notus.notificacao.repository.NotificacaoRepository;
 import com.pfc.notus.notificacao.util.EmailUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class NotificacaoEnvioService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificacaoEnvioService.class);
@@ -33,17 +34,13 @@ public class NotificacaoEnvioService {
     public record EnvioPreparado(Long id, String email, String template, List<String> variaveis) {
     }
 
-    @Autowired
-    private NotificacaoRepository notificacaoRepository;
+    private final NotificacaoRepository notificacaoRepository;
 
-    @Autowired
-    private NotificacaoService notificacaoService;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private NotificacaoProperties properties;
+    private final NotificacaoProperties properties;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public List<Long> reservarLote(LocalDateTime inicioCiclo) {
@@ -73,11 +70,7 @@ public class NotificacaoEnvioService {
         }
 
         List<String> variaveis = Arrays.asList(objectMapper.readValue(notificacao.getVariaveis(), String[].class));
-        // Determina para qual email enviar - aluno ou responsável
-        String emailDestino = notificacao.getResponsavel() != null
-            ? notificacao.getResponsavel().getEmail()
-            : notificacao.getStudent().getEmail();
-        return Optional.of(new EnvioPreparado(id, emailDestino, notificacao.getTemplate(), variaveis));
+        return Optional.of(new EnvioPreparado(id, emailDestino(notificacao), notificacao.getTemplate(), variaveis));
     }
 
     @Transactional
@@ -87,34 +80,42 @@ public class NotificacaoEnvioService {
             return;
         }
         notificacao.setTentativas(notificacao.getTentativas() + 1);
-        // Obtém o email de destino (responsável ou aluno)
-        String emailDestino = notificacao.getResponsavel() != null
-            ? notificacao.getResponsavel().getEmail()
-            : notificacao.getStudent().getEmail();
-        String destino = EmailUtil.mascarar(emailDestino);
+        String destino = EmailUtil.mascarar(emailDestino(notificacao));
 
         switch (resultado.tipo()) {
-            case SUCESSO -> {
-                notificacao.setStatus(StatusNotificacao.ENVIADA);
-                notificacao.setProviderMessageId(resultado.providerMessageId());
-                notificacao.setEnviadoEm(LocalDateTime.now());
-                notificacao.setErro(null);
-                log.info(AuditMarker.AUDIT, "Notificação {} enviada | {} | {} | {}",
-                        id, notificacao.getTipo(), destino, resultado.providerMessageId());
-            }
+            case SUCESSO -> marcarEnviada(notificacao, resultado.providerMessageId(), destino);
             case DEFINITIVO -> falhar(notificacao, resultado.erro(), destino);
-            case TEMPORARIO -> {
-                if (notificacao.getTentativas() >= properties.maxTentativas()) {
-                    falhar(notificacao, "Tentativas esgotadas: " + resultado.erro(), destino);
-                } else {
-                    notificacao.setStatus(StatusNotificacao.PENDENTE);
-                    notificacao.setProximaTentativaEm(LocalDateTime.now());
-                    notificacao.setErro(truncar(resultado.erro()));
-                    log.warn("Notificação {} com erro temporário (tentativa {} de {}), nova tentativa no próximo ciclo: {}",
-                            id, notificacao.getTentativas(), properties.maxTentativas(), resultado.erro());
-                }
-            }
+            case TEMPORARIO -> tentarDeNovoOuFalhar(notificacao, resultado.erro(), destino);
         }
+    }
+
+    private void marcarEnviada(Notificacao notificacao, String providerMessageId, String destino) {
+        notificacao.setStatus(StatusNotificacao.ENVIADA);
+        notificacao.setProviderMessageId(providerMessageId);
+        notificacao.setEnviadoEm(LocalDateTime.now());
+        notificacao.setErro(null);
+        log.info(AuditMarker.AUDIT, "Notificação {} enviada | {} | {} | {}",
+                notificacao.getId(), notificacao.getTipo(), destino, providerMessageId);
+    }
+
+    /** Erro temporário (ex.: provedor fora do ar): volta para a fila até esgotar as tentativas. */
+    private void tentarDeNovoOuFalhar(Notificacao notificacao, String erro, String destino) {
+        if (notificacao.getTentativas() >= properties.maxTentativas()) {
+            falhar(notificacao, "Tentativas esgotadas: " + erro, destino);
+            return;
+        }
+        notificacao.setStatus(StatusNotificacao.PENDENTE);
+        notificacao.setProximaTentativaEm(LocalDateTime.now());
+        notificacao.setErro(truncar(erro));
+        log.warn("Notificação {} com erro temporário (tentativa {} de {}), nova tentativa no próximo ciclo: {}",
+                notificacao.getId(), notificacao.getTentativas(), properties.maxTentativas(), erro);
+    }
+
+    /** Aviso de responsável vai para o e-mail dele; aviso de aluno, para o do aluno. */
+    private static String emailDestino(Notificacao notificacao) {
+        return notificacao.getResponsavel() != null
+                ? notificacao.getResponsavel().getEmail()
+                : notificacao.getStudent().getEmail();
     }
 
     private void falhar(Notificacao notificacao, String erro, String destino) {

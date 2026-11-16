@@ -10,7 +10,6 @@ import com.pfc.notus.privacidade.dto.AnonimizarRequest;
 import com.pfc.notus.privacidade.dto.RegistroAnonimizacaoDTO;
 import com.pfc.notus.privacidade.dto.ResumoAnonimizacaoDTO;
 import com.pfc.notus.privacidade.repository.RegistroAnonimizacaoRepository;
-import com.pfc.notus.privacidade.repository.SolicitacaoTitularRepository;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.domain.Student;
 import com.pfc.notus.user.domain.enums.StatusMatricula;
@@ -24,7 +23,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,13 +41,6 @@ class AnonimizacaoServiceUnitTest {
 
     @Mock
     private UserService userService;
-
-    @Mock
-    private SolicitacaoTitularService solicitacaoTitularService;
-
-    @Mock
-    private SolicitacaoTitularRepository solicitacaoRepository;
-
     @Mock
     private RegistroAnonimizacaoRepository registroRepository;
 
@@ -83,7 +74,6 @@ class AnonimizacaoServiceUnitTest {
     @Test
     void resumo_alunoComMatriculaAtiva_informaOBloqueioEOQueEstaLigado() {
         when(userRepository.findById(54L)).thenReturn(Optional.of(helena));
-        when(solicitacaoRepository.listarAbertasDoUsuario(54L)).thenReturn(List.of());
         when(registroRepository.findFirstByUsuarioIdOrderByExecutadoEmDesc(54L)).thenReturn(Optional.empty());
         when(boletimRepository.countByStudentId(54L)).thenReturn(24L);
         when(faltaRepository.countByAlunoId(54L)).thenReturn(3L);
@@ -99,7 +89,6 @@ class AnonimizacaoServiceUnitTest {
     @Test
     void resumo_responsavelComFilhoAtivo_listaOsFilhosEBloqueia() {
         when(userRepository.findById(24L)).thenReturn(Optional.of(simone));
-        when(solicitacaoRepository.listarAbertasDoUsuario(24L)).thenReturn(List.of());
         when(registroRepository.findFirstByUsuarioIdOrderByExecutadoEmDesc(24L)).thenReturn(Optional.empty());
 
         ResumoAnonimizacaoDTO resumo = service.resumo(24L);
@@ -111,28 +100,26 @@ class AnonimizacaoServiceUnitTest {
     @Test
     void anonimizar_motivoOutroSemDetalhe_recusa() {
         assertThrows(RegraNegocioException.class, () -> service.anonimizar(54L,
-                new AnonimizarRequest("20260011", MotivoAnonimizacao.OUTRO, " ", null), ADMIN));
-        verify(userService, never()).anonimyzeUser(anyLong(), anyString(), anyString());
+                new AnonimizarRequest("20260011", MotivoAnonimizacao.OUTRO, " "), ADMIN));
+        verify(userService, never()).anonymizeUser(anyLong(), anyString(), anyString());
     }
 
     @Test
-    void anonimizar_pedidoDoTitularSemPedido_recusa() {
+    void anonimizar_pedidoDoTitularSemDetalhe_recusa() {
         assertThrows(RegraNegocioException.class, () -> service.anonimizar(54L,
-                new AnonimizarRequest("20260011", MotivoAnonimizacao.PEDIDO_DO_TITULAR, null, null), ADMIN));
-        verify(userService, never()).anonimyzeUser(anyLong(), anyString(), anyString());
+                new AnonimizarRequest("20260011", MotivoAnonimizacao.PEDIDO_DO_TITULAR, null), ADMIN));
+        verify(userService, never()).anonymizeUser(anyLong(), anyString(), anyString());
     }
 
     @Test
-    void anonimizar_comPedido_atendeOPedidoAnonimizaERegistraOMotivo() {
+    void anonimizar_pedidoDoTitularComDetalhe_anonimizaERegistraOMotivo() {
         helena.setStatusMatricula(StatusMatricula.CANCELADA);
         when(userRepository.findById(54L)).thenReturn(Optional.of(helena));
         when(registroRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         RegistroAnonimizacaoDTO registro = service.anonimizar(54L,
-                new AnonimizarRequest("20260011", MotivoAnonimizacao.PEDIDO_DO_TITULAR, "Mudou de escola", 7L), ADMIN);
-
-        verify(solicitacaoTitularService).atenderPorAnonimizacao(7L, 54L, ADMIN);
-        verify(userService).anonimyzeUser(54L, "20260011", ADMIN);
+                new AnonimizarRequest("20260011", MotivoAnonimizacao.PEDIDO_DO_TITULAR, "Pedido da mãe na secretaria em 10/11"), ADMIN);
+        verify(userService).anonymizeUser(54L, "20260011", ADMIN);
         assertEquals("ALUNO", registro.perfil());
         assertEquals(20260011L, registro.matricula());
         assertEquals("Pedido do titular", registro.motivoDescricao());

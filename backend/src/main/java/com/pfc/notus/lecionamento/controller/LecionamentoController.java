@@ -1,10 +1,10 @@
 package com.pfc.notus.lecionamento.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.lecionamento.dto.LecionamentoDTO;
 import com.pfc.notus.lecionamento.dto.LecionamentoRequestDTO;
-import com.pfc.notus.Service.LecionamentoService;
+import com.pfc.notus.lecionamento.service.LecionamentoService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +13,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping(value = "/lecionamento")
+@RequiredArgsConstructor
 public class LecionamentoController {
 
-    @Autowired
-    private LecionamentoService lecionamentoService;
+    private final LecionamentoService lecionamentoService;
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type ComponentProps, type FormEvent } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, School, Trash2 } from "lucide-react";
+import { useNavegacaoAdmin } from "@/features/admin/navegacao";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CampoData } from "@/components/layout/CampoData";
@@ -123,6 +124,7 @@ export function CadastroAlunoForm({
   const [alunos, setAlunos] = useState<Aluno[]>(() => [novoAluno()]);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<StudentRegistrationResponse[] | null>(null);
+  const navegacao = useNavegacaoAdmin();
   const [errosCampo, setErrosCampo] = useState<{ fieldName: string; message: string }[]>([]);
   const [errosResponsavel, setErrosResponsavel] = useState<ErrosResponsavel>({});
   const [errosAlunos, setErrosAlunos] = useState<Record<number, ErrosAluno>>({});
@@ -423,6 +425,21 @@ export function CadastroAlunoForm({
                 </li>
               ))}
             </ul>
+            {navegacao && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <p className="w-full text-sm text-muted-foreground">
+                  Próximo passo: coloque {resultado.length === 1 ? "o aluno" : "os alunos"} em uma
+                  turma para que os professores possam lançar chamada e notas.
+                </p>
+                <Button size="sm" onClick={() => navegacao.irPara("turmas")}>
+                  <School className="size-4" aria-hidden="true" />
+                  Colocar em uma turma
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setResultado(null)}>
+                  Cadastrar outro aluno
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

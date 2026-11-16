@@ -43,6 +43,10 @@ export function CadastroProfessorForm({
       const criado = await cadastrarProfessor({ fullName: nome.trim(), email: email.trim() });
       toast.success(
         `${criado.fullName} cadastrado(a). Enviamos um link por e-mail para criar a senha.`,
+        {
+          description:
+            "Próximo passo: vincule o professor às turmas e disciplinas em que ele leciona, logo abaixo.",
+        },
       );
       setNome("");
       setEmail("");

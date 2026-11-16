@@ -21,7 +21,11 @@ export function DashboardAdmin() {
   const [versao, setVersao] = useState(0);
   const turmas = useCarga<TurmaDTO[]>(getTurmas, versao);
   const alunos = useCarga<StudentMinDTO[]>(getStudents, versao);
-  const professores = useCarga<ProfessorDTO[]>(getProfessores, versao);
+  // Professores desligados não entram nos indicadores.
+  const professores = useCarga<ProfessorDTO[]>(
+    () => getProfessores().then((ps) => ps.filter((p) => !p.desligado)),
+    versao,
+  );
   const usuarios = useCarga<UsuarioDTO[]>(getUsuarios, versao);
   const lecionamentos = useCarga<LecionamentoDTO[]>(getLecionamentos, versao);
   const disciplinas = useCarga<DisciplinaDTO[]>(getDisciplinas, versao);

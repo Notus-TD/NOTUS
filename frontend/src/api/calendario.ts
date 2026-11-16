@@ -1,14 +1,12 @@
 import { Bimestre } from "@/api/boletim";
 import { getJson, sendJson } from "@/api/cliente";
 
-export type SituacaoPeriodo = "NAO_INICIADO" | "EM_ANDAMENTO" | "FECHADO" | "REABERTO";
-
+// O bimestre fica aberto para lançamentos até a data de fim e fecha sozinho depois dela.
 export type PeriodoDTO = {
   bimestre: Bimestre;
   descricao: string;
   inicio: string;
   fim: string;
-  situacao: SituacaoPeriodo;
   lancamentoAberto: boolean;
 };
 
@@ -27,9 +25,3 @@ export const getCalendario = (ano: string) => getJson<CalendarioDTO>(`/calendari
 
 export const salvarCalendario = (ano: string, periodos: PeriodoRequest[]) =>
   sendJson<CalendarioDTO>("PUT", `/calendario/${ano}`, { periodos });
-
-export const reabrirBimestre = (ano: string, bimestre: Bimestre) =>
-  sendJson<CalendarioDTO>("PUT", `/calendario/${ano}/${bimestre}/reabrir`);
-
-export const fecharBimestre = (ano: string, bimestre: Bimestre) =>
-  sendJson<CalendarioDTO>("PUT", `/calendario/${ano}/${bimestre}/fechar`);

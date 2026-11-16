@@ -1,5 +1,6 @@
 package com.pfc.notus.entrega.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
@@ -8,7 +9,6 @@ import com.pfc.notus.entrega.domain.Entrega;
 import com.pfc.notus.entrega.domain.StatusEntrega;
 import com.pfc.notus.entrega.dto.EntregaDTO;
 import com.pfc.notus.entrega.dto.EntregaRequestDTO;
-import com.pfc.notus.entrega.mapper.EntregaMapper;
 import com.pfc.notus.entrega.repository.EntregaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
@@ -17,7 +17,6 @@ import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,30 +24,25 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
+@RequiredArgsConstructor
 public class EntregaService {
 
-    @Autowired
-    private EntregaRepository entregaRepository;
+    private final EntregaRepository entregaRepository;
 
-    @Autowired
-    private AtividadeRepository atividadeRepository;
+    private final AtividadeRepository atividadeRepository;
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final StudentRepository studentRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private StudentAccessGuardService studentAccessGuardService;
+    private final StudentAccessGuardService studentAccessGuardService;
 
-    @Autowired
-    private CalendarioService calendarioService;
+    private final CalendarioService calendarioService;
 
     @Transactional(readOnly = true)
     public List<EntregaDTO> getDoProfessor(String requesterEmail) {
         return entregaRepository.buscarDoProfessor(buscarUsuario(requesterEmail).getId(), null).stream()
-                .map(EntregaMapper::toDto)
+                .map(EntregaDTO::from)
                 .toList();
     }
 
@@ -56,7 +50,7 @@ public class EntregaService {
     public List<EntregaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
         return entregaRepository.buscarDoProfessor(buscarUsuario(requesterEmail).getId(), studentId).stream()
-                .map(EntregaMapper::toDto)
+                .map(EntregaDTO::from)
                 .toList();
     }
 
@@ -65,7 +59,7 @@ public class EntregaService {
         Atividade atividade = buscarAtividade(atividadeId);
         studentAccessGuardService.assertCanTeachTurma(atividade.getTurma().getId(), atividade.getDisciplina().getId(), requesterEmail);
         return entregaRepository.findByAtividadeId(atividadeId).stream()
-                .map(EntregaMapper::toDto)
+                .map(EntregaDTO::from)
                 .toList();
     }
 
@@ -87,9 +81,13 @@ public class EntregaService {
                 .orElseGet(() -> new Entrega(atividade, student));
         entity.setStatus(dto.status());
         entity.setPontosObtidos(pontosObtidos(atividade, dto));
-        return EntregaMapper.toDto(entregaRepository.save(entity));
+        return EntregaDTO.from(entregaRepository.save(entity));
     }
 
+    /**
+     * Não entregou: 0 (ou nada, se a atividade não vale pontos).
+     * Entregou: os pontos informados, entre 0 e o valor da atividade.
+     */
     private Float pontosObtidos(Atividade atividade, EntregaRequestDTO dto) {
         Float valor = atividade.getPontos();
         if (dto.status() == StatusEntrega.NAO_ENTREGUE) {
@@ -113,6 +111,7 @@ public class EntregaService {
         Entrega entrega = entregaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Entrega não encontrada com o id: " + id));
         studentAccessGuardService.assertCanTeach(entrega.getStudent().getId(), entrega.getAtividade().getDisciplina().getId(), requesterEmail);
+        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(entrega.getAtividade().getTurma()), entrega.getAtividade().getBimestre());
         entregaRepository.delete(entrega);
     }
 

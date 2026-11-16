@@ -1,12 +1,13 @@
 package com.pfc.notus.atividade.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.atividade.domain.Atividade;
 import com.pfc.notus.atividade.dto.AtividadeDTO;
 import com.pfc.notus.atividade.repository.AtividadeRepository;
 import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.entrega.domain.StatusEntrega;
 import com.pfc.notus.entrega.repository.EntregaRepository;
 import com.pfc.notus.exception.ConflictException;
@@ -23,7 +24,6 @@ import com.pfc.notus.user.domain.User;
 import com.pfc.notus.user.repository.UserRepository;
 import com.pfc.notus.user.service.StudentAccessGuardService;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -35,37 +35,28 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class AtividadeService {
 
-    @Autowired
-    private AtividadeRepository atividadeRepository;
+    private final AtividadeRepository atividadeRepository;
 
-    @Autowired
-    private TurmaRepository turmaRepository;
+    private final TurmaRepository turmaRepository;
 
-    @Autowired
-    private DisiciplinaRepository disciplinaRepository;
+    private final DisciplinaRepository disciplinaRepository;
 
-    @Autowired
-    private LecionamentoRepository lecionamentoRepository;
+    private final LecionamentoRepository lecionamentoRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private EntregaRepository entregaRepository;
+    private final EntregaRepository entregaRepository;
 
-    @Autowired
-    private StudentAccessGuardService studentAccessGuardService;
+    private final StudentAccessGuardService studentAccessGuardService;
 
-    @Autowired
-    private NotificacaoService notificacaoService;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
 
-    @Autowired
-    private CalendarioService calendarioService;
+    private final CalendarioService calendarioService;
 
     @Transactional
     public List<AtividadeDTO> getAllAtividade() {
@@ -123,29 +114,19 @@ public class AtividadeService {
         if (dto.prazo().isBefore(LocalDate.now())) {
             throw new RegraNegocioException("O prazo da atividade não pode ser uma data passada.");
         }
-        if (dto.bimestre() == null) {
-            throw new RegraNegocioException("Informe o bimestre da atividade.");
-        }
-        if (dto.pontos() != null && (dto.pontos().isNaN() || dto.pontos() <= 0 || dto.pontos() > 10)) {
-            throw new RegraNegocioException("Os pontos da atividade devem ser maiores que 0 e no máximo 10.");
-        }
+        exigirBimestre(dto);
+        validarPontos(dto.pontos());
         User requester = buscarUsuario(requesterEmail);
         Turma turma = turmaRepository.findById(dto.turmaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + dto.turmaId()));
         calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(turma), dto.bimestre());
-        Disciplina disciplina = resolverDisciplina(requester, turma.getId(), dto.disciplinaId());
 
         Atividade entity = new Atividade();
-        entity.setTitle(dto.title().trim());
-        entity.setContent(dto.content().trim());
-        entity.setBimestre(dto.bimestre());
-        entity.setPrazo(dto.prazo());
-        entity.setPontos(dto.pontos());
+        preencher(entity, dto);
         entity.setPublicadaEm(LocalDateTime.now());
         entity.setTurma(turma);
-        entity.setDisciplina(disciplina);
+        entity.setDisciplina(resolverDisciplina(requester, turma.getId(), dto.disciplinaId()));
         entity.setAnoLetivo(AnoLetivo.daTurma(turma));
-
         entity = atividadeRepository.save(entity);
         eventPublisher.publishEvent(new AtividadePublicadaEvent(entity.getId()));
         return toDTO(entity, null);
@@ -155,37 +136,18 @@ public class AtividadeService {
     public AtividadeDTO atualizar(Long id, AtividadeDTO dto, String requesterEmail) {
         Atividade atividade = atividadeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + id));
-        User requester = buscarUsuario(requesterEmail);
-        boolean podeEditar = requester.hasRole("ROLE_ADMIN")
-                || (requester.hasRole("ROLE_PROFESSOR") && lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(
-                        requester.getId(), atividade.getTurma().getId(), atividade.getDisciplina().getId()));
-        if (!podeEditar) {
-            throw new AccessDeniedException("Sem permissão para editar esta atividade.");
-        }
-        if (dto.bimestre() == null) {
-            throw new RegraNegocioException("Informe o bimestre da atividade.");
-        }
-        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), atividade.getBimestre());
-        calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), dto.bimestre());
+        exigirQueLeciona(atividade, requesterEmail, "Sem permissão para editar esta atividade.");
+        exigirBimestre(dto);
+        String anoLetivo = AnoLetivo.daTurma(atividade.getTurma());
+        calendarioService.exigirBimestreAberto(anoLetivo, atividade.getBimestre());
+        calendarioService.exigirBimestreAberto(anoLetivo, dto.bimestre());
         if (!dto.prazo().equals(atividade.getPrazo()) && dto.prazo().isBefore(LocalDate.now())) {
             throw new RegraNegocioException("O prazo da atividade não pode ser uma data passada.");
         }
-        if (dto.pontos() != null && (dto.pontos().isNaN() || dto.pontos() <= 0 || dto.pontos() > 10)) {
-            throw new RegraNegocioException("Os pontos da atividade devem ser maiores que 0 e no máximo 10.");
-        }
-        float novoMaximo = dto.pontos() == null ? 0f : dto.pontos();
-        boolean entregaAcimaDoNovoValor = entregaRepository.findByAtividadeId(id).stream()
-                .anyMatch(e -> e.getPontosObtidos() != null && e.getPontosObtidos() > novoMaximo);
-        if (entregaAcimaDoNovoValor) {
-            throw new ConflictException("Há entregas com mais pontos do que o novo valor da atividade. "
-                    + "Ajuste os pontos dessas entregas antes.");
-        }
+        validarPontos(dto.pontos());
+        exigirEntregasDentroDoNovoValor(id, dto.pontos());
 
-        atividade.setTitle(dto.title().trim());
-        atividade.setContent(dto.content().trim());
-        atividade.setBimestre(dto.bimestre());
-        atividade.setPrazo(dto.prazo());
-        atividade.setPontos(dto.pontos());
+        preencher(atividade, dto);
         return toDTO(atividadeRepository.save(atividade), null);
     }
 
@@ -193,13 +155,7 @@ public class AtividadeService {
     public void delete(Long id, String requesterEmail) {
         Atividade atividade = atividadeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + id));
-        User requester = buscarUsuario(requesterEmail);
-        boolean podeExcluir = requester.hasRole("ROLE_ADMIN")
-                || (requester.hasRole("ROLE_PROFESSOR") && lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(
-                        requester.getId(), atividade.getTurma().getId(), atividade.getDisciplina().getId()));
-        if (!podeExcluir) {
-            throw new AccessDeniedException("Sem permissão para excluir esta atividade.");
-        }
+        exigirQueLeciona(atividade, requesterEmail, "Sem permissão para excluir esta atividade.");
         calendarioService.exigirBimestreAberto(AnoLetivo.daTurma(atividade.getTurma()), atividade.getBimestre());
         if (entregaRepository.existsByAtividadeId(id)) {
             throw new ConflictException("A atividade já tem entregas e não pode ser excluída.");
@@ -208,35 +164,87 @@ public class AtividadeService {
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_ATIVIDADE, id, "Atividade excluída antes do envio");
     }
 
+    private void preencher(Atividade atividade, AtividadeDTO dto) {
+        atividade.setTitle(dto.title().trim());
+        atividade.setContent(dto.content().trim());
+        atividade.setBimestre(dto.bimestre());
+        atividade.setPrazo(dto.prazo());
+        atividade.setPontos(dto.pontos());
+    }
+
+    private static void exigirBimestre(AtividadeDTO dto) {
+        if (dto.bimestre() == null) {
+            throw new RegraNegocioException("Informe o bimestre da atividade.");
+        }
+    }
+
+    /** Pontos são opcionais; se vierem, ficam entre 0 (exclusive) e 10. */
+    private static void validarPontos(Float pontos) {
+        if (pontos != null && (pontos.isNaN() || pontos <= 0 || pontos > 10)) {
+            throw new RegraNegocioException("Os pontos da atividade devem ser maiores que 0 e no máximo 10.");
+        }
+    }
+
+    /** Admin sempre pode; professor só se leciona a disciplina da atividade naquela turma. */
+    private void exigirQueLeciona(Atividade atividade, String requesterEmail, String mensagem) {
+        User requester = buscarUsuario(requesterEmail);
+        boolean pode = requester.hasRole("ROLE_ADMIN")
+                || (requester.hasRole("ROLE_PROFESSOR") && lecionamentoRepository.existsByProfessorIdAndTurmaIdAndDisciplinaId(
+                        requester.getId(), atividade.getTurma().getId(), atividade.getDisciplina().getId()));
+        if (!pode) {
+            throw new AccessDeniedException(mensagem);
+        }
+    }
+
+    /** Baixar o valor da atividade não pode deixar entrega com mais pontos do que ela vale. */
+    private void exigirEntregasDentroDoNovoValor(Long atividadeId, Float pontos) {
+        float novoMaximo = pontos == null ? 0f : pontos;
+        boolean entregaAcima = entregaRepository.findByAtividadeId(atividadeId).stream()
+                .anyMatch(e -> e.getPontosObtidos() != null && e.getPontosObtidos() > novoMaximo);
+        if (entregaAcima) {
+            throw new ConflictException("Há entregas com mais pontos do que o novo valor da atividade. "
+                    + "Ajuste os pontos dessas entregas antes.");
+        }
+    }
+
+    /** Admin escolhe qualquer disciplina; professor só as que leciona na turma. */
     private Disciplina resolverDisciplina(User requester, Long turmaId, Long disciplinaId) {
         if (requester.hasRole("ROLE_ADMIN")) {
-            if (disciplinaId == null) {
-                throw new RegraNegocioException("Informe a disciplina da atividade.");
-            }
-            return disciplinaRepository.findById(disciplinaId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + disciplinaId));
+            return disciplinaDoAdmin(disciplinaId);
         }
         if (requester.hasRole("ROLE_PROFESSOR")) {
-            List<Disciplina> disciplinasNaTurma = lecionamentoRepository.findByProfessorId(requester.getId()).stream()
-                    .filter(l -> l.getTurma().getId().equals(turmaId))
-                    .map(Lecionamento::getDisciplina)
-                    .toList();
-
-            if (disciplinasNaTurma.isEmpty()) {
-                throw new AccessDeniedException("Você não leciona nesta turma.");
-            }
-            if (disciplinaId == null && disciplinasNaTurma.size() > 1) {
-                throw new RegraNegocioException("Informe a disciplina da atividade.");
-            }
-            if (disciplinaId == null) {
-                return disciplinasNaTurma.getFirst();
-            }
-            return disciplinasNaTurma.stream()
-                    .filter(d -> d.getId().equals(disciplinaId))
-                    .findFirst()
-                    .orElseThrow(() -> new AccessDeniedException("Você só pode publicar atividades das disciplinas que leciona nesta turma."));
+            return disciplinaDoProfessor(requester.getId(), turmaId, disciplinaId);
         }
         throw new AccessDeniedException("Sem permissão para publicar atividades.");
+    }
+
+    private Disciplina disciplinaDoAdmin(Long disciplinaId) {
+        if (disciplinaId == null) {
+            throw new RegraNegocioException("Informe a disciplina da atividade.");
+        }
+        return disciplinaRepository.findById(disciplinaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + disciplinaId));
+    }
+
+    /** Se o professor tem uma disciplina só na turma, ela é usada quando o formulário não informa. */
+    private Disciplina disciplinaDoProfessor(Long professorId, Long turmaId, Long disciplinaId) {
+        List<Disciplina> disciplinasNaTurma = lecionamentoRepository.findByProfessorId(professorId).stream()
+                .filter(l -> l.getTurma().getId().equals(turmaId))
+                .map(Lecionamento::getDisciplina)
+                .toList();
+        if (disciplinasNaTurma.isEmpty()) {
+            throw new AccessDeniedException("Você não leciona nesta turma.");
+        }
+        if (disciplinaId == null && disciplinasNaTurma.size() > 1) {
+            throw new RegraNegocioException("Informe a disciplina da atividade.");
+        }
+        if (disciplinaId == null) {
+            return disciplinasNaTurma.getFirst();
+        }
+        return disciplinasNaTurma.stream()
+                .filter(d -> d.getId().equals(disciplinaId))
+                .findFirst()
+                .orElseThrow(() -> new AccessDeniedException("Você só pode publicar atividades das disciplinas que leciona nesta turma."));
     }
 
     private User buscarUsuario(String email) {

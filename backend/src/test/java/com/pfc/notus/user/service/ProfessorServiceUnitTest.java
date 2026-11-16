@@ -1,10 +1,13 @@
 package com.pfc.notus.user.service;
 
 import com.pfc.notus.exception.ConflictException;
+import com.pfc.notus.exception.ResourceNotFoundException;
+import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
 import com.pfc.notus.user.domain.Professor;
 import com.pfc.notus.user.dto.ProfessorDTO;
 import com.pfc.notus.user.dto.ProfessorRequest;
 import com.pfc.notus.user.repository.ProfessorRepository;
+import com.pfc.notus.user.repository.TokenSenhaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -15,11 +18,16 @@ import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +39,12 @@ class ProfessorServiceUnitTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private LecionamentoRepository lecionamentoRepository;
+
+    @Mock
+    private TokenSenhaRepository tokenSenhaRepository;
 
     @InjectMocks
     private ProfessorService professorService;
@@ -46,7 +60,7 @@ class ProfessorServiceUnitTest {
         ProfessorDTO dto = professorService.createProfessor(
                 new ProfessorRequest("  Luciana Almeida ", " luciana@escola.com "));
 
-        assertEquals(new ProfessorDTO(2026000200L, "Luciana Almeida", "luciana@escola.com", true), dto);
+        assertEquals(new ProfessorDTO(2026000200L, "Luciana Almeida", "luciana@escola.com", true, false), dto);
         ArgumentCaptor<Professor> captor = ArgumentCaptor.forClass(Professor.class);
         verify(userService).register(captor.capture(), eq("ROLE_PROFESSOR"));
         assertEquals("luciana@escola.com", captor.getValue().getEmail());
@@ -70,7 +84,45 @@ class ProfessorServiceUnitTest {
         anonimizado.setAnonimizadoEm(LocalDateTime.of(2026, 5, 1, 10, 0));
         when(professorRepository.findAll(Sort.by("fullName"))).thenReturn(List.of(ativo, anonimizado));
 
-        assertEquals(List.of(new ProfessorDTO(1L, "Luciana Almeida", "luciana@escola.com", true)),
+        assertEquals(List.of(new ProfessorDTO(1L, "Luciana Almeida", "luciana@escola.com", true, false)),
                 professorService.listProfessors());
+    }
+
+    @Test
+    void desligar_bloqueiaAcessoRemoveVinculosEZeraMfa() {
+        Professor luciana = new Professor("Luciana Almeida", "luciana@escola.com");
+        luciana.setId(7L);
+        luciana.setMfaAtivo(true);
+        luciana.setMfaSegredo("segredo-cifrado");
+        when(professorRepository.findById(7L)).thenReturn(Optional.of(luciana));
+        when(lecionamentoRepository.deleteByProfessorId(7L)).thenReturn(2L);
+
+        ProfessorDTO dto = professorService.desligar(7L, "admin@notus.com");
+
+        assertTrue(dto.desligado());
+        assertFalse(luciana.isAtivo());
+        assertFalse(luciana.isMfaAtivo());
+        assertNull(luciana.getMfaSegredo());
+        assertEquals("Luciana Almeida", luciana.getFullName());
+        verify(lecionamentoRepository).deleteByProfessorId(7L);
+        verify(tokenSenhaRepository).encerrarAbertos(eq(7L), any());
+    }
+
+    @Test
+    void desligar_professorJaDesligado_recusa() {
+        Professor luciana = new Professor("Luciana Almeida", "luciana@escola.com");
+        luciana.setId(7L);
+        luciana.setAtivo(false);
+        when(professorRepository.findById(7L)).thenReturn(Optional.of(luciana));
+
+        assertThrows(ConflictException.class, () -> professorService.desligar(7L, "admin@notus.com"));
+        verify(lecionamentoRepository, never()).deleteByProfessorId(any());
+    }
+
+    @Test
+    void desligar_professorInexistente_recusa() {
+        when(professorRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> professorService.desligar(99L, "admin@notus.com"));
     }
 }

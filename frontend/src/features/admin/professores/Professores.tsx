@@ -1,6 +1,6 @@
 import { ApiError } from "@/api/cliente";
 import { getDisciplinas, type DisciplinaDTO } from "@/api/disciplinas";
-import { getProfessores, type ProfessorDTO } from "@/api/professores";
+import { desligarProfessor, getProfessores, type ProfessorDTO } from "@/api/professores";
 import {
   deleteLecionamento,
   getLecionamentos,
@@ -30,7 +30,7 @@ import { nomeProfessor } from "@/features/admin/professores/vinculos";
 import { useCarga } from "@/hooks/use-carga";
 import { MensagemErro } from "@/components/layout/MensagemErro";
 import { normalizar } from "@/lib/busca";
-import { RefreshCw, Search, UserPlus, X } from "lucide-react";
+import { RefreshCw, Search, UserMinus, UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -54,6 +54,16 @@ export function Professores() {
       atualizar();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Erro ao remover o vínculo.");
+    }
+  }
+
+  async function desligar(p: ProfessorDTO) {
+    try {
+      await desligarProfessor(p.id);
+      toast.success(`${p.fullName} foi desligado: o acesso foi bloqueado e os vínculos removidos.`);
+      atualizar();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao desligar o professor.");
     }
   }
 
@@ -111,8 +121,8 @@ export function Professores() {
           <CardHeader>
             <CardTitle>Novo professor</CardTitle>
             <CardDescription>
-              O professor entra no portal com o e-mail e, no primeiro acesso, a senha igual ao
-              e-mail.
+              O professor recebe por e-mail um link de convite para criar a senha. No primeiro
+              acesso, ele também cadastra a verificação em duas etapas (MFA).
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -120,6 +130,14 @@ export function Professores() {
               onSucesso={() => {
                 setCadastrando(false);
                 atualizar();
+                // Próximo passo: vincular o professor a uma turma e disciplina.
+                setTimeout(
+                  () =>
+                    document
+                      .getElementById("vincular-professor")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  300,
+                );
               }}
               onCancelar={() => setCadastrando(false)}
             />
@@ -133,13 +151,15 @@ export function Professores() {
         lecionamentos.estado === "ok" &&
         turmas.estado === "ok" &&
         disciplinas.estado === "ok" && (
-          <VincularProfessor
-            professores={professores.dados}
-            turmas={turmas.dados}
-            disciplinas={disciplinas.dados}
-            lecionamentos={lecionamentos.dados}
-            onVinculado={atualizar}
-          />
+          <div id="vincular-professor" className="scroll-mt-24">
+            <VincularProfessor
+              professores={professores.dados.filter((p) => !p.desligado)}
+              turmas={turmas.dados}
+              disciplinas={disciplinas.dados}
+              lecionamentos={lecionamentos.dados}
+              onVinculado={atualizar}
+            />
+          </div>
         )}
 
       <Card>
@@ -174,18 +194,37 @@ export function Professores() {
                           <div className="min-w-0">
                             <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
                               <span className="truncate">{p.fullName}</span>
-                              {p.acessoPendente && <BadgeAcessoPendente />}
+                              {p.desligado ? (
+                                <span className="text-sm font-medium text-muted-foreground">
+                                  Desligado
+                                </span>
+                              ) : (
+                                p.acessoPendente && <BadgeAcessoPendente />
+                              )}
                             </p>
                             <p className="truncate text-sm text-muted-foreground">{p.email}</p>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {p.acessoPendente && (
-                              <BotaoReenviarConvite userId={p.id} nome={p.fullName} />
-                            )}
-                            {!p.acessoPendente && (
-                              <BotaoRedefinirMfa userId={p.id} nome={p.fullName} />
-                            )}
-                          </div>
+                          {!p.desligado && (
+                            <div className="flex flex-wrap gap-2">
+                              {p.acessoPendente && (
+                                <BotaoReenviarConvite userId={p.id} nome={p.fullName} />
+                              )}
+                              {!p.acessoPendente && (
+                                <BotaoRedefinirMfa userId={p.id} nome={p.fullName} />
+                              )}
+                              <ConfirmarAcao
+                                titulo={`Desligar ${p.fullName}?`}
+                                descricao="O acesso ao sistema é bloqueado na hora, os vínculos com turmas e disciplinas são removidos e a verificação em duas etapas é zerada. As faltas e notas que ele lançou continuam no histórico."
+                                textoConfirmar="Desligar professor"
+                                onConfirmar={() => void desligar(p)}
+                              >
+                                <Button variant="outline" size="sm">
+                                  <UserMinus className="size-4" aria-hidden="true" />
+                                  Desligar
+                                </Button>
+                              </ConfirmarAcao>
+                            </div>
+                          )}
                         </div>
                         {vinculos.length === 0 ? (
                           <p className="text-sm text-muted-foreground">

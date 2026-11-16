@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/api/cliente";
-import { anonimizarUsuario, type MotivoAnonimizacao, type SolicitacaoDTO } from "@/api/privacidade";
+import { anonimizarUsuario, type MotivoAnonimizacao } from "@/api/privacidade";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,42 +25,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { MOTIVOS_ANONIMIZACAO, formatarData } from "@/lib/solicitacoes";
+import { MOTIVOS_ANONIMIZACAO } from "@/lib/anonimizacao";
+
+// "Pedido do titular" e "Outro motivo" exigem detalhe: o pedido chega pela secretaria (fluxo manual),
+// então o admin registra como e quando ele foi feito.
+const exigeDetalhe = (m: MotivoAnonimizacao) => m === "OUTRO" || m === "PEDIDO_DO_TITULAR";
 
 export function FormAnonimizacao({
   userId,
   nome,
   codigo,
   rotuloCodigo,
-  pedidos,
   aoConcluir,
 }: {
   userId: number;
   nome: string;
   codigo: string;
   rotuloCodigo: string;
-  pedidos: SolicitacaoDTO[];
   aoConcluir: () => void;
 }) {
   const id = useId();
-  const pedidosAnonimizacao = pedidos.filter((p) => p.tipo === "ANONIMIZACAO");
-  const [motivo, setMotivo] = useState<MotivoAnonimizacao>(
-    pedidosAnonimizacao.length > 0 ? "PEDIDO_DO_TITULAR" : "FIM_DO_PRAZO_DE_GUARDA",
-  );
-  const [pedidoId, setPedidoId] = useState(
-    pedidosAnonimizacao[0] ? String(pedidosAnonimizacao[0].id) : "",
-  );
+  const [motivo, setMotivo] = useState<MotivoAnonimizacao>("PEDIDO_DO_TITULAR");
   const [detalhe, setDetalhe] = useState("");
   const [digitado, setDigitado] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  const motivos = MOTIVOS_ANONIMIZACAO.filter(
-    (m) => m.id !== "PEDIDO_DO_TITULAR" || pedidosAnonimizacao.length > 0,
-  );
-  const faltaDetalhe = motivo === "OUTRO" && !detalhe.trim();
-  const faltaPedido = motivo === "PEDIDO_DO_TITULAR" && !pedidoId;
+  const faltaDetalhe = exigeDetalhe(motivo) && !detalhe.trim();
   const confere = digitado.trim() === codigo;
-  const podeConfirmar = confere && !faltaDetalhe && !faltaPedido && !salvando;
+  const podeConfirmar = confere && !faltaDetalhe && !salvando;
 
   async function anonimizar() {
     if (!podeConfirmar) return;
@@ -70,7 +62,6 @@ export function FormAnonimizacao({
         confirmacao: digitado.trim(),
         motivo,
         detalhe: detalhe.trim() || null,
-        solicitacaoId: motivo === "PEDIDO_DO_TITULAR" ? Number(pedidoId) : null,
       });
       toast.success(`Dados de ${nome} anonimizados. O motivo ficou registrado.`);
       aoConcluir();
@@ -90,7 +81,7 @@ export function FormAnonimizacao({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {motivos.map((m) => (
+            {MOTIVOS_ANONIMIZACAO.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.rotulo}
               </SelectItem>
@@ -98,26 +89,9 @@ export function FormAnonimizacao({
           </SelectContent>
         </Select>
       </div>
-      {motivo === "PEDIDO_DO_TITULAR" && (
-        <div className="space-y-1.5">
-          <Label htmlFor={`${id}-pedido`}>Pedido atendido</Label>
-          <Select value={pedidoId} onValueChange={setPedidoId}>
-            <SelectTrigger id={`${id}-pedido`}>
-              <SelectValue placeholder="Escolha o pedido" />
-            </SelectTrigger>
-            <SelectContent>
-              {pedidosAnonimizacao.map((p) => (
-                <SelectItem key={p.id} value={String(p.id)}>
-                  Pedido nº {p.id} de {p.solicitanteNome}, em {formatarData(p.solicitadaEm)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
       <div className="space-y-1.5 md:col-span-2">
         <Label htmlFor={`${id}-detalhe`}>
-          Detalhes {motivo === "OUTRO" ? "(obrigatório)" : "(opcional)"}
+          Detalhes {exigeDetalhe(motivo) ? "(obrigatório)" : "(opcional)"}
         </Label>
         <Textarea
           id={`${id}-detalhe`}
@@ -125,7 +99,7 @@ export function FormAnonimizacao({
           onChange={(e) => setDetalhe(e.target.value)}
           maxLength={500}
           rows={2}
-          placeholder="Ex.: aluno transferido em 2026, pedido feito pela mãe na secretaria."
+          placeholder="Ex.: pedido feito pela mãe na secretaria em 10/11/2026, por escrito."
         />
       </div>
       <div className="space-y-1.5">

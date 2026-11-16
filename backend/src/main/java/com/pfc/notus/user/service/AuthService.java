@@ -71,13 +71,13 @@ public class AuthService {
         User user = (User) auth.getPrincipal();
         boolean exigeMfa = auth.getAuthorities().stream().anyMatch(a -> PERFIS_COM_MFA.contains(a.getAuthority()));
         if (!exigeMfa) {
-            return concluir(user.getId(), dto.email(), auth.getAuthorities(), user.isFirstLogin());
+            return concluir(user.getId(), user.getEmail(), auth.getAuthorities(), user.isFirstLogin());
         }
 
         User completo = userRepository.findById(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + user.getId()));
         String etapa = completo.isMfaAtivo() ? LoginRespostaDTO.MFA : LoginRespostaDTO.MFA_CADASTRO;
-        return LoginRespostaDTO.desafio(etapa, dto.email(), jwtProvider.createDesafio(user.getId(), dto.email(), etapa));
+        return LoginRespostaDTO.desafio(etapa, user.getEmail(), jwtProvider.createDesafio(user.getId(), user.getEmail(), etapa));
     }
 
     @Transactional

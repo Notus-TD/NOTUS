@@ -1,10 +1,10 @@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, Archive, EyeOff, FileText, UserRound, Users } from "lucide-react";
+import { ArrowLeft, Archive, Download, EyeOff, FileJson, UserRound, Users } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/api/cliente";
-import { getResumoAnonimizacao } from "@/api/privacidade";
+import { getDadosDoUsuario, getResumoAnonimizacao } from "@/api/privacidade";
 import { cancelarMatricula } from "@/api/usuarios";
 import { Etiqueta, Painel, classeCabecalhoTabela } from "@/components/layout/LayoutAdmin";
 import { MensagemErro } from "@/components/layout/MensagemErro";
@@ -30,9 +30,63 @@ import {
 } from "@/components/ui/table";
 import { rotuloSituacao, tomSituacao } from "@/features/admin/alunos/situacao";
 import { FormAnonimizacao } from "@/features/admin/anonimizacao/FormAnonimizacao";
-import { EtiquetaSolicitacao } from "@/features/familia/responsavel/PrivacidadeResponsavel";
 import { useCarga } from "@/hooks/use-carga";
-import { formatarData, formatarDataHora, rotuloTipoSolicitacao } from "@/lib/solicitacoes";
+import { formatarData, formatarDataHora } from "@/lib/anonimizacao";
+
+// Cópia dos dados do titular (LGPD, art. 18): o admin gera a pedido do titular, confere na tela e baixa o JSON.
+function CopiaDosDados({ userId, nome }: { userId: number; nome: string }) {
+  const [json, setJson] = useState<string | null>(null);
+  const [gerando, setGerando] = useState(false);
+
+  async function gerar() {
+    setGerando(true);
+    try {
+      setJson(JSON.stringify(await getDadosDoUsuario(userId), null, 2));
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Erro ao gerar a cópia dos dados.");
+    } finally {
+      setGerando(false);
+    }
+  }
+
+  function baixar() {
+    if (!json) return;
+    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `dados-${userId}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <Painel titulo="Cópia dos dados (LGPD, art. 18)" icone={FileJson}>
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Quando {nome} pedir uma cópia dos próprios dados na secretaria, gere o arquivo aqui e
+          entregue o JSON. A geração fica registrada na auditoria.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={gerar} disabled={gerando}>
+            <FileJson aria-hidden="true" />
+            {gerando ? "Gerando..." : json ? "Gerar de novo" : "Gerar cópia"}
+          </Button>
+          {json && (
+            <Button onClick={baixar}>
+              <Download aria-hidden="true" />
+              Baixar JSON
+            </Button>
+          )}
+        </div>
+        {json && (
+          <pre className="max-h-96 overflow-auto rounded-md border border-border bg-muted/40 p-3 text-xs">
+            {json}
+          </pre>
+        )}
+      </div>
+    </Painel>
+  );
+}
 
 function Dado({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
   return (
@@ -205,36 +259,7 @@ export function DetalheAnonimizacao({
         </p>
       </Painel>
 
-      {r.pedidosAbertos.length > 0 && (
-        <Painel titulo="Pedidos do titular em aberto" icone={FileText} semEspaco>
-          <Table>
-            <TableHeader className={classeCabecalhoTabela}>
-              <TableRow>
-                <TableHead>Pedido</TableHead>
-                <TableHead>Feito por</TableHead>
-                <TableHead>Recebido em</TableHead>
-                <TableHead>Prazo</TableHead>
-                <TableHead>Situação</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {r.pedidosAbertos.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">
-                    nº {p.id} · {rotuloTipoSolicitacao[p.tipo]}
-                  </TableCell>
-                  <TableCell>{p.solicitanteNome}</TableCell>
-                  <TableCell>{formatarData(p.solicitadaEm)}</TableCell>
-                  <TableCell>{formatarData(p.prazoEm)}</TableCell>
-                  <TableCell>
-                    <EtiquetaSolicitacao s={p} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Painel>
-      )}
+      {!anonimizado && <CopiaDosDados userId={r.id} nome={nome} />}
 
       <Painel titulo="Anonimização" icone={EyeOff}>
         {anonimizado && (
@@ -242,10 +267,6 @@ export function DetalheAnonimizacao({
             <Dado rotulo="Feita em" valor={formatarDataHora(r.anonimizadoEm ?? "")} />
             <Dado rotulo="Motivo" valor={r.registro?.motivoDescricao ?? "Não registrado"} />
             <Dado rotulo="Executada por" valor={r.registro?.executadoPor ?? "—"} />
-            <Dado
-              rotulo="Pedido atendido"
-              valor={r.registro?.solicitacaoId ? `nº ${r.registro.solicitacaoId}` : "—"}
-            />
             {r.registro?.detalhe && (
               <div className="sm:col-span-2 lg:col-span-4">
                 <Dado rotulo="Detalhes" valor={r.registro.detalhe} />
@@ -301,7 +322,6 @@ export function DetalheAnonimizacao({
             nome={nome}
             codigo={String(aluno ? r.matricula : r.id)}
             rotuloCodigo={aluno ? "a matrícula" : "o registro"}
-            pedidos={r.pedidosAbertos}
             aoConcluir={recarregar}
           />
         )}

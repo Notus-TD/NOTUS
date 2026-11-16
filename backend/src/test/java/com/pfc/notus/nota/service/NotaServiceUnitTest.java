@@ -4,7 +4,7 @@ import com.pfc.notus.calendario.service.CalendarioService;
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.boletim.repository.BoletimRepository;
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.exception.RegraNegocioException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.nota.domain.Nota;
@@ -55,7 +55,7 @@ class NotaServiceUnitTest {
     private StudentRepository studentRepository;
 
     @Mock
-    private DisiciplinaRepository disciplinaRepository;
+    private DisciplinaRepository disciplinaRepository;
 
     @Mock
     private StudentAccessGuardService studentAccessGuardService;

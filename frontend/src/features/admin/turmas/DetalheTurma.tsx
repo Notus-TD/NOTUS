@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { rotuloSituacao, tomSituacao } from "@/features/admin/alunos/situacao";
 import { ConfirmarAcao } from "@/features/admin/comum/ConfirmarAcao";
+import { useNavegacaoAdmin } from "@/features/admin/navegacao";
 import { agruparPorProfessor } from "@/features/admin/professores/vinculos";
 import { FormularioTurma } from "@/features/admin/turmas/FormularioTurma";
 import { useCarga } from "@/hooks/use-carga";
@@ -51,6 +52,7 @@ export function DetalheTurma({
   const [filtroAlunos, setFiltroAlunos] = useState("");
   const [origem, setOrigem] = useState(ORIGEM_TODAS);
   const [ocupado, setOcupado] = useState(false);
+  const navegacao = useNavegacaoAdmin();
   const detalhe = useCarga<TurmaDetalheDTO>(() => getTurma(turma.id), 0);
   const todos = useCarga<StudentMinDTO[]>(getStudents, 0);
 
@@ -351,9 +353,20 @@ export function DetalheTurma({
                       className="flex flex-wrap items-center justify-between gap-3 py-3"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {s.studentName}
-                        </p>
+                        {navegacao ? (
+                          <button
+                            type="button"
+                            onClick={() => navegacao.abrirAluno(s)}
+                            className="truncate text-left text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                            title="Abrir a ficha do aluno"
+                          >
+                            {s.studentName}
+                          </button>
+                        ) : (
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {s.studentName}
+                          </p>
+                        )}
                         <p className="text-sm text-muted-foreground">Matrícula {s.matricula}</p>
                       </div>
                       <span className="flex shrink-0 items-center gap-2">

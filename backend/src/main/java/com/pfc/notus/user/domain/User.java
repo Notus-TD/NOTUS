@@ -11,8 +11,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 
@@ -30,7 +32,7 @@ public class User implements UserDetails {
     @Getter @Setter
     private String password;
 
-    @Getter @Setter
+    @Getter
     private String email;
 
     @Getter @Setter
@@ -66,9 +68,40 @@ public class User implements UserDetails {
     private Set<Role> roles = new HashSet<>();
 
     public User(String email) {
-        this.email = email;
+        this.email = normalizarEmail(email);
         this.firstLogin = true;
         this.createdAt = LocalDate.now();
+    }
+
+    public void setEmail(String email) {
+        this.email = normalizarEmail(email);
+    }
+
+    /**
+     * E-mail sempre sem espaços e em minúsculas: "Ana@Escola.com " e "ana@escola.com" são o mesmo usuário.
+     * Vazio vira null (aluno pode não ter e-mail).
+     */
+    /** LGPD: apaga os dados de acesso. Student e Responsible completam com os próprios dados pessoais. */
+    public void anonimizar() {
+        this.email = null;
+        this.password = null;
+        this.termsAcceptedAt = null;
+        this.ativo = false;
+        this.anonimizadoEm = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    /** Apaga o MFA: no próximo login o usuário cadastra o autenticador de novo. */
+    public void limparMfa() {
+        this.mfaSegredo = null;
+        this.mfaAtivo = false;
+        this.mfaUltimoPasso = null;
+    }
+
+    public static String normalizarEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 
     public User(String username, String password) {

@@ -1,7 +1,7 @@
 package com.pfc.notus.disciplina.service;
 
 import com.pfc.notus.disciplina.domain.Disciplina;
-import com.pfc.notus.disciplina.repository.DisiciplinaRepository;
+import com.pfc.notus.disciplina.repository.DisciplinaRepository;
 import com.pfc.notus.exception.ConflictException;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.lecionamento.repository.LecionamentoRepository;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 class DisciplinaServiceUnitTest {
 
     @Mock
-    private DisiciplinaRepository disciplinaRepository;
+    private DisciplinaRepository disciplinaRepository;
 
     @Mock
     private LecionamentoRepository lecionamentoRepository;
@@ -69,5 +69,36 @@ class DisciplinaServiceUnitTest {
 
         assertThatThrownBy(() -> disciplinaService.delete(9L))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void salvar_nomeJaUsadoEmOutraCaixa_recusa() {
+        when(disciplinaRepository.existsByTitleIgnoreCase("matemática")).thenReturn(true);
+
+        assertThatThrownBy(() -> disciplinaService.save(
+                new com.pfc.notus.disciplina.dto.DisciplinaDTO(null, "  matemática ", "Números", null)))
+                .isInstanceOf(ConflictException.class);
+        verify(disciplinaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_nomeNovo_gravaSemEspacosNasPontas() {
+        when(disciplinaRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        var salva = disciplinaService.save(
+                new com.pfc.notus.disciplina.dto.DisciplinaDTO(null, "  Física ", " Mecânica  ", null));
+
+        assertThat(salva.title()).isEqualTo("Física");
+        assertThat(salva.description()).isEqualTo("Mecânica");
+    }
+
+    @Test
+    void alterar_paraNomeDeOutraDisciplina_recusa() {
+        when(disciplinaRepository.findById(1L)).thenReturn(Optional.of(disciplina(1L)));
+        when(disciplinaRepository.existsByTitleIgnoreCaseAndIdNot("História", 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> disciplinaService.update(1L,
+                new com.pfc.notus.disciplina.dto.DisciplinaDTO(null, "História", "Brasil", null)))
+                .isInstanceOf(ConflictException.class);
     }
 }

@@ -16,7 +16,6 @@ import com.pfc.notus.user.repository.ResponsibleRepository;
 import com.pfc.notus.user.repository.RoleRepository;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
-import com.pfc.notus.user.service.util.AuthUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -65,9 +64,6 @@ class UserServiceUnitTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private AuthUtil authUtil;
-
-    @Mock
     private NotificacaoService notificacaoService;
 
     @Mock
@@ -104,7 +100,7 @@ class UserServiceUnitTest {
         aluno.setStatusMatricula(StatusMatricula.CANCELADA);
         when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
 
-        userService.anonimyzeUser(10L, " 20260001 ", ADMIN);
+        userService.anonymizeUser(10L, " 20260001 ", ADMIN);
 
         assertEquals(10L, aluno.getId());
         assertEquals(20260001L, aluno.getMatricula());
@@ -129,7 +125,7 @@ class UserServiceUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
 
         ConflictException excecao = assertThrows(ConflictException.class,
-                () -> userService.anonimyzeUser(10L, "20260001", ADMIN));
+                () -> userService.anonymizeUser(10L, "20260001", ADMIN));
 
         assertEquals("Cancele a matrícula do aluno antes de anonimizar.", excecao.getMessage());
         assertEquals("Ana Aluna", aluno.getFullName());
@@ -142,7 +138,7 @@ class UserServiceUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
 
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
-                () -> userService.anonimyzeUser(10L, "10", ADMIN));
+                () -> userService.anonymizeUser(10L, "10", ADMIN));
 
         assertEquals("A matrícula digitada não confere com a do aluno.", excecao.getMessage());
         assertEquals("Ana Aluna", aluno.getFullName());
@@ -153,7 +149,7 @@ class UserServiceUnitTest {
     @Test
     void deveRecusarAnonimizarSemConfirmacao() {
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
-                () -> userService.anonimyzeUser(10L, "  ", ADMIN));
+                () -> userService.anonymizeUser(10L, "  ", ADMIN));
 
         assertEquals("Digite a matrícula do aluno ou o registro do responsável para confirmar.", excecao.getMessage());
         verify(userRepository, never()).findById(anyLong());
@@ -164,7 +160,7 @@ class UserServiceUnitTest {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         ResourceNotFoundException excecao = assertThrows(ResourceNotFoundException.class,
-                () -> userService.anonimyzeUser(99L, "99", ADMIN));
+                () -> userService.anonymizeUser(99L, "99", ADMIN));
 
         assertEquals("Usuário não encontrado: 99", excecao.getMessage());
     }
@@ -176,7 +172,7 @@ class UserServiceUnitTest {
         when(userRepository.findById(10L)).thenReturn(Optional.of(aluno));
 
         ConflictException excecao = assertThrows(ConflictException.class,
-                () -> userService.anonimyzeUser(10L, "20260001", ADMIN));
+                () -> userService.anonymizeUser(10L, "20260001", ADMIN));
 
         assertEquals("Usuário já foi anonimizado.", excecao.getMessage());
         verify(userRepository, never()).save(any());
@@ -187,7 +183,7 @@ class UserServiceUnitTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(criarProfessor()));
 
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
-                () -> userService.anonimyzeUser(2L, "2", ADMIN));
+                () -> userService.anonymizeUser(2L, "2", ADMIN));
 
         assertEquals("Só alunos e responsáveis podem ser anonimizados.", excecao.getMessage());
         verify(userRepository, never()).save(any());
@@ -198,7 +194,7 @@ class UserServiceUnitTest {
         when(userRepository.findById(3L)).thenReturn(Optional.of(criarResponsavel(3L, "Marta Responsável")));
 
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
-                () -> userService.anonimyzeUser(3L, "4", ADMIN));
+                () -> userService.anonymizeUser(3L, "4", ADMIN));
 
         assertEquals("O registro digitado não confere com o do responsável.", excecao.getMessage());
         verify(studentRepository, never()).existsByResponsibleIdAndStatusMatricula(anyLong(), any());
@@ -211,7 +207,7 @@ class UserServiceUnitTest {
         when(userRepository.findById(3L)).thenReturn(Optional.of(responsavel));
         when(studentRepository.existsByResponsibleIdAndStatusMatricula(3L, StatusMatricula.ATIVA)).thenReturn(false);
 
-        userService.anonimyzeUser(3L, "3", ADMIN);
+        userService.anonymizeUser(3L, "3", ADMIN);
 
         assertEquals(3L, responsavel.getId());
         assertNull(responsavel.getName());
@@ -232,7 +228,7 @@ class UserServiceUnitTest {
         when(studentRepository.existsByResponsibleIdAndStatusMatricula(3L, StatusMatricula.ATIVA)).thenReturn(true);
 
         ConflictException excecao = assertThrows(ConflictException.class,
-                () -> userService.anonimyzeUser(3L, "3", ADMIN));
+                () -> userService.anonymizeUser(3L, "3", ADMIN));
 
         assertEquals("Não é possível anonimizar: o responsável tem aluno com matrícula ativa.", excecao.getMessage());
         assertEquals("Marta Responsável", responsavel.getName());

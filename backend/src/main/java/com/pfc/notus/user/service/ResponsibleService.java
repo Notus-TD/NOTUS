@@ -1,24 +1,23 @@
 package com.pfc.notus.user.service;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.exception.ResourceNotFoundException;
 import com.pfc.notus.user.domain.Responsible;
 import com.pfc.notus.user.dto.ResponsibleDTO;
 import com.pfc.notus.user.dto.ResponsibleRequest;
 import com.pfc.notus.user.repository.ResponsibleRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ResponsibleService {
 
-    @Autowired
-    private ResponsibleRepository responsibleRepository;
+    private final ResponsibleRepository responsibleRepository;
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
     @Transactional
     public Responsible findOrCreateResponsible(ResponsibleRequest dto) {

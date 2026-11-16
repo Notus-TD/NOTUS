@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "tb_student")
@@ -63,5 +64,34 @@ public class Student extends User {
     @Override
     public boolean isEnabled() {
         return super.isEnabled() && acessoLiberadoEm != null;
+    }
+
+    /** Cancela a matrícula: o aluno sai da turma e perde o login. Notas e faltas continuam no histórico. */
+    public void cancelarMatricula(String motivo) {
+        this.statusMatricula = StatusMatricula.CANCELADA;
+        this.turma = null;
+        this.turmaDesde = null;
+        setAtivo(false);
+        this.motivoCancelamento = motivo;
+        this.matriculaCanceladaEm = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    /** Desfaz o cancelamento. O aluno volta sem turma; a secretaria associa de novo. */
+    public void reativarMatricula() {
+        this.statusMatricula = StatusMatricula.ATIVA;
+        setAtivo(true);
+        this.motivoCancelamento = null;
+        this.matriculaCanceladaEm = null;
+    }
+
+    /** LGPD: apaga os dados pessoais e os vínculos. Matrícula e histórico escolar ficam (art. 16). */
+    @Override
+    public void anonimizar() {
+        super.anonimizar();
+        this.fullName = null;
+        this.birthDate = null;
+        this.responsible = null;
+        this.turma = null;
+        this.acessoLiberadoEm = null;
     }
 }

@@ -1,10 +1,10 @@
 package com.pfc.notus.entrega.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.entrega.dto.EntregaDTO;
 import com.pfc.notus.entrega.dto.EntregaRequestDTO;
 import com.pfc.notus.entrega.service.EntregaService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -15,10 +15,10 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/entrega")
 @PreAuthorize("hasRole('PROFESSOR')")
+@RequiredArgsConstructor
 public class EntregaController {
 
-    @Autowired
-    private EntregaService entregaService;
+    private final EntregaService entregaService;
 
     @GetMapping
     public ResponseEntity<List<EntregaDTO>> getDoProfessor(Authentication authentication) {

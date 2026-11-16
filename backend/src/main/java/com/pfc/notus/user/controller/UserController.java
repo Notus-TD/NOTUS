@@ -1,10 +1,10 @@
 package com.pfc.notus.user.controller;
 
+import lombok.RequiredArgsConstructor;
 import com.pfc.notus.user.dto.OnboardingRequest;
 import com.pfc.notus.user.dto.UsuarioDTO;
 import com.pfc.notus.user.service.UserService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -14,10 +14,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
     @PreAuthorize("hasAnyRole('ROLE_ALUNO','ROLE_RESPONSAVEL','ROLE_PROFESSOR')")
     @PostMapping("/me/onboarding")

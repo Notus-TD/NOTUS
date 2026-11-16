@@ -2,7 +2,6 @@ package com.pfc.notus.calendario.service;
 
 import com.pfc.notus.boletim.domain.Bimestre;
 import com.pfc.notus.calendario.domain.PeriodoLetivo;
-import com.pfc.notus.calendario.domain.SituacaoPeriodo;
 import com.pfc.notus.calendario.dto.CalendarioDTO;
 import com.pfc.notus.calendario.dto.CalendarioRequest;
 import com.pfc.notus.calendario.dto.PeriodoRequest;
@@ -141,14 +140,14 @@ class CalendarioServiceUnitTest {
     void motivoBloqueioDaData_bimestreFechado() {
         when(periodoRepository.findByAnoLetivoOrderByInicio(ANO_LETIVO)).thenReturn(cadastrados());
 
-        assertEquals(Optional.of("O 1º bimestre está fechado. Peça à secretaria para reabrir."),
+        assertEquals(Optional.of("O 1º bimestre já terminou e está fechado. Se precisar corrigir algo, peça à secretaria para ajustar a data de fim no calendário."),
                 calendarioService.motivoBloqueioDaData(ANO_LETIVO, dia(3, 10)));
     }
 
     @Test
-    void motivoBloqueioDaData_bimestreReaberto_liberaLancamento() {
+    void motivoBloqueioDaData_fimAdiadoPelaSecretaria_liberaLancamento() {
         List<PeriodoLetivo> periodos = cadastrados();
-        periodos.getFirst().setReaberto(true);
+        periodos.getFirst().setFim(LocalDate.now().plusDays(1));
         when(periodoRepository.findByAnoLetivoOrderByInicio(ANO_LETIVO)).thenReturn(periodos);
 
         assertTrue(calendarioService.motivoBloqueioDaData(ANO_LETIVO, dia(3, 10)).isEmpty());
@@ -171,22 +170,10 @@ class CalendarioServiceUnitTest {
     }
 
     @Test
-    void reabrir_bimestreFechado_ficaReaberto() {
+    void periodo_ficaAbertoAteOUltimoDiaEFechaNoDiaSeguinte() {
         PeriodoLetivo primeiro = cadastrados().getFirst();
-        when(periodoRepository.findByAnoLetivoAndBimestre(ANO_LETIVO, Bimestre.PRIMEIRO)).thenReturn(Optional.of(primeiro));
-        when(periodoRepository.findByAnoLetivoOrderByInicio(ANO_LETIVO)).thenReturn(List.of(primeiro));
 
-        calendarioService.reabrir(ANO_LETIVO, Bimestre.PRIMEIRO, "admin@notus.com");
-
-        assertEquals(SituacaoPeriodo.REABERTO, primeiro.situacao(LocalDate.now()));
-    }
-
-    @Test
-    void fechar_bimestreQueNaoFoiReaberto_recusa() {
-        PeriodoLetivo primeiro = cadastrados().getFirst();
-        when(periodoRepository.findByAnoLetivoAndBimestre(ANO_LETIVO, Bimestre.PRIMEIRO)).thenReturn(Optional.of(primeiro));
-
-        assertThrows(RegraNegocioException.class,
-                () -> calendarioService.fechar(ANO_LETIVO, Bimestre.PRIMEIRO, "admin@notus.com"));
+        assertTrue(primeiro.aberto(primeiro.getFim()));
+        assertFalse(primeiro.aberto(primeiro.getFim().plusDays(1)));
     }
 }
