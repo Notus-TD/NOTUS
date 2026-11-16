@@ -12,6 +12,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// ! REFA: Entidade da tabela tb_atividade: uma tarefa publicada para uma turma em uma disciplina
 @Entity
 @Table(name = "tb_atividade")
 @NoArgsConstructor
@@ -36,10 +37,12 @@ public class Atividade {
     @Getter @Setter
     private Float pontos;
 
+    // ! REFA: ano letivo copiado da turma na publicação, para isolar os dados por ano
     @Column(name = "ano_letivo", length = 4)
     @Getter @Setter
     private String anoLetivo;
 
+    // ! REFA: disciplina e turma da atividade (lazy, não vão pro JSON)
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn( name = "disciplina_id", nullable = false)
@@ -52,6 +55,7 @@ public class Atividade {
     @Getter @Setter
     private Turma turma;
 
+    // ! REFA: construtor usado nos testes e seeds
     public Atividade(String title, String content) {
         this.title = title;
         this.content = content;

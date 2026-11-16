@@ -7,6 +7,7 @@ import com.pfc.notus.notificacao.util.EmailUtil;
 
 import java.time.LocalDateTime;
 
+// ! REFN: Linha da fila para o painel do admin: destinatário (e-mail mascarado), status, tentativas e erro
 public record NotificacaoDTO(
         Long id,
         TipoNotificacao tipo,
@@ -23,6 +24,7 @@ public record NotificacaoDTO(
         LocalDateTime enviadoEm,
         LocalDateTime proximaTentativaEm
 ) {
+    // ! REFN: converte a entidade mascarando o e-mail do responsável
     public static NotificacaoDTO from(Notificacao n) {
         return new NotificacaoDTO(
                 n.getId(),

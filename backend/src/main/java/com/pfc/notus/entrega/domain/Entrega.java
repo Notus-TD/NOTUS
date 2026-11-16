@@ -10,6 +10,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "tb_entrega",
         uniqueConstraints = @UniqueConstraint(columnNames = {"atividade_id", "student_id"}))
+// ! REFE: Entidade da tabela tb_entrega: status e pontos de um aluno em uma atividade (única por atividade+aluno)
 @NoArgsConstructor
 public class Entrega {
 
@@ -23,6 +24,7 @@ public class Entrega {
     @Getter @Setter
     private StatusEntrega status;
 
+    // ! REFE: pontos que o aluno tirou; entra na nota do bimestre no boletim
     @Getter @Setter
     private Float pontosObtidos;
 
@@ -36,6 +38,7 @@ public class Entrega {
     @Getter @Setter
     private Student student;
 
+    // ! REFE: cria a entrega ainda sem status (o service preenche)
     public Entrega(Atividade atividade, Student student) {
         this.atividade = atividade;
         this.student = student;

@@ -7,6 +7,7 @@ import com.pfc.notus.user.dto.StudentDetalheDTO;
 
 import java.util.List;
 
+// ! REFP: Bloco do aluno na exportação: cadastro, boletim, faltas e atividades
 public record DadosAlunoDTO(
         StudentDetalheDTO cadastro,
         List<BoletimDisciplinaDTO> boletim,

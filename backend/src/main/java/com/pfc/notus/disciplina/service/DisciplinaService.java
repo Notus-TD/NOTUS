@@ -14,18 +14,22 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// ! REFD: CRUD de disciplinas com regra de nome único e bloqueio de exclusão quando há dados ligados
 @Service
 @RequiredArgsConstructor
 public class DisciplinaService {
 
+    // ! REFD: repositório da disciplina e do vínculo com professor (para checar antes de excluir)
     private final DisciplinaRepository disciplinaRepository;
 
     private final LecionamentoRepository lecionamentoRepository;
 
+    // ! REFD: lista todas as disciplinas
     public List<DisciplinaDTO> getAllDisciplina() {
         return disciplinaRepository.findAll().stream().map(this::toDTO).toList();
     }
 
+    // ! REFD: cria a disciplina; recusa se já existe outra com o mesmo nome (ignora maiúsculas)
     @Transactional
     public DisciplinaDTO save(DisciplinaDTO dto) {
         if (disciplinaRepository.existsByTitleIgnoreCase(dto.title())) {
@@ -40,6 +44,7 @@ public class DisciplinaService {
         return toDTO(entity);
     }
 
+    // ! REFD: edita título/descrição; recusa se o novo nome já é de outra disciplina
     @Transactional
     public DisciplinaDTO update(Long id, DisciplinaDTO dto) {
         Disciplina entity = disciplinaRepository.findById(id)
@@ -53,6 +58,7 @@ public class DisciplinaService {
         return toDTO(entity);
     }
 
+    // ! REFD: exclui; dá conflito se tem professor vinculado ou se o banco acusa notas/faltas/aulas/atividades ligadas
     @Transactional
     public void delete(Long id) {
         if (!disciplinaRepository.existsById(id)) {
@@ -69,6 +75,7 @@ public class DisciplinaService {
         }
     }
 
+    // ! REFD: converte a entidade para DTO
     private DisciplinaDTO toDTO(Disciplina entity) {
         return new DisciplinaDTO(entity.getId(), entity.getTitle(), entity.getDescription(), entity.getCreated());
     }

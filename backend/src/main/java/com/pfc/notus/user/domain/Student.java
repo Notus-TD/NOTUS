@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
+// ! REFU: Entidade da tabela tb_student: aluno com matrícula, nascimento, responsável, turma e status da matrícula
 @Entity
 @Table(name = "tb_student")
 @NoArgsConstructor
@@ -39,12 +40,15 @@ public class Student extends User {
     @Getter @Setter
     private Turma turma;
 
+    // ! REFU: quando o responsável liberou o login; null = aluno não consegue entrar
     @Getter @Setter
     private LocalDateTime acessoLiberadoEm;
 
+    // ! REFU: data que entrou na turma atual; frequência só conta a partir daqui
     @Getter @Setter
     private LocalDate turmaDesde;
 
+    // ! REFU: motivo e data do cancelamento da matrícula
     @Column(length = 300)
     @Getter @Setter
     private String motivoCancelamento;
@@ -52,6 +56,7 @@ public class Student extends User {
     @Getter @Setter
     private LocalDateTime matriculaCanceladaEm;
 
+    // ! REFU: cria com matrícula ATIVA
     public Student(String fullName, String email, Long matricula, LocalDate birthDate, Responsible responsible) {
         super(email);
         this.fullName = fullName;
@@ -61,12 +66,14 @@ public class Student extends User {
         this.responsible = responsible;
     }
 
+    // ! REFU: aluno só loga se estiver ativo E com acesso liberado pelo responsável
     @Override
     public boolean isEnabled() {
         return super.isEnabled() && acessoLiberadoEm != null;
     }
 
     /** Cancela a matrícula: o aluno sai da turma e perde o login. Notas e faltas continuam no histórico. */
+    // ! REFU: sai da turma, perde o login e guarda o motivo; notas e faltas ficam
     public void cancelarMatricula(String motivo) {
         this.statusMatricula = StatusMatricula.CANCELADA;
         this.turma = null;
@@ -77,6 +84,7 @@ public class Student extends User {
     }
 
     /** Desfaz o cancelamento. O aluno volta sem turma; a secretaria associa de novo. */
+    // ! REFU: desfaz o cancelamento; volta sem turma
     public void reativarMatricula() {
         this.statusMatricula = StatusMatricula.ATIVA;
         setAtivo(true);
@@ -85,6 +93,7 @@ public class Student extends User {
     }
 
     /** LGPD: apaga os dados pessoais e os vínculos. Matrícula e histórico escolar ficam (art. 16). */
+    // ! REFU: LGPD: apaga nome, nascimento, responsável e turma; matrícula e histórico ficam
     @Override
     public void anonimizar() {
         super.anonimizar();

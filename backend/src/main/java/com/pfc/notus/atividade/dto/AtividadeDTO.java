@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// ! REFA: Dados da atividade que vão e voltam da API; title, content, bimestre, prazo e turmaId são obrigatórios
 public record AtividadeDTO(
         Long id,
         @NotBlank String title,

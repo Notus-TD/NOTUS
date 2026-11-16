@@ -46,13 +46,16 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+// ! REFF: Chamada e frequência: registra aulas dadas e faltas por aluno, calcula % de presença e avisa o responsável
 @Service
 @RequiredArgsConstructor
 public class FaltaService {
 
+    // ! REFF: no máximo 2 aulas da mesma disciplina por dia; chamada não pode ser em data futura
     private static final int MAXIMO_AULAS_POR_DIA = 2;
     private static final String DATA_FUTURA = "Não é possível lançar chamada em data futura.";
 
+    // ! REFF: repositórios de falta, turma, aluno, disciplina, aulas, vínculo + guard, notificação, eventos e calendário
     private final FaltaRepository faltaRepository;
 
     private final TurmaRepository turmaRepository;
@@ -75,10 +78,12 @@ public class FaltaService {
 
     private final CalendarioService calendarioService;
 
+    // ! REFF: todas as faltas sem filtro (admin)
     public List<FaltaDTO> getAllFaltas() {
         return faltaRepository.findAll().stream().map(FaltaDTO::from).toList();
     }
 
+    // ! REFF: faltas de um aluno no ano letivo da turma dele
     public List<FaltaDTO> getByStudent(Long studentId) {
         Student aluno = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
@@ -86,6 +91,7 @@ public class FaltaService {
                 .map(FaltaDTO::from).toList();
     }
 
+    // ! REFF: monta a chamada do dia para o professor ver (exige que ele lecione a disciplina na turma)
     @Transactional
     public ChamadaDTO getChamada(Long turmaId, Long disciplinaId, LocalDate data, String requesterEmail) {
         if (data == null) {
@@ -97,6 +103,7 @@ public class FaltaService {
         return montarChamada(turma, disciplinaId, data);
     }
 
+    // ! REFF: salva a chamada: valida, confere data letiva, registra quantas aulas teve e aplica as faltas de cada aluno
     @Transactional
     public ChamadaDTO salvarChamada(ChamadaRequestDTO dto, String requesterEmail) {
         validarChamada(dto);
@@ -116,6 +123,7 @@ public class FaltaService {
     }
 
     /** Data não pode ser futura, 1 ou 2 aulas, e cada aluno aparece uma vez com no máximo uma falta por aula. */
+    // ! REFF: data não pode ser futura, 1 ou 2 aulas, aluno sem repetir e no máximo uma falta por aula
     private static void validarChamada(ChamadaRequestDTO dto) {
         if (dto.data().isAfter(LocalDate.now())) {
             throw new RegraNegocioException(DATA_FUTURA);
@@ -135,6 +143,7 @@ public class FaltaService {
     }
 
     /** Alunos ativos da turma, por id. Recusa a chamada se vier aluno de fora da turma. */
+    // ! REFF: alunos ativos da turma indexados por id; recusa aluno de fora da turma
     private Map<Long, Student> alunosDaChamada(Turma turma, List<ChamadaFaltaRequestDTO> faltas) {
         Map<Long, Student> alunos = alunosAtivos(turma.getId()).stream()
                 .collect(Collectors.toMap(Student::getId, Function.identity()));
@@ -147,6 +156,7 @@ public class FaltaService {
     }
 
     /** Cria ou atualiza o registro de quantas aulas a disciplina teve no dia. */
+    // ! REFF: cria ou atualiza o registro de quantas aulas a disciplina teve no dia
     private void registrarAula(Turma turma, Disciplina disciplina, LocalDate data, int quantidade) {
         AulaRegistro aula = aulaRegistroRepository
                 .findByTurmaIdAndDisciplinaIdAndDataAndAnoLetivo(turma.getId(), disciplina.getId(), data, AnoLetivo.daTurma(turma))
@@ -155,6 +165,7 @@ public class FaltaService {
         aulaRegistroRepository.save(aula);
     }
 
+    // ! REFF: busca as faltas já lançadas no dia e aplica a nova quantidade para cada aluno
     private void registrarFaltas(ChamadaRequestDTO dto, Map<Long, Student> alunos, Disciplina disciplina, User registradoPor) {
         Map<Long, List<FaltaDomain>> faltasDoDia = faltaRepository
                 .findByAlunoIdInAndDisciplinaIdAndData(List.copyOf(alunos.keySet()), disciplina.getId(), dto.data()).stream()
@@ -165,6 +176,7 @@ public class FaltaService {
         }
     }
 
+    // ! REFF: apaga uma falta se o professor leciona e a data ainda aceita lançamento; cancela notificação pendente
     @Transactional
     public void delete(Long id, String requesterEmail) {
         FaltaDomain falta = faltaRepository.findById(id)
@@ -176,11 +188,13 @@ public class FaltaService {
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_FALTA, id, "Falta excluída antes do envio");
     }
 
+    // ! REFF: atalho para o controller checar se quem pediu pode ver o aluno
     @Transactional
     public void assertCanView(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
     }
 
+    // ! REFF: faltas conforme o papel: professor vê das turmas dele, aluno as próprias, responsável as dos filhos
     @Transactional
     public List<FaltaDTO> getFaltasParaUsuarioLogado(String email) {
         User user = userRepository.findByEmail(email)
@@ -195,6 +209,7 @@ public class FaltaService {
                 .toList();
     }
 
+    // ! REFF: % de presença por disciplina do aluno logado (ou de cada filho do responsável)
     @Transactional
     public List<FrequenciaDisciplinaDTO> getFrequenciaParaUsuarioLogado(String email) {
         List<Student> alunos = resolverAlunos(email);
@@ -206,6 +221,7 @@ public class FaltaService {
     }
 
     /** Uma linha por disciplina que já teve aula na turma atual do aluno. */
+    // ! REFF: para cada disciplina que já teve aula na turma: total de aulas, faltas e % de presença
     private List<FrequenciaDisciplinaDTO> frequenciaDoAluno(Student aluno, List<Disciplina> disciplinas) {
         String anoLetivo = AnoLetivo.doAluno(aluno);
         List<FaltaDomain> faltas = faltaRepository.findByAlunoIdAndAnoLetivo(aluno.getId(), anoLetivo);
@@ -227,6 +243,7 @@ public class FaltaService {
     }
 
     /** Soma só as faltas da disciplina lançadas em dias que contam como aula. */
+    // ! REFF: soma só as faltas lançadas em dias que têm registro de aula
     private static long faltasNasAulas(List<FaltaDomain> faltas, Disciplina disciplina, List<AulaRegistro> aulas) {
         Set<LocalDate> diasDeAula = aulas.stream().map(AulaRegistro::getData).collect(Collectors.toSet());
         return faltas.stream()
@@ -236,6 +253,7 @@ public class FaltaService {
     }
 
     /** Faltas só das turmas e disciplinas que o professor leciona. */
+    // ! REFF: faltas só das combinações turma+disciplina que o professor leciona
     private List<FaltaDTO> getFaltasDoProfessor(Long professorId) {
         List<Lecionamento> lecionamentos = lecionamentoRepository.findByProfessorId(professorId);
         if (lecionamentos.isEmpty()) return List.of();
@@ -252,6 +270,7 @@ public class FaltaService {
                 .toList();
     }
 
+    // ! REFF: aluno logado = ele mesmo; responsável = os filhos; outros = ninguém
     private List<Student> resolverAlunos(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + email));
@@ -262,6 +281,7 @@ public class FaltaService {
     }
 
     /** Lista da chamada: cada aluno ativo com as faltas do dia e o total no ano, mais o motivo se o dia estiver bloqueado. */
+    // ! REFF: monta a chamada: quantas aulas já registradas, uma linha por aluno ativo e o motivo se o dia estiver bloqueado
     private ChamadaDTO montarChamada(Turma turma, Long disciplinaId, LocalDate data) {
         String anoLetivo = AnoLetivo.daTurma(turma);
         Integer aulas = aulaRegistroRepository
@@ -272,6 +292,7 @@ public class FaltaService {
         return new ChamadaDTO(turma.getId(), disciplinaId, data, aulas, linhas, motivoBloqueio(anoLetivo, data));
     }
 
+    // ! REFF: data futura ou bloqueio do calendário (fora do ano, recesso, bimestre fechado)
     private String motivoBloqueio(String anoLetivo, LocalDate data) {
         if (data.isAfter(LocalDate.now())) {
             return DATA_FUTURA;
@@ -279,6 +300,7 @@ public class FaltaService {
         return calendarioService.motivoBloqueioDaData(anoLetivo, data).orElse(null);
     }
 
+    // ! REFF: para cada aluno: faltas no dia e total no ano (só a partir de quando entrou na turma)
     private List<ChamadaAlunoDTO> linhasDaChamada(List<Student> alunos, Long disciplinaId, LocalDate data, String anoLetivo) {
         if (alunos.isEmpty()) {
             return List.of();
@@ -293,6 +315,7 @@ public class FaltaService {
     }
 
     /** Zero faltas apaga o lançamento do dia; senão cria um novo (e avisa o responsável) ou atualiza o existente. */
+    // ! REFF: 0 faltas apaga o lançamento do dia; senão cria (e avisa o responsável) ou atualiza
     private void aplicarFaltas(Student aluno, int faltas, List<FaltaDomain> doDia, Disciplina disciplina,
                                LocalDate data, User registradoPor) {
         if (faltas == 0) {
@@ -307,6 +330,7 @@ public class FaltaService {
         }
     }
 
+    // ! REFF: salva a falta nova e dispara evento com o total de faltas no ano para o e-mail
     private void criarFalta(Student aluno, int faltas, Disciplina disciplina, LocalDate data, User registradoPor) {
         LocalDateTime agora = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         FaltaDomain nova = faltaRepository.save(new FaltaDomain(faltas, data, agora, aluno, registradoPor, disciplina));
@@ -318,6 +342,7 @@ public class FaltaService {
         eventPublisher.publishEvent(new FaltaRegistradaEvent(nova.getId(), totalNoAno));
     }
 
+    // ! REFF: muda a quantidade e quem registrou
     private void atualizarFalta(FaltaDomain falta, int faltas, User registradoPor) {
         falta.setQuantidade(faltas);
         falta.setRegistradoPor(registradoPor);
@@ -325,11 +350,13 @@ public class FaltaService {
         faltaRepository.save(falta);
     }
 
+    // ! REFF: apaga a falta e cancela a notificação pendente dela
     private void excluirFalta(FaltaDomain falta) {
         faltaRepository.delete(falta);
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_FALTA, falta.getId(), "Falta removida na chamada");
     }
 
+    // ! REFF: alunos da turma com matrícula ativa, em ordem de nome
     private List<Student> alunosAtivos(Long turmaId) {
         return studentRepository.findByTurmaId(turmaId, Sort.by("fullName")).stream()
                 .filter(a -> a.getStatusMatricula() == StatusMatricula.ATIVA)
@@ -340,10 +367,12 @@ public class FaltaService {
      * Aluno transferido começa a frequência do zero na turma nova: só contam as aulas e faltas a partir da data em
      * que ele entrou nela (turmaDesde). Sem essa data (cadastro antigo), conta tudo.
      */
+    // ! REFF: aluno transferido só conta aulas/faltas a partir da data que entrou na turma nova
     private static boolean naTurmaAtual(Student aluno, LocalDate data) {
         return aluno.getTurmaDesde() == null || !data.isBefore(aluno.getTurmaDesde());
     }
 
+    // ! REFF: soma a quantidade de faltas agrupando por aluno
     private static Map<Long, Integer> somarPorAluno(List<FaltaDomain> faltas) {
         return faltas.stream()
                 .collect(Collectors.groupingBy(f -> f.getAluno().getId(), Collectors.summingInt(FaltaDomain::getQuantidade)));

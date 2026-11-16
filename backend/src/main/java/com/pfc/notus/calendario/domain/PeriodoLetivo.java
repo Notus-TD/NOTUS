@@ -15,6 +15,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "tb_periodo_letivo",
         uniqueConstraints = @UniqueConstraint(name = "uk_periodo_ano_bimestre", columnNames = {"ano_letivo", "bimestre"}))
+// ! REFCAL: Entidade da tabela tb_periodo_letivo: as datas de início e fim de um bimestre em um ano
 @NoArgsConstructor
 @Getter
 public class PeriodoLetivo {
@@ -38,6 +39,7 @@ public class PeriodoLetivo {
     @Column(nullable = false)
     private LocalDate fim;
 
+    // ! REFCAL: construtor com todos os campos
     public PeriodoLetivo(String anoLetivo, Bimestre bimestre, LocalDate inicio, LocalDate fim) {
         this.anoLetivo = anoLetivo;
         this.bimestre = bimestre;
@@ -45,11 +47,13 @@ public class PeriodoLetivo {
         this.fim = fim;
     }
 
+    // ! REFCAL: a data está dentro deste bimestre?
     public boolean contem(LocalDate data) {
         return !data.isBefore(inicio) && !data.isAfter(fim);
     }
 
     /** Aberto para lançamentos até o último dia do bimestre (inclusive). */
+    // ! REFCAL: ainda aceita lançamentos? (até o último dia do bimestre, inclusive)
     public boolean aberto(LocalDate hoje) {
         return !hoje.isAfter(fim);
     }

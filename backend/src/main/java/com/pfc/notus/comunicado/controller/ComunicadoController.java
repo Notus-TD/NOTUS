@@ -19,6 +19,7 @@ import java.util.List;
 @RequestMapping("/comunicado")
 public class ComunicadoController {
 
+    // ! REFC: service que salva e filtra os comunicados
     private final ComunicadoService comunicadoService;
 
     public ComunicadoController(ComunicadoService comunicadoService) {

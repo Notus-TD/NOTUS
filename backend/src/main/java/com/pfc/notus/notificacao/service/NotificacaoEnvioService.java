@@ -21,19 +21,23 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+// ! REFN: Lado do envio: reserva um lote da fila, prepara o e-mail e registra se deu certo, falhou ou vai tentar de novo
 @Service
 @RequiredArgsConstructor
 public class NotificacaoEnvioService {
 
+    // ! REFN: reserva de 10 min por lote e tamanho máximo da mensagem de erro guardada
     private static final Logger log = LoggerFactory.getLogger(NotificacaoEnvioService.class);
 
     private static final Duration RESERVA = Duration.ofMinutes(10);
 
     private static final int MAX_ERRO = 500;
 
+    // ! REFN: o que o worker precisa para mandar o e-mail: id, destino, template e variáveis
     public record EnvioPreparado(Long id, String email, String template, List<String> variaveis) {
     }
 
+    // ! REFN: repositório da fila, service de regras, configs (lote, tentativas) e JSON
     private final NotificacaoRepository notificacaoRepository;
 
     private final NotificacaoService notificacaoService;
@@ -42,6 +46,7 @@ public class NotificacaoEnvioService {
 
     private final ObjectMapper objectMapper;
 
+    // ! REFN: pega as notificações prontas (PENDENTE ou ENVIANDO vencida), marca como ENVIANDO e reserva por 10 min
     @Transactional
     public List<Long> reservarLote(LocalDateTime inicioCiclo) {
         List<Long> ids = notificacaoRepository.findIdsProntosParaEnvio(
@@ -54,6 +59,7 @@ public class NotificacaoEnvioService {
         return ids;
     }
 
+    // ! REFN: revalida se o destinatário ainda pode receber (senão cancela) e monta os dados do envio
     @Transactional
     public Optional<EnvioPreparado> preparar(Long id) {
         Notificacao notificacao = notificacaoRepository.findById(id).orElse(null);
@@ -73,6 +79,7 @@ public class NotificacaoEnvioService {
         return Optional.of(new EnvioPreparado(id, emailDestino(notificacao), notificacao.getTemplate(), variaveis));
     }
 
+    // ! REFN: conta a tentativa e trata o resultado: sucesso, erro definitivo ou erro temporário
     @Transactional
     public void registrarResultado(Long id, ResultadoEnvio resultado) {
         Notificacao notificacao = notificacaoRepository.findById(id).orElse(null);
@@ -89,6 +96,7 @@ public class NotificacaoEnvioService {
         }
     }
 
+    // ! REFN: status ENVIADA com id do provedor e hora
     private void marcarEnviada(Notificacao notificacao, String providerMessageId, String destino) {
         notificacao.setStatus(StatusNotificacao.ENVIADA);
         notificacao.setProviderMessageId(providerMessageId);
@@ -99,6 +107,7 @@ public class NotificacaoEnvioService {
     }
 
     /** Erro temporário (ex.: provedor fora do ar): volta para a fila até esgotar as tentativas. */
+    // ! REFN: erro temporário: volta para PENDENTE até esgotar as tentativas, aí vira FALHA
     private void tentarDeNovoOuFalhar(Notificacao notificacao, String erro, String destino) {
         if (notificacao.getTentativas() >= properties.maxTentativas()) {
             falhar(notificacao, "Tentativas esgotadas: " + erro, destino);
@@ -112,12 +121,14 @@ public class NotificacaoEnvioService {
     }
 
     /** Aviso de responsável vai para o e-mail dele; aviso de aluno, para o do aluno. */
+    // ! REFN: aviso de responsável vai para o e-mail dele; de aluno, para o do aluno
     private static String emailDestino(Notificacao notificacao) {
         return notificacao.getResponsavel() != null
                 ? notificacao.getResponsavel().getEmail()
                 : notificacao.getStudent().getEmail();
     }
 
+    // ! REFN: status FALHA com a mensagem de erro
     private void falhar(Notificacao notificacao, String erro, String destino) {
         notificacao.setStatus(StatusNotificacao.FALHA);
         notificacao.setErro(truncar(erro));
@@ -125,6 +136,7 @@ public class NotificacaoEnvioService {
                 notificacao.getId(), notificacao.getTipo(), destino, erro);
     }
 
+    // ! REFN: corta o erro em 500 caracteres para caber na coluna
     private static String truncar(String erro) {
         if (erro == null) return null;
         return erro.length() > MAX_ERRO ? erro.substring(0, MAX_ERRO) : erro;

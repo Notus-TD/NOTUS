@@ -26,9 +26,11 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Optional;
 
+// ! REFU: Links de senha por e-mail: convite (7 dias) e redefinição (1 hora); o token é guardado só como hash
 @Service
 public class SenhaService {
 
+    // ! REFU: limite de 3 pedidos por hora e mensagem padrão de link inválido
     private static final Logger log = LoggerFactory.getLogger(SenhaService.class);
 
     static final int MAX_REDEFINICOES_POR_HORA = 3;
@@ -37,12 +39,14 @@ public class SenhaService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    // ! REFU: repositórios de usuário e token, encoder de senha, eventos (para o e-mail) e controle de tentativas
     private final UserRepository userRepository;
     private final TokenSenhaRepository tokenSenhaRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher eventPublisher;
     private final LoginTentativaService loginTentativaService;
 
+    // ! REFU: injeção via construtor
     public SenhaService(UserRepository userRepository, TokenSenhaRepository tokenSenhaRepository,
                         PasswordEncoder passwordEncoder, ApplicationEventPublisher eventPublisher,
                         LoginTentativaService loginTentativaService) {
@@ -53,6 +57,7 @@ public class SenhaService {
         this.loginTentativaService = loginTentativaService;
     }
 
+    // ! REFU: esqueci senha: se a conta existe e está ativa gera o link (convite se nunca ativou, senão redefinição); respeita o limite por hora
     @Transactional
     public void solicitarRedefinicao(String email) {
         Optional<User> encontrado = userRepository.findByEmail(email.trim());
@@ -73,17 +78,20 @@ public class SenhaService {
         gerarLink(user, tipo, agora);
     }
 
+    // ! REFU: gera um link novo para o usuário (usado no cadastro e no reenvio de convite)
     @Transactional
     public void gerarLink(User user, TipoTokenSenha tipo) {
         gerarLink(user, tipo, LocalDateTime.now());
     }
 
+    // ! REFU: confere se o token existe, não expirou e não foi usado; devolve o tipo e o e-mail mascarado
     @Transactional(readOnly = true)
     public TokenSenhaDTO validar(String token) {
         TokenSenha tokenSenha = buscarValido(token, LocalDateTime.now());
         return new TokenSenhaDTO(tokenSenha.getTipo(), EmailUtil.mascarar(tokenSenha.getUser().getEmail()));
     }
 
+    // ! REFU: troca a senha pelo link; convite exige aceitar os termos e marca o primeiro acesso como feito; encerra os outros links
     @Transactional
     public void definirSenha(String token, String novaSenha, Boolean aceiteTermos) {
         LocalDateTime agora = LocalDateTime.now();
@@ -106,6 +114,7 @@ public class SenhaService {
         log.info(AuditMarker.AUDIT, "Senha do usuário {} definida por link de {}", user.getId(), tokenSenha.getTipo());
     }
 
+    // ! REFU: encerra links abertos, salva o hash do token novo e dispara o evento que manda o e-mail
     private void gerarLink(User user, TipoTokenSenha tipo, LocalDateTime agora) {
         tokenSenhaRepository.encerrarAbertos(user.getId(), agora);
 
@@ -116,6 +125,7 @@ public class SenhaService {
         log.info(AuditMarker.AUDIT, "Link de {} gerado para o usuário {}", tipo, user.getId());
     }
 
+    // ! REFU: busca pelo hash e valida expiração, uso e se a conta pode usar senha
     private TokenSenha buscarValido(String token, LocalDateTime agora) {
         if (token == null || token.isBlank()) {
             throw new RegraNegocioException(LINK_INVALIDO);
@@ -126,16 +136,19 @@ public class SenhaService {
                 .orElseThrow(() -> new RegraNegocioException(LINK_INVALIDO));
     }
 
+    // ! REFU: conta ativa, não anonimizada e com e-mail
     private static boolean podeUsarSenha(User user) {
         return user.isAtivo() && user.getAnonimizadoEm() == null && user.getEmail() != null;
     }
 
+    // ! REFU: 32 bytes aleatórios em base64 URL-safe
     private static String novoToken() {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
+    // ! REFU: SHA-256 em hex (o que vai pro banco)
     static String hash(String token) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));

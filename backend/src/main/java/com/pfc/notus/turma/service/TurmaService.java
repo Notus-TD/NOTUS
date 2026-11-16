@@ -27,17 +27,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+// ! REFT: CRUD de turmas e associação de alunos; turma é única por nome + ano letivo
 @Service
 public class TurmaService {
 
+    // ! REFT: repositórios de turma e aluno
     private final TurmaRepository turmaRepository;
     private final StudentRepository studentRepository;
 
+    // ! REFT: injeção via construtor
     public TurmaService(TurmaRepository turmaRepository, StudentRepository studentRepository) {
         this.turmaRepository = turmaRepository;
         this.studentRepository = studentRepository;
     }
 
+    // ! REFT: todas as turmas ordenadas por ano e nome, com a contagem de alunos
     @Transactional(readOnly = true)
     public List<TurmaDTO> getAllTurma() {
         return turmaRepository.findAll(Sort.by("schoolYear", "name")).stream()
@@ -45,6 +49,7 @@ public class TurmaService {
                 .toList();
     }
 
+    // ! REFT: detalhe da turma: alunos em ordem alfabética e os vínculos de professor
     @Transactional(readOnly = true)
     public TurmaDetalheDTO getById(Long turmaId) {
         Turma turma = buscarTurma(turmaId);
@@ -61,6 +66,7 @@ public class TurmaService {
         return new TurmaDetalheDTO(turma.getId(), turma.getName(), turma.getSchoolYear(), alunos, lecionamentos);
     }
 
+    // ! REFT: cria a turma; recusa se já existe outra com o mesmo nome no mesmo ano
     @Transactional
     public TurmaDTO create(TurmaRequestDTO dto) {
         String name = dto.name().trim();
@@ -74,6 +80,7 @@ public class TurmaService {
         return toDTO(turma);
     }
 
+    // ! REFT: edita nome/ano; recusa se bater com outra turma
     @Transactional
     public TurmaDTO update(Long turmaId, TurmaRequestDTO dto) {
         Turma turma = buscarTurma(turmaId);
@@ -89,6 +96,7 @@ public class TurmaService {
         return toDTO(turmaRepository.save(turma));
     }
 
+    // ! REFT: exclui só se não tem alunos nem professores; se o banco acusar aulas/atividades, dá conflito
     @Transactional
     public void delete(Long turmaId) {
         Turma turma = buscarTurma(turmaId);
@@ -108,12 +116,14 @@ public class TurmaService {
         }
     }
 
+    // ! REFT: coloca um aluno na turma
     @Transactional
     public TurmaAlunoResponseDTO associarAluno(Long turmaId, TurmaAlunoRequestDTO dto) {
         Turma turma = buscarTurma(turmaId);
         return associarUm(turma, dto.studentId());
     }
 
+    // ! REFT: coloca vários alunos; recusa lista com id repetido
     @Transactional
     public List<TurmaAlunoResponseDTO> associarAlunosLote(Long turmaId, TurmaAlunosLoteRequestDTO dto) {
         Set<Long> idsUnicos = new HashSet<>(dto.studentIds());
@@ -127,6 +137,7 @@ public class TurmaService {
                 .toList();
     }
 
+    // ! REFT: aluno precisa estar com matrícula ativa e não estar já nessa turma; marca a data que entrou (turmaDesde)
     private TurmaAlunoResponseDTO associarUm(Turma turma, Long studentId) {
         Student student = buscarAluno(studentId);
 
@@ -150,6 +161,7 @@ public class TurmaService {
         );
     }
 
+    // ! REFT: tira o aluno da turma e zera a data de entrada
     @Transactional
     public void removerAluno(Long turmaId, Long studentId) {
         Turma turma = buscarTurma(turmaId);
@@ -164,16 +176,19 @@ public class TurmaService {
         studentRepository.save(student);
     }
 
+    // ! REFT: busca turma ou dá 404
     private Turma buscarTurma(Long turmaId) {
         return turmaRepository.findById(turmaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Turma não encontrada com o id: " + turmaId));
     }
 
+    // ! REFT: busca aluno ou dá 404
     private Student buscarAluno(Long studentId) {
         return studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
     }
 
+    // ! REFT: converte para DTO com o total de alunos
     private TurmaDTO toDTO(Turma turma) {
         return new TurmaDTO(turma.getId(), turma.getName(), turma.getSchoolYear(), turma.getAlunos().size());
     }

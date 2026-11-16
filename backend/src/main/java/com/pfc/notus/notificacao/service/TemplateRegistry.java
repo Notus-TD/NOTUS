@@ -7,14 +7,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+// ! REFN: Textos dos e-mails/avisos: um template por tipo, com placeholders {{1}}, {{2}}... e assunto/título de cada um
 @Component
 public class TemplateRegistry {
 
+    // ! REFN: tamanho máximo de cada variável e rodapé padrão dos e-mails
     private static final int MAX_VARIAVEL = 120;
 
     private static final String RODAPE = "\n\nPara não receber mais estes avisos, fale com a secretaria."
             + "\nMensagem automática, não responda.";
 
+    // ! REFN: template principal de cada tipo (falta, atividade, nota final, comunicado)
     private static final Map<TipoNotificacao, Template> TEMPLATES = Map.of(
             TipoNotificacao.FALTA, new Template("falta_aluno", 5,
                     "Olá, {{1}}. Registramos uma falta de {{2}} em {{3}} no dia {{4}}.\n"
@@ -30,15 +33,18 @@ public class TemplateRegistry {
                             + "Leia a mensagem completa no portal NOTUS." + RODAPE)
     );
 
+    // ! REFN: variações usadas por nome (ex: nota_atualizada)
     private static final List<Template> VARIACOES = List.of(
             new Template("nota_atualizada", 5,
                     "Olá, {{1}}. A nota final de {{2}} em {{3}} no {{4}} foi atualizada.\n"
                             + "Nova nota final: {{5}}." + RODAPE)
     );
 
+    // ! REFN: nome, quantas variáveis espera e o texto com placeholders
     public record Template(String nome, int quantidadeVariaveis, String texto) {
     }
 
+    // ! REFN: assunto do e-mail e título no portal, por nome de template
     private static final Map<String, String> ASSUNTOS = Map.of(
             "falta_aluno", "NOTUS: aviso de falta",
             "nova_atividade", "NOTUS: nova atividade",
@@ -55,10 +61,12 @@ public class TemplateRegistry {
             "comunicado", "Comunicado da escola"
     );
 
+    // ! REFN: título curto para o portal
     public String titulo(String nomeTemplate) {
         return TITULOS.getOrDefault(nomeTemplate, "Aviso da escola");
     }
 
+    // ! REFN: busca template pelo nome (principal ou variação)
     public Template porNome(String nomeTemplate) {
         return java.util.stream.Stream.concat(TEMPLATES.values().stream(), VARIACOES.stream())
                 .filter(t -> t.nome().equals(nomeTemplate))
@@ -66,15 +74,18 @@ public class TemplateRegistry {
                 .orElseThrow(() -> new IllegalArgumentException("Template desconhecido: " + nomeTemplate));
     }
 
+    // ! REFN: renderiza sem o rodapé de e-mail
     public String renderizarParaPortal(String nomeTemplate, List<String> variaveis) {
         String texto = renderizar(nomeTemplate, variaveis);
         return texto.endsWith(RODAPE) ? texto.substring(0, texto.length() - RODAPE.length()) : texto;
     }
 
+    // ! REFN: assunto do e-mail
     public String assunto(String nomeTemplate) {
         return ASSUNTOS.getOrDefault(nomeTemplate, "NOTUS: aviso escolar");
     }
 
+    // ! REFN: troca os {{n}} pelos valores
     public String renderizar(String nomeTemplate, List<String> variaveis) {
         String texto = porNome(nomeTemplate).texto();
         for (int i = 0; i < variaveis.size(); i++) {
@@ -83,6 +94,7 @@ public class TemplateRegistry {
         return texto;
     }
 
+    // ! REFN: template principal de um tipo
     public Template template(TipoNotificacao tipo) {
         Template template = TEMPLATES.get(tipo);
         if (template == null) {
@@ -91,6 +103,7 @@ public class TemplateRegistry {
         return template;
     }
 
+    // ! REFN: valida a quantidade de valores e limpa cada um (sem quebra de linha, no máximo 120 caracteres)
     public List<String> variaveis(TipoNotificacao tipo, String... valores) {
         Template template = template(tipo);
         if (valores.length != template.quantidadeVariaveis()) {
@@ -100,6 +113,7 @@ public class TemplateRegistry {
         return Arrays.stream(valores).map(TemplateRegistry::limpar).toList();
     }
 
+    // ! REFN: normaliza espaços e corta o texto; vazio vira '-'
     private static String limpar(String valor) {
         if (valor == null || valor.isBlank()) return "-";
         String limpo = valor.replaceAll("[\\r\\n\\t]+", " ").replaceAll(" {2,}", " ").trim();

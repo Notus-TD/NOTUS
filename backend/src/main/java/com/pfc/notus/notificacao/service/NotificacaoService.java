@@ -45,20 +45,24 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+// ! REFN: Cria os avisos (falta, nota final, atividade, comunicado) na fila, decide quem pode receber e cancela/apaga quando precisa
 @Service
 @RequiredArgsConstructor
 public class NotificacaoService {
 
+    // ! REFN: log, formato de data e locale pt-BR usados nos textos
     private static final Logger log = LoggerFactory.getLogger(NotificacaoService.class);
     private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final Locale PT_BR = Locale.of("pt", "BR");
 
+    // ! REFN: tipos de referência (o que gerou o aviso) e meses que os registros ficam guardados
     public static final String REF_FALTA = "FALTA";
     public static final String REF_BOLETIM = "BOLETIM";
     public static final String REF_ATIVIDADE = "ATIVIDADE";
     public static final String REF_COMUNICADO = "COMUNICADO";
     public static final int MESES_RETENCAO = 6;
 
+    // ! REFN: repositório da fila, registro de templates, JSON e repositórios das entidades que geram aviso
     private final NotificacaoRepository notificacaoRepository;
 
     private final TemplateRegistry templateRegistry;
@@ -77,6 +81,7 @@ public class NotificacaoService {
 
     private final ResponsibleRepository responsibleRepository;
 
+    // ! REFN: cria aviso de falta para o responsável e para o aluno (se tiver acesso), com disciplina, data e total no ano
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notificarFalta(Long faltaId, int totalFaltasNaDisciplina) {
         FaltaDomain falta = faltaRepository.findById(faltaId).orElse(null);
@@ -92,6 +97,7 @@ public class NotificacaoService {
         avisarAluno(aviso, aluno, chave);
     }
 
+    // ! REFN: cria aviso de nota final lançada/atualizada para responsável e aluno
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notificarNotaFinal(Long boletimId, boolean atualizada) {
         Boletim boletim = boletimRepository.findById(boletimId).orElse(null);
@@ -107,6 +113,7 @@ public class NotificacaoService {
         avisarAluno(aviso, aluno, chave);
     }
 
+    // ! REFN: busca a atividade e os alunos da turma e cria os avisos
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notificarAtividadePublicada(Long atividadeId) {
         Atividade atividade = atividadeRepository.findById(atividadeId).orElse(null);
@@ -120,6 +127,7 @@ public class NotificacaoService {
     }
 
     /** Um aviso por responsável (mesmo com 2 filhos na turma) e um para cada aluno com acesso ao portal. */
+    // ! REFN: um aviso por responsável (mesmo com 2 filhos na turma) e um para cada aluno com acesso ao portal
     @Transactional
     public void notificarAtividade(Long atividadeId, Collection<Student> alunosDaTurma,
                                    String disciplina, String titulo, LocalDate prazo) {
@@ -133,6 +141,7 @@ public class NotificacaoService {
         }
     }
 
+    // ! REFN: comunicado global vai para todos os responsáveis elegíveis; recado de turma só para os responsáveis daquela turma
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notificarComunicado(Long comunicadoId) {
         Comunicado comunicado = comunicadoRepository.findById(comunicadoId).orElse(null);
@@ -152,6 +161,7 @@ public class NotificacaoService {
         }
     }
 
+    // ! REFN: avisos do responsável para o portal, com título e texto já montados pelo template (sem comunicados nem cancelados)
     @Transactional(readOnly = true)
     public List<AvisoDTO> avisosDoResponsavel(String email) {
         Responsible responsavel = responsibleRepository.findByEmail(email)
@@ -171,6 +181,7 @@ public class NotificacaoService {
                 .toList();
     }
 
+    // ! REFN: cancela avisos pendentes de uma falta/nota/atividade/comunicado que foi apagado
     @Transactional
     public void cancelarPorReferencia(String referenciaTipo, Long referenciaId, String motivo) {
         int canceladas = notificacaoRepository.cancelarPorReferencia(
@@ -180,6 +191,7 @@ public class NotificacaoService {
         }
     }
 
+    // ! REFN: cancela tudo que está pendente para um responsável (ex: anonimizado)
     @Transactional
     public void cancelarPendentesDoResponsavel(Long responsavelId, String motivo) {
         int canceladas = notificacaoRepository.cancelarPorResponsavel(
@@ -189,6 +201,7 @@ public class NotificacaoService {
         }
     }
 
+    // ! REFN: cancela tudo que está pendente para um aluno (ex: matrícula cancelada)
     @Transactional
     public void cancelarPendentesDoAluno(Long studentId, String motivo) {
         int canceladas = notificacaoRepository.cancelarPorAluno(
@@ -198,18 +211,21 @@ public class NotificacaoService {
         }
     }
 
+    // ! REFN: LGPD: limpa as variáveis (nome etc.) dos avisos do aluno
     @Transactional
     public void apagarDadosDoAluno(Long studentId) {
         int apagadas = notificacaoRepository.apagarVariaveisDoAluno(studentId);
         log.info(AuditMarker.AUDIT, "Dados pessoais apagados das notificações | aluno {} | {}", studentId, apagadas);
     }
 
+    // ! REFN: LGPD: limpa as variáveis dos avisos do responsável
     @Transactional
     public void apagarDadosDoResponsavel(Long responsavelId) {
         int apagadas = notificacaoRepository.apagarVariaveisDoResponsavel(responsavelId);
         log.info(AuditMarker.AUDIT, "Dados pessoais apagados das notificações | responsável {} | {}", responsavelId, apagadas);
     }
 
+    // ! REFN: consulta da fila para o admin com filtros opcionais de tipo, status, responsável e datas
     @Transactional(readOnly = true)
     public List<NotificacaoDTO> listar(TipoNotificacao tipo, StatusNotificacao status, Long responsavelId,
                                        LocalDate de, LocalDate ate) {
@@ -220,6 +236,7 @@ public class NotificacaoService {
                 .toList();
     }
 
+    // ! REFN: só notificação com FALHA pode ser reenviada: zera tentativas e volta para PENDENTE
     @Transactional
     public NotificacaoDTO reenviar(Long id) {
         Notificacao notificacao = notificacaoRepository.findById(id)
@@ -235,6 +252,7 @@ public class NotificacaoService {
         return NotificacaoDTO.from(notificacao);
     }
 
+    // ! REFN: responsáveis dos alunos ativos de uma turma, sem repetir
     private List<Responsible> responsaveisDaTurma(Long turmaId) {
         return studentRepository.findByTurmaId(turmaId, Sort.unsorted()).stream()
                 .filter(s -> s.getStatusMatricula() == StatusMatricula.ATIVA)
@@ -244,6 +262,7 @@ public class NotificacaoService {
                 .toList();
     }
 
+    // ! REFN: por que o responsável não pode receber: inexistente, inativo, sem aceitar termos ou aluno sem matrícula ativa; null = pode
     public String motivoBloqueio(Responsible responsavel, Student aluno) {
         if (responsavel == null) return "Aluno sem responsável cadastrado";
         if (!responsavel.isAtivo()) return "Responsável inativo ou anonimizado";
@@ -252,6 +271,7 @@ public class NotificacaoService {
         return null;
     }
 
+    // ! REFN: responsável pode receber aviso? (usa motivoBloqueio)
     private boolean elegivel(Responsible responsavel, Student aluno) {
         String motivo = motivoBloqueio(responsavel, aluno);
         if (motivo != null) {
@@ -262,6 +282,7 @@ public class NotificacaoService {
     }
 
     // Verifica se aluno é elegível para receber notificação (acesso liberado pelo responsável)
+    // ! REFN: aluno pode receber aviso? precisa ter acesso liberado e matrícula ativa
     private boolean elegivelAluno(Student aluno) {
         if (aluno == null) return false;
         // Acesso só liberado se acessoLiberadoEm foi definido (aluno pode acessar portal)
@@ -271,12 +292,14 @@ public class NotificacaoService {
     }
 
     /** Comunicado vai para o responsável que tem pelo menos um filho com matrícula ativa. */
+    // ! REFN: comunicado vai para o responsável que tem pelo menos um filho com matrícula ativa
     private boolean podeReceberComunicado(Responsible responsavel) {
         boolean temFilhoAtivo = responsavel.getStudents().stream()
                 .anyMatch(s -> s.getStatusMatricula() == StatusMatricula.ATIVA);
         return temFilhoAtivo && motivoBloqueio(responsavel, null) == null;
     }
 
+    // ! REFN: evita aviso duplicado quando o responsável tem 2 filhos na mesma turma
     private Collection<Student> primeiroAlunoDeCadaResponsavel(Collection<Student> alunos) {
         Map<Long, Student> porResponsavel = new LinkedHashMap<>();
         for (Student aluno : alunos) {
@@ -291,11 +314,13 @@ public class NotificacaoService {
      * O que vai no aviso, sem o destinatário. "detalhes" são os campos do texto que vêm depois
      * do nome de quem recebe e do nome do aluno (ex.: disciplina, data, total de faltas).
      */
+    // ! REFN: o que vai no aviso sem o destinatário: tipo, template, referência e os detalhes do texto
     private record Aviso(TipoNotificacao tipo, String templateNome, String referenciaTipo, Long referenciaId,
                          String... detalhes) {
     }
 
     /** Avisa o responsável, se ele pode receber (ativo, aceitou os termos e o filho está matriculado). */
+    // ! REFN: cria o aviso para o responsável do aluno, se ele for elegível
     private void avisarResponsavel(Aviso aviso, Student aluno, String chave) {
         Responsible responsavel = aluno.getResponsible();
         if (elegivel(responsavel, aluno)) {
@@ -304,12 +329,14 @@ public class NotificacaoService {
     }
 
     /** Avisa o próprio aluno, se o acesso dele ao portal foi liberado. */
+    // ! REFN: cria o aviso para o próprio aluno, se o acesso dele estiver liberado
     private void avisarAluno(Aviso aviso, Student aluno, String chave) {
         if (elegivelAluno(aluno)) {
             criar(aviso, null, aluno, chave + ":ALUNO", aluno.getFullName());
         }
     }
 
+    // ! REFN: monta as variáveis do template (nome de quem recebe, nome do aluno, detalhes) e grava
     private void criar(Aviso aviso, Responsible responsavel, Student aluno, String chave, String nomeDeQuemRecebe) {
         String[] valores = Stream.concat(Stream.of(nomeDeQuemRecebe, aluno.getFullName()), Arrays.stream(aviso.detalhes()))
                 .toArray(String[]::new);
@@ -318,6 +345,7 @@ public class NotificacaoService {
     }
 
     /** Grava o aviso na fila (o worker envia depois). A chave impede o mesmo aviso duas vezes. */
+    // ! REFN: grava o aviso na fila com status PENDENTE; a chave de idempotência impede duplicar
     private void criar(TipoNotificacao tipo, String templateNome, Responsible responsavel, Student aluno,
                        String referenciaTipo, Long referenciaId, String chave, List<String> variaveis) {
         if (notificacaoRepository.existsByChaveIdempotencia(chave)) {
@@ -333,6 +361,7 @@ public class NotificacaoService {
         log.info(AuditMarker.AUDIT, "Notificação {} criada | {} | {} | {}", notificacao.getId(), tipo, destinatario, email);
     }
 
+    // ! REFN: job diário (3h): apaga avisos com mais de 6 meses
     @Scheduled(cron = "${notificacao.retencao-cron:0 0 3 * * *}")
     @Transactional
     public int apagarVencidas() {

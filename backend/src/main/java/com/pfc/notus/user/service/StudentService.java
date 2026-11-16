@@ -29,12 +29,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+// ! REFU: Regras de aluno: cadastro (com responsável), acesso ao portal, cancelar/reativar matrícula, edição e listagens
 @Service
 @RequiredArgsConstructor
 public class StudentService {
 
+    // ! REFU: log de auditoria
     private static final Logger log = LoggerFactory.getLogger(StudentService.class);
 
+    // ! REFU: services de usuário, responsável, notificação e senha + repositório de aluno
     private final UserService userService;
 
     private final ResponsibleService responsibleService;
@@ -45,6 +48,7 @@ public class StudentService {
 
     private final SenhaService senhaService;
 
+    // ! REFU: cadastra o aluno: matrícula única, acha ou cria o responsável, cria sem convite (o responsável libera o acesso depois)
     @Transactional
     public StudentRegistrationResponse createStudent(ResponsibleRequest responsibleDto, StudentRequest studentDto) {
         if (studentRepository.findByMatricula(studentDto.matricula()).isPresent()) {
@@ -65,6 +69,7 @@ public class StudentService {
         return new StudentRegistrationResponse(student.getId(), student.getFullName());
     }
 
+    // ! REFU: cadastra vários irmãos com o mesmo responsável
     @Transactional
     public List<StudentRegistrationResponse> createStudents(ResponsibleRequest responsibleDto, List<StudentRequest> studentDtos) {
         validarSemRepetidos(studentDtos);
@@ -74,6 +79,7 @@ public class StudentService {
     }
 
     /** No cadastro de irmãos, a mesma matrícula ou o mesmo e-mail não podem aparecer duas vezes. */
+    // ! REFU: no lote, matrícula e e-mail não podem se repetir
     private static void validarSemRepetidos(List<StudentRequest> alunos) {
         Set<Long> matriculas = new HashSet<>();
         Set<String> emails = new HashSet<>();
@@ -88,6 +94,7 @@ public class StudentService {
         }
     }
 
+    // ! REFU: responsável libera o login do filho: matrícula ativa, e-mail diferente do dele; manda convite se é o primeiro acesso
     @Transactional
     public StudentMinDTO liberarAcesso(Long studentId, String email, String requesterEmail) {
         Student student = alunoDoResponsavel(studentId, requesterEmail);
@@ -113,6 +120,7 @@ public class StudentService {
         return StudentMinDTO.of(student);
     }
 
+    // ! REFU: responsável tira o login do filho
     @Transactional
     public StudentMinDTO retirarAcesso(Long studentId, String requesterEmail) {
         Student student = alunoDoResponsavel(studentId, requesterEmail);
@@ -126,6 +134,7 @@ public class StudentService {
         return StudentMinDTO.of(student);
     }
 
+    // ! REFU: garante que quem pediu é o responsável do aluno e que ele não foi anonimizado
     private Student alunoDoResponsavel(Long studentId, String requesterEmail) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
@@ -138,6 +147,7 @@ public class StudentService {
         return student;
     }
 
+    // ! REFU: admin cancela com motivo: aluno sai da turma, perde o login e os avisos pendentes são cancelados
     @Transactional
     public StudentMinDTO cancelarMatricula(Long studentId, String motivo, String requesterEmail) {
         if (motivo == null || motivo.isBlank()) {
@@ -155,6 +165,7 @@ public class StudentService {
         return StudentMinDTO.of(student);
     }
 
+    // ! REFU: admin reativa (só se o responsável não foi anonimizado); aluno volta sem turma
     @Transactional
     public StudentMinDTO reativarMatricula(Long studentId, String requesterEmail) {
         Student student = buscarAlunoNaoAnonimizado(studentId);
@@ -171,11 +182,13 @@ public class StudentService {
         return StudentMinDTO.of(student);
     }
 
+    // ! REFU: ficha completa do aluno
     @Transactional(readOnly = true)
     public StudentDetalheDTO getDetalhe(Long studentId) {
         return StudentDetalheDTO.of(buscarAluno(studentId));
     }
 
+    // ! REFU: edita nome, e-mail, matrícula (única) e nascimento
     @Transactional
     public StudentDetalheDTO updateStudent(Long studentId, StudentRequest dto) {
         Student student = buscarAluno(studentId);
@@ -191,6 +204,7 @@ public class StudentService {
     }
 
     /** E-mail vazio apaga o e-mail do aluno, mas não se ele tem acesso ao portal (o login é o e-mail). */
+    // ! REFU: e-mail vazio apaga o e-mail, mas não se o aluno tem acesso ao portal (o login é o e-mail)
     private void trocarEmail(Student student, String novoEmail) {
         String email = novoEmail == null ? "" : novoEmail.trim();
         if (!email.isEmpty()) {
@@ -203,11 +217,13 @@ public class StudentService {
         student.setEmail(null);
     }
 
+    // ! REFU: busca aluno ou dá 404
     private Student buscarAluno(Long studentId) {
         return studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
     }
 
+    // ! REFU: busca aluno e recusa se já foi anonimizado
     private Student buscarAlunoNaoAnonimizado(Long studentId) {
         Student student = buscarAluno(studentId);
         if (student.getAnonimizadoEm() != null) {
@@ -216,6 +232,7 @@ public class StudentService {
         return student;
     }
 
+    // ! REFU: todos os alunos (admin)
     @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudents() {
         return studentRepository.findAll().stream()
@@ -223,6 +240,7 @@ public class StudentService {
                 .toList();
     }
 
+    // ! REFU: alunos de várias turmas (as do professor)
     @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudentsByTurmas(java.util.Collection<Long> turmaIds) {
         if (turmaIds.isEmpty()) return List.of();
@@ -231,6 +249,7 @@ public class StudentService {
                 .toList();
     }
 
+    // ! REFU: filhos de um responsável
     @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudentsByResponsible(Long responsibleId) {
         return studentRepository.findByResponsibleId(responsibleId).stream()
@@ -238,6 +257,7 @@ public class StudentService {
                 .toList();
     }
 
+    // ! REFU: alunos de uma turma, por nome ou matrícula
     @Transactional(readOnly = true)
     public List<StudentMinDTO> listStudentsByTurma(Long turmaId, String sort) {
         Sort ordenacao = "matricula".equalsIgnoreCase(sort) ? Sort.by("matricula") : Sort.by("fullName");

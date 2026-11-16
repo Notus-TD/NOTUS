@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+// ! REFNO: Corpo do POST/PUT /nota: descrição, valor (0-10), bimestre, aluno e disciplina
 public record NotaRequestDTO(
         @NotBlank String descricao,
         @NotNull @DecimalMin("0.0") @DecimalMax("10.0") Float rate,

@@ -5,6 +5,7 @@ import com.pfc.notus.user.domain.enums.StatusMatricula;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// ! REFP: Resumo antes de anonimizar: dados do titular, filhos (se responsável), quantos registros ficam e o motivo de bloqueio
 public record ResumoAnonimizacaoDTO(
         Long id,
         String perfil,

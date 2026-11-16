@@ -41,13 +41,16 @@ import java.util.OptionalDouble;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+// ! REFB: Monta o boletim do aluno juntando notas de avaliações, pontos de atividades e notas finais; também lança/remove nota final
 @Service
 @RequiredArgsConstructor
 public class BoletimService {
 
+    // ! REFB: faixa permitida para nota final
     private static final float NOTA_MINIMA = 0f;
     private static final float NOTA_MAXIMA = 10f;
 
+    // ! REFB: repositórios de nota, entrega, aluno, disciplina e services de permissão, notificação e calendário
     private final BoletimRepository boletimRepository;
 
     private final NotaRepository notaRepository;
@@ -68,6 +71,7 @@ public class BoletimService {
 
     private final CalendarioService calendarioService;
 
+    // ! REFB: ponto de entrada do boletim: valida se quem pediu pode ver o aluno e monta o boletim
     @Transactional(readOnly = true)
     public List<BoletimDisciplinaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
@@ -75,6 +79,7 @@ public class BoletimService {
         return montarBoletim(studentId);
     }
 
+    // ! REFB: busca notas, notas finais e entregas pontuadas do ano letivo e agrupa tudo por disciplina+bimestre
     private List<BoletimDisciplinaDTO> montarBoletim(Long studentId) {
         String ano = anoLetivoDoAluno(studentId);
         List<Nota> notas = notaRepository.findByStudentIdAndAnoLetivoOrderByIdAsc(studentId, ano);
@@ -97,6 +102,7 @@ public class BoletimService {
     }
 
     /** Uma disciplina aparece no boletim se tem nota, nota final ou atividade pontuada no ano. */
+    // ! REFB: disciplina só entra no boletim se tiver nota, nota final ou atividade pontuada
     private static Collection<Disciplina> disciplinasComLancamento(List<Nota> notas, List<Boletim> boletins, List<Entrega> pontuadas) {
         Map<Long, Disciplina> disciplinas = new HashMap<>();
         notas.forEach(n -> disciplinas.putIfAbsent(n.getDisciplina().getId(), n.getDisciplina()));
@@ -105,6 +111,7 @@ public class BoletimService {
         return disciplinas.values();
     }
 
+    // ! REFB: cria ou atualiza a nota final: valida faixa 0-10, se o professor leciona a disciplina e se o bimestre está aberto; avisa o responsável se mudou
     @Transactional
     public BoletimDTO lancarNotaFinal(NotaFinalRequestDTO dto, String requesterEmail) {
         validarNotaFinal(dto);
@@ -134,6 +141,7 @@ public class BoletimService {
                 pontosAtividades(student.getId(), disciplina.getId(), dto.bimestre()));
     }
 
+    // ! REFB: nota final precisa estar entre 0 e 10 e ter bimestre
     private static void validarNotaFinal(NotaFinalRequestDTO dto) {
         if (dto.notaFinal() == null || dto.notaFinal().isNaN() || dto.notaFinal() < NOTA_MINIMA || dto.notaFinal() > NOTA_MAXIMA) {
             throw new RegraNegocioException("A nota final deve estar entre 0 e 10.");
@@ -143,6 +151,7 @@ public class BoletimService {
         }
     }
 
+    // ! REFB: apaga a nota final se o professor leciona e o bimestre está aberto; cancela notificação pendente
     @Transactional
     public void removerNotaFinal(Long id, String requesterEmail) {
         Boletim entity = boletimRepository.findById(id)
@@ -154,6 +163,7 @@ public class BoletimService {
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_BOLETIM, id, "Nota final removida antes do envio");
     }
 
+    // ! REFB: média das notas de avaliação da disciplina no bimestre
     private Float mediaCalculada(Long studentId, Long disciplinaId, Bimestre bimestre) {
         OptionalDouble media = notaRepository.findByStudentIdAndDisciplinaIdAndBimestreAndAnoLetivo(
                         studentId, disciplinaId, bimestre, anoLetivoDoAluno(studentId)).stream()
@@ -162,6 +172,7 @@ public class BoletimService {
         return media.isPresent() ? (float) media.getAsDouble() : null;
     }
 
+    // ! REFB: soma dos pontos de atividades entregues na disciplina no bimestre
     private Float pontosAtividades(Long studentId, Long disciplinaId, Bimestre bimestre) {
         Celula celula = new Celula(disciplinaId, bimestre);
         List<Entrega> daCelula = entregasPontuadas(studentId, anoLetivoDoAluno(studentId)).stream()
@@ -170,6 +181,7 @@ public class BoletimService {
         return daCelula.isEmpty() ? null : (float) daCelula.stream().mapToDouble(Entrega::getPontosObtidos).sum();
     }
 
+    // ! REFB: entregas do aluno que receberam pontos, só do ano letivo informado
     private List<Entrega> entregasPontuadas(Long studentId, String ano) {
         return entregaRepository.findByStudentId(studentId).stream()
                 .filter(e -> e.getPontosObtidos() != null)
@@ -177,16 +189,19 @@ public class BoletimService {
                 .toList();
     }
 
+    // ! REFB: ano letivo da turma do aluno (ou o ano atual se não tiver turma)
     private String anoLetivoDoAluno(Long studentId) {
         Student aluno = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + studentId));
         return AnoLetivo.doAluno(aluno);
     }
 
+    // ! REFB: chave disciplina+bimestre de uma entrega
     private static Celula celulaDaEntrega(Entrega entrega) {
         return new Celula(entrega.getAtividade().getDisciplina().getId(), entrega.getAtividade().getBimestre());
     }
 
+    // ! REFB: monta a linha de uma disciplina com os bimestres que têm algum lançamento e a média final
     private BoletimDisciplinaDTO montarDisciplina(Long studentId, Disciplina disciplina, Map<Celula, Double> medias,
                                                   Map<Celula, Boletim> notasFinais, Map<Celula, Double> pontos) {
         List<BoletimDTO> bimestres = Arrays.stream(Bimestre.values())
@@ -197,6 +212,7 @@ public class BoletimService {
         return new BoletimDisciplinaDTO(disciplina.getId(), disciplina.getTitle(), bimestres, mediaFinal(bimestres));
     }
 
+    // ! REFB: média das notas dos bimestres que têm nota
     private Float mediaFinal(List<BoletimDTO> bimestres) {
         OptionalDouble media = bimestres.stream()
                 .map(BoletimDTO::nota)
@@ -206,6 +222,7 @@ public class BoletimService {
         return media.isPresent() ? (float) media.getAsDouble() : null;
     }
 
+    // ! REFB: monta um bimestre: se tem nota final usa ela, senão calcula média + pontos de atividades
     private BoletimDTO montarLinha(Long studentId, Disciplina disciplina, Bimestre bimestre, Double media,
                                    Boletim notaFinal, Double pontos) {
         Float mediaCalculada = media == null ? null : media.floatValue();
@@ -216,6 +233,7 @@ public class BoletimService {
         return BoletimDTO.comNotaFinal(notaFinal, mediaCalculada, pontosAtividades);
     }
 
+    // ! REFB: chave usada nos mapas: disciplina + bimestre
     private record Celula(Long disciplinaId, Bimestre bimestre) {
     }
 }

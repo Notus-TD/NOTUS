@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "tb_boletim",
         uniqueConstraints = @UniqueConstraint(name = "uk_boletim_aluno_disciplina_bimestre_ano",
                 columnNames = {"student_id", "disciplina_id", "bimestre", "ano_letivo"}))
+// ! REFB: Entidade da tabela tb_boletim: a nota final de um aluno em uma disciplina em um bimestre (única por ano letivo)
 @NoArgsConstructor
 public class Boletim {
 
@@ -27,6 +28,7 @@ public class Boletim {
     @Getter @Setter
     private Bimestre bimestre;
 
+    // ! REFB: ano letivo da turma do aluno no momento do lançamento
     @Column(name = "ano_letivo", length = 9)
     @Getter @Setter
     private String anoLetivo;
@@ -49,11 +51,13 @@ public class Boletim {
     @Getter @Setter
     private Disciplina disciplina;
 
+    // ! REFB: quem lançou a nota (professor ou admin)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lancado_por_id", nullable = false)
     @Getter @Setter
     private User lancadoPor;
 
+    // ! REFB: cria o registro já com o ano letivo do aluno
     public Boletim(Student student, Disciplina disciplina, Bimestre bimestre) {
         this.student = student;
         this.disciplina = disciplina;

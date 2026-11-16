@@ -19,17 +19,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// ! REFU: Cadastro, listagem e desligamento de professores
 @Service
 @RequiredArgsConstructor
 public class ProfessorService {
 
+    // ! REFU: log de auditoria
     private static final Logger log = LoggerFactory.getLogger(ProfessorService.class);
 
+    // ! REFU: repositórios de professor, vínculo e token de senha + service de usuário
     private final ProfessorRepository professorRepository;
     private final UserService userService;
     private final LecionamentoRepository lecionamentoRepository;
     private final TokenSenhaRepository tokenSenhaRepository;
 
+    // ! REFU: cria o professor com papel PROFESSOR e manda o convite por e-mail
     @Transactional
     public ProfessorDTO createProfessor(ProfessorRequest dto) {
         Professor professor = new Professor(dto.fullName(), dto.email());
@@ -37,6 +41,7 @@ public class ProfessorService {
         return ProfessorDTO.of(professor);
     }
 
+    // ! REFU: professores em ordem de nome, sem os anonimizados
     @Transactional(readOnly = true)
     public List<ProfessorDTO> listProfessors() {
         return professorRepository.findAll(Sort.by("fullName")).stream()
@@ -49,6 +54,7 @@ public class ProfessorService {
      * Professor que saiu da escola: bloqueia o login (inclusive a sessão aberta), remove os vínculos com turmas e
      * disciplinas, zera o MFA e invalida os links de senha abertos. O nome continua no histórico do que ele lançou.
      */
+    // ! REFU: professor que saiu: bloqueia o login, apaga os vínculos com turmas, zera o MFA e invalida links de senha
     @Transactional
     public ProfessorDTO desligar(Long id, String adminEmail) {
         Professor professor = professorRepository.findById(id)

@@ -7,6 +7,7 @@ import com.pfc.notus.user.domain.enums.StatusMatricula;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// ! REFU: Ficha completa do aluno: dados pessoais, matrícula, turma, responsável, acesso e cancelamento
 public record StudentDetalheDTO(
         Long userId,
         String fullName,
@@ -24,6 +25,7 @@ public record StudentDetalheDTO(
         String motivoCancelamento,
         LocalDateTime matriculaCanceladaEm
 ) {
+    // ! REFU: converte a entidade tratando turma e responsável nulos
     public static StudentDetalheDTO of(Student s) {
         Responsible r = s.getResponsible();
         return new StudentDetalheDTO(

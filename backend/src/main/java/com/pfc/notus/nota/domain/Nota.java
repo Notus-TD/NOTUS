@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+// ! REFNO: Entidade da tabela tb_nota: uma avaliação (prova, trabalho) de um aluno em uma disciplina em um bimestre
 @Entity
 @Table(name = "tb_nota")
 @NoArgsConstructor
@@ -22,6 +23,7 @@ public class Nota {
     @Getter @Setter
     private String descricao;
 
+    // ! REFNO: valor da nota, de 0 a 10
     @Column(nullable = false)
     @Getter @Setter
     private Float rate;
@@ -31,6 +33,7 @@ public class Nota {
     @Getter @Setter
     private Bimestre bimestre;
 
+    // ! REFNO: ano letivo da turma do aluno no lançamento
     @Column(name = "ano_letivo", length = 9)
     @Getter @Setter
     private String anoLetivo;
@@ -45,6 +48,7 @@ public class Nota {
     @Getter @Setter
     private Disciplina disciplina;
 
+    // ! REFNO: construtor com os dados da avaliação; aluno e disciplina são setados depois
     public Nota(String descricao, Float rate, Bimestre bimestre) {
         this.descricao = descricao;
         this.rate = rate;

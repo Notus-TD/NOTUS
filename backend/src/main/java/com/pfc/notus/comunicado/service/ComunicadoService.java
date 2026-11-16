@@ -31,16 +31,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// ! REFC: Regras dos comunicados: admin publica para um público, professor manda recado para a turma, cada usuário vê só o que é dele
 @Service
 public class ComunicadoService {
 
+    // ! REFC: log de auditoria (quem publicou o quê)
     private static final Logger log = LoggerFactory.getLogger(ComunicadoService.class);
 
+    // ! REFC: repositórios de comunicado, vínculo professor-turma e usuário + publicador de eventos para e-mail
     private final ComunicadoRepository comunicadoRepository;
     private final LecionamentoRepository lecionamentoRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    // ! REFC: injeção das dependências via construtor
     public ComunicadoService(ComunicadoRepository comunicadoRepository, LecionamentoRepository lecionamentoRepository,
                             UserRepository userRepository, ApplicationEventPublisher eventPublisher) {
         this.comunicadoRepository = comunicadoRepository;
@@ -107,6 +111,7 @@ public class ComunicadoService {
                 .map(ComunicadoDTO::from).toList();
     }
 
+    // ! REFC: turmas que o usuário pode ver recados: responsável = turmas dos filhos, aluno = a própria turma, outros = nenhuma
     private Set<Long> turmasDoUsuario(String email) {
         User usuario = userRepository.findByEmail(email).orElse(null);
         if (usuario instanceof Responsible responsavel) {

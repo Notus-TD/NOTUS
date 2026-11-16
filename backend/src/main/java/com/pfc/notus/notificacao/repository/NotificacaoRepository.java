@@ -12,9 +12,11 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// ! REFN: Acesso ao banco da tabela tb_notificacao (fila de avisos por e-mail)
 @Repository
 public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> {
 
+    // ! REFN: já existe aviso com essa chave? (evita duplicar)
     boolean existsByChaveIdempotencia(String chaveIdempotencia);
 
     @Query("""
@@ -24,6 +26,7 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
               AND n.tipo <> :excluido
             ORDER BY n.criadoEm DESC, n.id DESC
             """)
+    // ! REFN: avisos do responsável para o portal, sem os cancelados e sem comunicados, mais recentes primeiro
     List<Notificacao> buscarAvisosDoResponsavel(Long responsavelId, StatusNotificacao cancelada,
                                                 TipoNotificacao excluido);
 
@@ -33,6 +36,7 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
               AND n.proximaTentativaEm <= :agora
             ORDER BY n.proximaTentativaEm, n.id
             """)
+    // ! REFN: ids das notificações que o worker deve processar agora (pendentes ou com reserva vencida), em lote
     List<Long> findIdsProntosParaEnvio(StatusNotificacao pendente, StatusNotificacao enviando,
                                        LocalDateTime agora, Pageable pageable);
 
@@ -42,6 +46,7 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
             WHERE n.status = :pendente
               AND n.referenciaTipo = :referenciaTipo AND n.referenciaId = :referenciaId
             """)
+    // ! REFN: cancela pendentes ligadas a uma falta/nota/atividade/comunicado específica
     int cancelarPorReferencia(StatusNotificacao pendente, StatusNotificacao cancelada,
                               String referenciaTipo, Long referenciaId, String motivo);
 
@@ -50,6 +55,7 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
             UPDATE Notificacao n SET n.status = :cancelada, n.erro = :motivo
             WHERE n.status = :pendente AND n.responsavel.id = :responsavelId
             """)
+    // ! REFN: cancela todas as pendentes de um responsável
     int cancelarPorResponsavel(StatusNotificacao pendente, StatusNotificacao cancelada,
                                Long responsavelId, String motivo);
 
@@ -58,17 +64,21 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
             UPDATE Notificacao n SET n.status = :cancelada, n.erro = :motivo
             WHERE n.status = :pendente AND n.student.id = :studentId
             """)
+    // ! REFN: cancela todas as pendentes de um aluno
     int cancelarPorAluno(StatusNotificacao pendente, StatusNotificacao cancelada,
                          Long studentId, String motivo);
 
+    // ! REFN: apaga avisos antigos (retenção de 6 meses)
     @Modifying
     @Query("DELETE FROM Notificacao n WHERE n.criadoEm < :limite")
     int apagarCriadasAntesDe(LocalDateTime limite);
 
+    // ! REFN: LGPD: zera as variáveis (dados pessoais) dos avisos do aluno
     @Modifying
     @Query("UPDATE Notificacao n SET n.variaveis = NULL WHERE n.student.id = :studentId")
     int apagarVariaveisDoAluno(Long studentId);
 
+    // ! REFN: LGPD: zera as variáveis dos avisos do responsável
     @Modifying
     @Query("UPDATE Notificacao n SET n.variaveis = NULL WHERE n.responsavel.id = :responsavelId")
     int apagarVariaveisDoResponsavel(Long responsavelId);
@@ -81,10 +91,13 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
               AND n.criadoEm >= :de AND n.criadoEm < :ate
             ORDER BY n.criadoEm DESC, n.id DESC
             """)
+    // ! REFN: consulta do admin com filtros opcionais (tipo, status, responsável) e período obrigatório
     List<Notificacao> buscar(TipoNotificacao tipo, StatusNotificacao status, Long responsavelId,
                              LocalDateTime de, LocalDateTime ate);
 
+    // ! REFN: quantos avisos o aluno tem (resumo de anonimização)
     long countByStudentId(Long studentId);
 
+    // ! REFN: quantos avisos o responsável tem (resumo de anonimização)
     long countByResponsavelId(Long responsavelId);
 }

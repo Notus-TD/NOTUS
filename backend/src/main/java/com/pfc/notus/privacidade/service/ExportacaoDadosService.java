@@ -29,18 +29,22 @@ import java.util.List;
  * Cópia dos dados pessoais de um titular (LGPD, art. 18, II). O pedido chega pela secretaria e o admin gera o
  * arquivo pelo painel; cada geração fica registrada na auditoria.
  */
+// ! REFP: Exportação LGPD: junta cadastro, boletim, faltas, atividades e avisos do titular em um único DTO
 @Service
 @RequiredArgsConstructor
 public class ExportacaoDadosService {
 
+    // ! REFP: log de auditoria de cada exportação
     private static final Logger log = LoggerFactory.getLogger(ExportacaoDadosService.class);
 
+    // ! REFP: repositório de usuário e services de boletim, falta, atividade e notificação para montar os dados
     private final UserRepository userRepository;
     private final BoletimService boletimService;
     private final FaltaService faltaService;
     private final AtividadeService atividadeService;
     private final NotificacaoService notificacaoService;
 
+    // ! REFP: responsável: dados dele + de cada filho não anonimizado + avisos; aluno: só os dados dele; recusa se já anonimizado
     @Transactional(readOnly = true)
     public ExportacaoDadosDTO exportar(Long userId, String adminEmail) {
         User user = userRepository.findById(userId)
@@ -68,11 +72,13 @@ public class ExportacaoDadosService {
         return dados;
     }
 
+    // ! REFP: dados cadastrais do responsável
     private static DadosResponsavelDTO dadosDoResponsavel(Responsible r) {
         return new DadosResponsavelDTO(r.getId(), r.getName(), r.getEmail(), r.getPhone(), r.getCreatedAt(),
                 r.getTermsAcceptedAt());
     }
 
+    // ! REFP: cadastro, boletim, faltas e atividades do aluno
     private DadosAlunoDTO dadosDoAluno(Student aluno, String adminEmail) {
         return new DadosAlunoDTO(
                 StudentDetalheDTO.of(aluno),

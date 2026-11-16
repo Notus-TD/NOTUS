@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+// ! REFD: Entidade da tabela tb_disciplina: matéria (ex: Matemática) com título, descrição e data de criação
 @Entity
 @Table(name ="tb_disciplina")
 @NoArgsConstructor
@@ -27,10 +28,12 @@ public class Disciplina {
     @Getter @Setter
     private LocalDateTime created;
 
+    // ! REFD: atividades publicadas nessa disciplina; apagar a disciplina apaga as atividades
     @OneToMany(mappedBy = "disciplina", cascade = CascadeType.ALL, orphanRemoval = true)
     @Getter @Setter
     private List<Atividade> atividades = new ArrayList<>();
 
+    // ! REFD: construtor usado nos testes e seeds
     public Disciplina(String title, String description) {
         this.title = title;
         this.description = description;

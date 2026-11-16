@@ -40,12 +40,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
+// ! REFU: Base de todos os usuários: carrega para o Spring Security, cadastra, troca e-mail, convite, MFA, perfil e anonimização LGPD
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
 
+    // ! REFU: log de auditoria
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
+    // ! REFU: repositórios de usuário, aluno, responsável, role + notificação, encoder de senha e service de senha
     private final UserRepository userRepository;
 
     private final StudentRepository studentRepository;
@@ -60,6 +63,7 @@ public class UserService implements UserDetailsService {
 
     private final SenhaService senhaService;
 
+    // ! REFU: usado pelo Spring no login: monta o User com papéis; aluno sem acesso liberado fica inativo
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         List<UserDetailsProjection> result = userRepository.searchUserAndRolesByEmail(username);
@@ -78,6 +82,7 @@ public class UserService implements UserDetailsService {
 
         return user;
     }
+    // ! REFU: cadastra e já manda o link de convite por e-mail
     @Transactional
     public User register(User user, String roleAuthority) {
         User salvo = registrarSemConvite(user, roleAuthority);
@@ -85,6 +90,7 @@ public class UserService implements UserDetailsService {
         return salvo;
     }
 
+    // ! REFU: cadastra sem e-mail: valida e-mail único, gera id (ano + sequência), senha aleatória e o papel
     @Transactional
     public User registrarSemConvite(User user, String roleAuthority) {
         if (user.getEmail() != null && userRepository.findByEmail(user.getEmail()).isPresent()) {
@@ -101,6 +107,7 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
+    // ! REFU: normaliza e troca o e-mail, recusando se outro usuário já usa
     public void atualizarEmail(User user, String novoEmail) {
         String emailLimpo = User.normalizarEmail(novoEmail);
         userRepository.findByEmail(emailLimpo).ifPresent(outro -> {
@@ -111,6 +118,7 @@ public class UserService implements UserDetailsService {
         user.setEmail(emailLimpo);
     }
 
+    // ! REFU: admin reenvia o convite: só para conta ativa que nunca logou (aluno precisa ter acesso liberado)
     @Transactional
     public void reenviarConvite(Long userId, String requesterEmail) {
         User user = userRepository.findById(userId)
@@ -128,6 +136,7 @@ public class UserService implements UserDetailsService {
         log.info(AuditMarker.AUDIT, "Convite do usuário {} reenviado por {}", user.getId(), requesterEmail);
     }
 
+    // ! REFU: admin zera o MFA do usuário (perdeu o celular); no próximo login cadastra de novo
     @Transactional
     public void redefinirMfa(Long userId, String requesterEmail) {
         User user = userRepository.findById(userId)
@@ -141,6 +150,7 @@ public class UserService implements UserDetailsService {
         log.info(AuditMarker.AUDIT, "Verificação em duas etapas do usuário {} redefinida por {}", user.getId(), requesterEmail);
     }
 
+    // ! REFU: e-mail, papéis, nome e (se responsável) a lista de filhos
     @Transactional
     public MeuPerfilDTO getMeuPerfil(String email) {
         User user = userRepository.findByEmail(email)
@@ -163,6 +173,7 @@ public class UserService implements UserDetailsService {
         return new MeuPerfilDTO(user.getEmail(), roles, nome, dependentes);
     }
 
+    // ! REFU: primeiro acesso: define senha e aceita os termos; só funciona uma vez
     @Transactional
     public void onBoarding (String newPassword, Boolean acceptTerms){
         User user = usuarioLogado();
@@ -187,6 +198,7 @@ public class UserService implements UserDetailsService {
 
     }
 
+    // ! REFU: alunos e responsáveis juntos, anonimizados por último e depois por nome
     @Transactional(readOnly = true)
     public List<UsuarioDTO> listarUsuarios() {
         return Stream.concat(
@@ -201,6 +213,7 @@ public class UserService implements UserDetailsService {
     }
 
     /** LGPD: apaga os dados pessoais de um aluno ou responsável. Cada entidade sabe o que apagar (anonimizar()). */
+    // ! REFU: LGPD: confirma com matrícula (aluno) ou id (responsável), valida bloqueios, anonimiza e limpa os avisos
     @Transactional
     public void anonymizeUser(Long userId, String confirmacao, String requesterEmail) {
         if (confirmacao == null || confirmacao.isBlank()) {
@@ -224,6 +237,7 @@ public class UserService implements UserDetailsService {
         log.info(AuditMarker.AUDIT, "Usuário {} anonimizado por {}", user.getId(), requesterEmail);
     }
 
+    // ! REFU: matrícula digitada precisa bater e a matrícula não pode estar ativa
     private void validarAnonimizacaoDoAluno(Student aluno, String confirmacao) {
         if (!String.valueOf(aluno.getMatricula()).equals(confirmacao)) {
             throw new RegraNegocioException("A matrícula digitada não confere com a do aluno.");
@@ -233,6 +247,7 @@ public class UserService implements UserDetailsService {
         }
     }
 
+    // ! REFU: id digitado precisa bater e nenhum filho pode ter matrícula ativa
     private void validarAnonimizacaoDoResponsavel(Responsible responsavel, String confirmacao) {
         if (!String.valueOf(responsavel.getId()).equals(confirmacao)) {
             throw new RegraNegocioException("O registro digitado não confere com o do responsável.");
@@ -242,6 +257,7 @@ public class UserService implements UserDetailsService {
         }
     }
 
+    // ! REFU: cancela avisos pendentes e apaga os dados pessoais dos avisos já enviados
     private void apagarDadosDasNotificacoes(User user) {
         if (user instanceof Student) {
             notificacaoService.cancelarPendentesDoAluno(user.getId(), "Aluno anonimizado");
@@ -252,6 +268,7 @@ public class UserService implements UserDetailsService {
         }
     }
 
+    // ! REFU: id = ano atual * 1.000.000 + sequência (ex: 2026000001)
     private Long gerarProximoId() {
         long base = LocalDate.now().getYear() * 1_000_000L;
         Long ultimo = userRepository.buscarUltimoId();
@@ -262,6 +279,7 @@ public class UserService implements UserDetailsService {
         return ultimo + 1;
     }
 
+    // ! REFU: pega o usuário do contexto de segurança
     private static User usuarioLogado() {
         return (User) Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
     }
