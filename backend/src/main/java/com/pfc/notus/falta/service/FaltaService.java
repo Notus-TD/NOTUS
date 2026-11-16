@@ -51,8 +51,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FaltaService {
 
-    // ! REFF: no máximo 2 aulas da mesma disciplina por dia; chamada não pode ser em data futura
-    private static final int MAXIMO_AULAS_POR_DIA = 2;
+    // ! REFF: no máximo 10 aulas da mesma disciplina por dia; chamada não pode ser em data futura
+    private static final int MAXIMO_AULAS_POR_DIA = 10;
     private static final String DATA_FUTURA = "Não é possível lançar chamada em data futura.";
 
     // ! REFF: repositórios de falta, turma, aluno, disciplina, aulas, vínculo + guard, notificação, eventos e calendário
@@ -122,14 +122,14 @@ public class FaltaService {
         return montarChamada(turma, disciplina.getId(), dto.data());
     }
 
-    /** Data não pode ser futura, 1 ou 2 aulas, e cada aluno aparece uma vez com no máximo uma falta por aula. */
-    // ! REFF: data não pode ser futura, 1 ou 2 aulas, aluno sem repetir e no máximo uma falta por aula
+    /** Data não pode ser futura, de 1 a 10 aulas, e cada aluno aparece uma vez com no máximo uma falta por aula. */
+    // ! REFF: data não pode ser futura, de 1 a 10 aulas, aluno sem repetir e no máximo uma falta por aula
     private static void validarChamada(ChamadaRequestDTO dto) {
         if (dto.data().isAfter(LocalDate.now())) {
             throw new RegraNegocioException(DATA_FUTURA);
         }
         if (dto.aulas() < 1 || dto.aulas() > MAXIMO_AULAS_POR_DIA) {
-            throw new RegraNegocioException("A chamada deve ter 1 ou 2 aulas no dia.");
+            throw new RegraNegocioException("A chamada deve ter de 1 a " + MAXIMO_AULAS_POR_DIA + " aulas no dia.");
         }
         Set<Long> jaInformados = new HashSet<>();
         for (ChamadaFaltaRequestDTO falta : dto.faltas()) {

@@ -209,11 +209,11 @@ class FaltaServiceUnitTest {
     }
 
     @Test
-    void deveRecusarMaisDeDuasAulasNoDia() {
+    void deveRecusarMaisDeDezAulasNoDia() {
         RegraNegocioException excecao = assertThrows(RegraNegocioException.class,
-                () -> faltaService.salvarChamada(chamada(3, new ChamadaFaltaRequestDTO(10L, 3)), PROFESSOR));
+                () -> faltaService.salvarChamada(chamada(11, new ChamadaFaltaRequestDTO(10L, 0)), PROFESSOR));
 
-        assertEquals("A chamada deve ter 1 ou 2 aulas no dia.", excecao.getMessage());
+        assertEquals("A chamada deve ter de 1 a 10 aulas no dia.", excecao.getMessage());
         verify(aulaRegistroRepository, never()).save(any());
     }
 
