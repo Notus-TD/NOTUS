@@ -3,6 +3,8 @@ package com.pfc.notus.disciplina.domain;
 import com.pfc.notus.boletim.domain.AnoLetivo;
 import com.pfc.notus.turma.domain.Turma;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,8 +40,10 @@ public class AulaRegistro {
     @Getter
     private String anoLetivo;
 
-    // ! REFD: quantidade de aulas naquele dia (1, 2...); entra no total para a % de frequência
+    // ! REFD: quantidade de aulas naquele dia (1-5 máximo); entra no total para a % de frequência
     @Column(name = "quantidade_aulas", nullable = false)
+    @Min(1)
+    @Max(5)
     @Getter @Setter
     private Integer quantidadeAulas;
 
