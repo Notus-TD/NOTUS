@@ -3,7 +3,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-ARG VITE_API_URL=https://nawszera-notus-api.onrender.com
+ARG VITE_API_URL=https://notus-backend-production-54e0ffc4.up.railway.app
 ENV VITE_API_URL=$VITE_API_URL NITRO_PRESET=node-server
 RUN npm run build
 
