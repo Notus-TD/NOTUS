@@ -9,13 +9,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+// ! REFU: Endpoint de responsáveis (/responsibles): admin edita nome, e-mail e telefone
 @RestController
 @RequestMapping(value = "/responsibles")
 @RequiredArgsConstructor
 public class ResponsibleController {
 
+    // ! REFU: service de responsável
     private final ResponsibleService responsibleService;
 
+    // ! REFU: PUT /responsibles/{id} - edita os dados do responsável
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ResponsibleDTO> update(@PathVariable Long id, @RequestBody @Valid ResponsibleRequest dto) {

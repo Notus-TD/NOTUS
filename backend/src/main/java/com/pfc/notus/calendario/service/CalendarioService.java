@@ -28,14 +28,18 @@ import java.util.stream.Collectors;
  * Calendário letivo: as datas dos quatro bimestres de cada ano. Um bimestre fica aberto para lançamentos até a
  * data de fim e fecha sozinho depois dela; para corrigir algo, a secretaria muda a data de fim.
  */
+// ! REFCAL: Guarda as datas dos 4 bimestres por ano e diz se um bimestre/data ainda aceita lançamento (nota, falta, atividade)
 @Service
 @RequiredArgsConstructor
 public class CalendarioService {
 
+    // ! REFCAL: log de auditoria e formato de data usado nas mensagens
     private static final Logger log = LoggerFactory.getLogger(CalendarioService.class);
     private static final DateTimeFormatter DATA_BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    // ! REFCAL: repositório dos períodos (bimestres) cadastrados
     private final PeriodoLetivoRepository periodoRepository;
 
+    // ! REFCAL: devolve o calendário do ano: início/fim, qual bimestre está rolando hoje e se cada um está aberto
     @Transactional(readOnly = true)
     public CalendarioDTO getCalendario(String anoLetivo) {
         validarAno(anoLetivo);
@@ -50,6 +54,7 @@ public class CalendarioService {
                 periodos.stream().map(p -> PeriodoDTO.from(p, hoje)).toList());
     }
 
+    // ! REFCAL: admin salva as datas dos 4 bimestres; valida e cria ou atualiza cada período
     @Transactional
     public CalendarioDTO salvar(String anoLetivo, CalendarioRequest request, String adminEmail) {
         validarAno(anoLetivo);
@@ -69,6 +74,7 @@ public class CalendarioService {
      * Os 4 bimestres informados, com datas do próprio ano, fim depois do início e um começando
      * depois do fim do anterior. Devolve os bimestres em ordem (1º ao 4º).
      */
+    // ! REFCAL: exige os 4 bimestres, datas dentro do ano, fim depois do início e sem sobreposição entre eles
     private static List<PeriodoRequest> validarBimestres(String anoLetivo, List<PeriodoRequest> periodos) {
         Set<Bimestre> informados = periodos.stream().map(PeriodoRequest::bimestre).collect(Collectors.toSet());
         if (!informados.equals(EnumSet.allOf(Bimestre.class))) {
@@ -96,6 +102,7 @@ public class CalendarioService {
     }
 
     /** Por que a data não aceita lançamento (fora do ano, recesso ou bimestre fechado). Vazio = pode lançar. */
+    // ! REFCAL: explica por que uma data não aceita lançamento (fora do ano, recesso ou bimestre fechado); vazio = pode
     @Transactional(readOnly = true)
     public Optional<String> motivoBloqueioDaData(String anoLetivo, LocalDate data) {
         List<PeriodoLetivo> periodos = periodoRepository.findByAnoLetivoOrderByInicio(anoLetivo);
@@ -117,6 +124,7 @@ public class CalendarioService {
         return Optional.empty();
     }
 
+    // ! REFCAL: lança erro se a data estiver bloqueada (usado em falta e chamada)
     @Transactional(readOnly = true)
     public void exigirDataLetiva(String anoLetivo, LocalDate data) {
         Optional<String> motivo = motivoBloqueioDaData(anoLetivo, data);
@@ -125,6 +133,7 @@ public class CalendarioService {
         }
     }
 
+    // ! REFCAL: lança erro se o bimestre já fechou (usado em nota, atividade e nota final); sem calendário cadastrado deixa passar
     @Transactional(readOnly = true)
     public void exigirBimestreAberto(String anoLetivo, Bimestre bimestre) {
         Optional<PeriodoLetivo> periodo = periodoRepository.findByAnoLetivoAndBimestre(anoLetivo, bimestre);
@@ -133,10 +142,12 @@ public class CalendarioService {
             throw new RegraNegocioException(mensagemFechado(bimestre));
         }
     }
+    // ! REFCAL: texto padrão de bimestre fechado
     private static String mensagemFechado(Bimestre bimestre) {
         return "O " + bimestre.getDescricao() + " já terminou e está fechado. Se precisar corrigir algo, peça à secretaria para ajustar a data de fim no calendário.";
     }
 
+    // ! REFCAL: ano precisa ter 4 dígitos
     private static void validarAno(String anoLetivo) {
         if (anoLetivo == null || !anoLetivo.matches("\\d{4}")) {
             throw new RegraNegocioException("Ano letivo inválido. Use o ano com 4 dígitos, como 2026.");

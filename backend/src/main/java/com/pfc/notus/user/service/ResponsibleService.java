@@ -11,14 +11,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+// ! REFU: Cadastro e edição de responsáveis
 @Service
 @RequiredArgsConstructor
 public class ResponsibleService {
 
+    // ! REFU: repositório de responsável e service de usuário
     private final ResponsibleRepository responsibleRepository;
 
     private final UserService userService;
 
+    // ! REFU: se já existe responsável com esse e-mail reaproveita (irmãos); senão cria e manda convite
     @Transactional
     public Responsible findOrCreateResponsible(ResponsibleRequest dto) {
         Optional<Responsible> existente = responsibleRepository.findByEmail(dto.email());
@@ -32,6 +35,7 @@ public class ResponsibleService {
         return (Responsible) userService.register(responsible, "ROLE_RESPONSAVEL");
     }
 
+    // ! REFU: edita nome, e-mail (checando duplicidade) e telefone
     @Transactional
     public ResponsibleDTO updateResponsible(Long responsibleId, ResponsibleRequest dto) {
         Responsible responsible = responsibleRepository.findById(responsibleId)

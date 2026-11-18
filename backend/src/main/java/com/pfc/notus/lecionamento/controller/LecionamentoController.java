@@ -11,19 +11,23 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// ! REFL: Endpoints do vínculo professor x turma x disciplina (/lecionamento), só admin: listar, criar e remover
 @RestController
 @RequestMapping(value = "/lecionamento")
 @RequiredArgsConstructor
 public class LecionamentoController {
 
+    // ! REFL: service que valida e salva o vínculo
     private final LecionamentoService lecionamentoService;
 
+    // ! REFL: GET /lecionamento - lista todos os vínculos
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping
     public List<LecionamentoDTO> getAll() {
         return lecionamentoService.getAll();
     }
 
+    // ! REFL: POST /lecionamento - vincula um professor a uma disciplina em uma turma
     @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping
     public ResponseEntity<LecionamentoDTO> create(@RequestBody @Valid LecionamentoRequestDTO dto) {
@@ -31,6 +35,7 @@ public class LecionamentoController {
         return ResponseEntity.ok(created);
     }
 
+    // ! REFL: DELETE /lecionamento/{id} - remove o vínculo
     @PreAuthorize("hasAnyRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

@@ -26,7 +26,7 @@ API REST em Java com Spring Boot.
 
 ### Organização
 
-O código é organizado por domínio (`atividade`, `boletim`, `disciplina`, `entrega`, `falta`, `presenca`, `nota`, `turma`, `user`), cada um com as camadas `domain`, `dto`, `repository`, `service` e `controller`.
+O código é organizado por domínio (`atividade`, `boletim`, `calendario`, `comunicado`, `disciplina`, `entrega`, `falta`, `lecionamento`, `nota`, `notificacao`, `privacidade`, `turma`, `user`), cada um com as camadas `domain`, `dto`, `repository`, `service` e `controller`.
 
 ### Como rodar
 
@@ -144,3 +144,51 @@ Regras: uma tela por arquivo; componentes em PascalCase (`Chamada.tsx`) e utilit
 ## Fluxo geral
 
 O frontend (React) consome a API REST do backend (Spring Boot) via HTTP, enviando o **token JWT** no cabeçalho `Authorization` após o login. O backend valida o token, aplica as regras de acesso por papel (`ROLE_ALUNO`, `ROLE_PROFESSOR`) e persiste os dados no banco.
+
+---
+
+## Instruções e evidências de execução
+
+Passo a passo para subir o sistema localmente e verificar as principais funcionalidades e integrações apresentadas na monografia. Os dados abaixo são fictícios, carregados pelo `import.sql` no perfil `h2` — **não há senhas, tokens ou dados pessoais reais envolvidos**.
+
+### 1. Subindo o sistema
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Backend em `http://localhost:8080`, frontend em `http://localhost:3000` (porta padrão do Vite/TanStack Start).
+
+### 2. Logins de exemplo (perfil `h2`, dados fictícios)
+
+| Perfil | E-mail de exemplo |
+|---|---|
+| Administrador | `admin@notus.com` |
+| Professor | `pedro.professor@gmail.com` |
+| Responsável | `marta.responsavel@gmail.com` |
+| Aluno | `ana.aluna@gmail.com` |
+
+A senha de todas as contas de exemplo é a senha de teste definida no ambiente de desenvolvimento local (não documentada aqui por ser um dado de acesso, ainda que fictício). Administrador e professor passam pela verificação em duas etapas (MFA) no primeiro acesso.
+
+### 3. Funcionalidades a verificar
+
+- **Login e papéis de acesso:** entrar com cada perfil acima e confirmar que cada um só enxerga as telas do seu papel (admin, professor, responsável, aluno).
+- **MFA:** no primeiro login de um professor ou administrador, o sistema pede o cadastro do aplicativo autenticador (QR code) antes de liberar o acesso.
+- **Lançamento de nota/falta/atividade:** como professor, lançar uma nota, uma falta e publicar uma atividade para uma turma; conferir o bloqueio automático ao tentar lançar fora do bimestre letivo aberto (cadastrado em Sistema → Calendário letivo).
+- **Boletim:** como aluno ou responsável, conferir que a nota lançada aparece no boletim do bimestre correto.
+- **Alocação de alunos em lote (RF13):** como administrador, associar vários alunos a uma turma de uma vez.
+- **Edição de cadastro (RF01):** como administrador, editar os dados de um aluno ou responsável já cadastrado.
+- **Notificações (RF12):** como administrador, conferir o histórico de notificações geradas pelos eventos acima (falta, nota, atividade).
+- **Integração de e-mail (Resend):** ao lançar uma falta, nota ou atividade, o sistema dispara uma notificação por e-mail via Resend; em ambiente local de testes, configure uma chave de API de teste própria (variável de ambiente, nunca commitada) para validar o envio.
+- **LGPD:** como responsável, solicitar a cópia dos dados (JSON) em "Meus dados"; como administrador, responder a uma solicitação de anonimização em Sistema → Anonimização (LGPD).
+
+### 4. Evidências
+
+As evidências de execução (prints de tela, vídeo de demonstração) ficam fora deste README e são anexadas separadamente na entrega, mostrando os fluxos acima rodando com os dados fictícios de exemplo.

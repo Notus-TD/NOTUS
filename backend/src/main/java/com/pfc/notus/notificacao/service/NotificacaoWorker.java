@@ -15,32 +15,39 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+// ! REFN: Loop de envio dos e-mails: roda a cada 10 min (ou na hora, quando chamado) e processa a fila em lotes respeitando o limite por segundo
 @Component
 @RequiredArgsConstructor
 public class NotificacaoWorker {
 
+    // ! REFN: log de erros do ciclo
     private static final Logger log = LoggerFactory.getLogger(NotificacaoWorker.class);
 
+    // ! REFN: service que reserva/registra, o provedor de e-mail (porta) e as configs de lote e taxa
     private final NotificacaoEnvioService envioService;
 
     private final NotificadorPort notificador;
 
     private final NotificacaoProperties properties;
 
+    // ! REFN: lock para rodar um ciclo por vez e flag de 'tem pedido pendente' para não perder chamada durante a execução
     private final ReentrantLock emExecucao = new ReentrantLock();
     private final AtomicBoolean pedidoPendente = new AtomicBoolean(false);
 
     @Scheduled(fixedDelayString = "${notificacao.worker-intervalo-ms:600000}",
             initialDelayString = "${notificacao.worker-atraso-inicial-ms:15000}")
+    // ! REFN: agendado: roda o ciclo periodicamente
     public void processar() {
         executar();
     }
 
+    // ! REFN: chamado pelo listener/controller: roda o ciclo em outra thread sem esperar o agendamento
     @Async
     public void processarAgora() {
         executar();
     }
 
+    // ! REFN: garante um ciclo por vez; se chamaram de novo enquanto rodava, roda mais uma vez ao terminar
     void executar() {
         pedidoPendente.set(true);
         while (pedidoPendente.get() && emExecucao.tryLock()) {
@@ -54,6 +61,7 @@ public class NotificacaoWorker {
         }
     }
 
+    // ! REFN: reserva lotes até a fila esvaziar; erro inesperado espera o próximo ciclo
     private void ciclo() {
         LocalDateTime inicioCiclo = LocalDateTime.now();
         try {
@@ -66,6 +74,7 @@ public class NotificacaoWorker {
         }
     }
 
+    // ! REFN: para cada id: prepara, envia e registra o resultado, com pausa entre envios; false se o servidor está desligando
     private boolean enviarLote(List<Long> ids) {
         long pausaMs = Math.max(1, 1000L / properties.taxaPorSegundo());
         for (Long id : ids) {
@@ -82,6 +91,7 @@ public class NotificacaoWorker {
     }
 
     /** Erro inesperado do provedor conta como temporário: a notificação volta para a fila. */
+    // ! REFN: chama o provedor; exceção vira erro temporário (volta pra fila)
     private ResultadoEnvio enviar(NotificacaoEnvioService.EnvioPreparado envio) {
         try {
             return notificador.enviar(envio.email(), envio.template(), envio.variaveis());
@@ -91,6 +101,7 @@ public class NotificacaoWorker {
     }
 
     /** Respeita o limite de envios por segundo do provedor. Retorna false se o servidor está desligando. */
+    // ! REFN: sleep para respeitar o limite por segundo do provedor
     private static boolean pausar(long pausaMs) {
         try {
             Thread.sleep(pausaMs);

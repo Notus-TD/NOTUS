@@ -133,9 +133,9 @@ class SenhaServiceUnitTest {
         user.setFirstLogin(false);
         when(tokenSenhaRepository.findByTokenHash(SenhaService.hash(TOKEN)))
                 .thenReturn(Optional.of(token(TipoTokenSenha.REDEFINICAO, LocalDateTime.now())));
-        when(passwordEncoder.encode("novaSenha123")).thenReturn("hash-novo");
+        when(passwordEncoder.encode("novaSenha123!")).thenReturn("hash-novo");
 
-        senhaService.definirSenha(TOKEN, "novaSenha123", null);
+        senhaService.definirSenha(TOKEN, "novaSenha123!", null);
 
         assertEquals("hash-novo", user.getPassword());
         assertFalse(user.isFirstLogin());
@@ -149,7 +149,7 @@ class SenhaServiceUnitTest {
         when(tokenSenhaRepository.findByTokenHash(SenhaService.hash(TOKEN)))
                 .thenReturn(Optional.of(token(TipoTokenSenha.CONVITE, LocalDateTime.now())));
 
-        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123", false));
+        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123!", false));
 
         assertEquals("hash-antigo", user.getPassword());
         verify(userRepository, never()).save(any());
@@ -159,9 +159,9 @@ class SenhaServiceUnitTest {
     void definirSenhaComConviteConcluiPrimeiroAcesso() {
         when(tokenSenhaRepository.findByTokenHash(SenhaService.hash(TOKEN)))
                 .thenReturn(Optional.of(token(TipoTokenSenha.CONVITE, LocalDateTime.now())));
-        when(passwordEncoder.encode("novaSenha123")).thenReturn("hash-novo");
+        when(passwordEncoder.encode("novaSenha123!")).thenReturn("hash-novo");
 
-        senhaService.definirSenha(TOKEN, "novaSenha123", true);
+        senhaService.definirSenha(TOKEN, "novaSenha123!", true);
 
         assertEquals("hash-novo", user.getPassword());
         assertFalse(user.isFirstLogin());
@@ -174,7 +174,7 @@ class SenhaServiceUnitTest {
                 .thenReturn(Optional.of(token(TipoTokenSenha.REDEFINICAO, LocalDateTime.now().minusHours(2))));
 
         RegraNegocioException e = assertThrows(RegraNegocioException.class,
-                () -> senhaService.definirSenha(TOKEN, "novaSenha123", null));
+                () -> senhaService.definirSenha(TOKEN, "novaSenha123!", null));
         assertEquals(SenhaService.LINK_INVALIDO, e.getMessage());
         verify(userRepository, never()).save(any());
     }
@@ -185,7 +185,7 @@ class SenhaServiceUnitTest {
         usado.setEncerradoEm(LocalDateTime.now());
         when(tokenSenhaRepository.findByTokenHash(SenhaService.hash(TOKEN))).thenReturn(Optional.of(usado));
 
-        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123", null));
+        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123!", null));
         verify(userRepository, never()).save(any());
     }
 
@@ -193,7 +193,7 @@ class SenhaServiceUnitTest {
     void definirSenhaComTokenDesconhecidoFalha() {
         when(tokenSenhaRepository.findByTokenHash(any())).thenReturn(Optional.empty());
 
-        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123", null));
+        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123!", null));
     }
 
     @Test
@@ -202,7 +202,7 @@ class SenhaServiceUnitTest {
         when(tokenSenhaRepository.findByTokenHash(SenhaService.hash(TOKEN)))
                 .thenReturn(Optional.of(token(TipoTokenSenha.REDEFINICAO, LocalDateTime.now())));
 
-        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123", null));
+        assertThrows(RegraNegocioException.class, () -> senhaService.definirSenha(TOKEN, "novaSenha123!", null));
     }
 
     @Test

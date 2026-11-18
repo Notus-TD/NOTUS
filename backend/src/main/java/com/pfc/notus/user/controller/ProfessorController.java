@@ -19,24 +19,29 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+// ! REFU: Endpoints de professores (/professores), só admin: cadastrar, listar e desligar
 @RestController
 @RequestMapping("/professores")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class ProfessorController {
 
+    // ! REFU: service de professor
     private final ProfessorService professorService;
 
+    // ! REFU: POST /professores - cadastra e manda convite por e-mail
     @PostMapping
     public ResponseEntity<ProfessorDTO> create(@RequestBody @Valid ProfessorRequest dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(professorService.createProfessor(dto));
     }
 
+    // ! REFU: GET /professores - lista os professores não anonimizados
     @GetMapping
     public ResponseEntity<List<ProfessorDTO>> findAll() {
         return ResponseEntity.ok(professorService.listProfessors());
     }
 
+    // ! REFU: PUT /professores/{id}/desligar - bloqueia o acesso e remove os vínculos com turmas
     @PutMapping("/{id}/desligar")
     public ResponseEntity<ProfessorDTO> desligar(@PathVariable Long id, Authentication authentication) {
         return ResponseEntity.ok(professorService.desligar(id, authentication.getName()));

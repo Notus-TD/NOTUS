@@ -21,13 +21,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+// ! REFNO: Regras das notas de avaliação (provas, trabalhos): faixa 0-10, só quem leciona lança e bimestre precisa estar aberto
 @Service
 @RequiredArgsConstructor
 public class NotaService {
 
+    // ! REFNO: faixa permitida para a nota
     private static final float NOTA_MINIMA = 0f;
     private static final float NOTA_MAXIMA = 10f;
 
+    // ! REFNO: repositórios de nota, aluno, disciplina, boletim + guard de permissão e calendário
     private final NotaRepository notaRepository;
 
     private final StudentRepository studentRepository;
@@ -40,6 +43,7 @@ public class NotaService {
 
     private final CalendarioService calendarioService;
 
+    // ! REFNO: busca a nota e valida se quem pediu pode ver aquele aluno
     @Transactional(readOnly = true)
     public NotaDTO getById(Long id, String requesterEmail) {
         Nota entity = buscarNota(id);
@@ -47,6 +51,7 @@ public class NotaService {
         return NotaDTO.from(entity);
     }
 
+    // ! REFNO: notas do aluno no ano letivo da turma dele, em ordem de lançamento
     @Transactional(readOnly = true)
     public List<NotaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
@@ -56,6 +61,7 @@ public class NotaService {
                 .toList();
     }
 
+    // ! REFNO: lança a nota: valida campos, se o professor leciona a disciplina pro aluno e se o bimestre está aberto
     @Transactional
     public NotaDTO save(NotaRequestDTO dto, String requesterEmail) {
         validarAvaliacao(dto);
@@ -71,6 +77,7 @@ public class NotaService {
         return NotaDTO.from(notaRepository.save(nota));
     }
 
+    // ! REFNO: edita a nota; não deixa trocar aluno nem disciplina e exige bimestre aberto
     @Transactional
     public NotaDTO update(Long id, NotaRequestDTO dto, String requesterEmail) {
         validarAvaliacao(dto);
@@ -87,6 +94,7 @@ public class NotaService {
         return NotaDTO.from(notaRepository.save(entity));
     }
 
+    // ! REFNO: apaga a nota se o professor leciona e o bimestre está aberto
     @Transactional
     public void delete(Long id, String requesterEmail) {
         Nota entity = buscarNota(id);
@@ -95,6 +103,7 @@ public class NotaService {
         notaRepository.delete(entity);
     }
 
+    // ! REFNO: bloqueia se o bimestre fechou no calendário OU se já tem nota final lançada no boletim para essa disciplina/bimestre
     private void assertBimestreAberto(Student student, Long disciplinaId, Bimestre bimestre) {
         calendarioService.exigirBimestreAberto(AnoLetivo.doAluno(student), bimestre);
         boolean fechado = boletimRepository
@@ -107,6 +116,7 @@ public class NotaService {
         }
     }
 
+    // ! REFNO: descrição obrigatória, nota entre 0 e 10 e bimestre informado
     private void validarAvaliacao(NotaRequestDTO dto) {
         if (dto.descricao() == null || dto.descricao().isBlank()) {
             throw new RegraNegocioException("Informe a descrição da avaliação.");
@@ -119,16 +129,19 @@ public class NotaService {
         }
     }
 
+    // ! REFNO: busca nota ou dá 404
     private Nota buscarNota(Long id) {
         return notaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Nota não encontrada com o id: " + id));
     }
 
+    // ! REFNO: busca aluno ou dá 404
     private Student buscarAluno(Long id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado com o id: " + id));
     }
 
+    // ! REFNO: busca disciplina ou dá 404
     private Disciplina buscarDisciplina(Long id) {
         return disciplinaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Disciplina não encontrada com o id: " + id));

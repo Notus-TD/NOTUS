@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_notificacao_status_proxima", columnList = "status, proxima_tentativa_em"),
                 @Index(name = "idx_notificacao_provider_id", columnList = "provider_message_id")
         })
+// ! REFN: Entidade da tabela tb_notificacao: um aviso na fila de e-mail, com destinatário, template, variáveis, status e tentativas
 @NoArgsConstructor
 public class Notificacao {
 
@@ -28,6 +29,7 @@ public class Notificacao {
     @Getter @Setter
     private TipoNotificacao tipo;
 
+    // ! REFN: destinatário: ou o responsável ou o aluno (um dos dois fica null)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responsavel_id")
     @Getter @Setter
@@ -38,12 +40,14 @@ public class Notificacao {
     @Getter @Setter
     private Student student;
 
+    // ! REFN: o que gerou o aviso (FALTA, BOLETIM, ATIVIDADE, COMUNICADO) e o id desse registro
     @Getter @Setter
     private String referenciaTipo;
 
     @Getter @Setter
     private Long referenciaId;
 
+    // ! REFN: chave única para não criar o mesmo aviso duas vezes
     @Column(nullable = false, unique = true)
     @Getter @Setter
     private String chaveIdempotencia;
@@ -52,6 +56,7 @@ public class Notificacao {
     @Getter @Setter
     private String template;
 
+    // ! REFN: valores que preenchem o template, guardados como JSON
     @Column(length = 2000)
     @Getter @Setter
     private String variaveis;
@@ -61,6 +66,7 @@ public class Notificacao {
     @Getter @Setter
     private StatusNotificacao status;
 
+    // ! REFN: controle de envio: tentativas feitas, quando tentar de novo, id do provedor e último erro
     @Getter @Setter
     private int tentativas;
 
@@ -80,6 +86,7 @@ public class Notificacao {
     @Getter @Setter
     private LocalDateTime enviadoEm;
 
+    // ! REFN: cria o aviso já PENDENTE, com 0 tentativas e pronto para enviar agora
     public Notificacao(TipoNotificacao tipo, Responsible responsavel, Student student,
                        String referenciaTipo, Long referenciaId, String chaveIdempotencia,
                        String template, String variaveis) {

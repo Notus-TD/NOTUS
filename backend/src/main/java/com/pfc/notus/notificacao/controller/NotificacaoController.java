@@ -15,15 +15,18 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+// ! REFN: Endpoints de notificações (/notificacao): admin consulta a fila e reenvia; responsável vê seus avisos
 @RestController
 @RequestMapping(value = "/notificacao")
 @RequiredArgsConstructor
 public class NotificacaoController {
 
+    // ! REFN: service da fila de avisos e o worker que dispara o envio na hora
     private final NotificacaoService notificacaoService;
 
     private final NotificacaoWorker worker;
 
+    // ! REFN: GET /notificacao - admin filtra a fila por tipo, status, responsável e período
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<NotificacaoDTO> listar(
@@ -35,12 +38,14 @@ public class NotificacaoController {
         return notificacaoService.listar(tipo, status, responsavelId, de, ate);
     }
 
+    // ! REFN: GET /notificacao/me - responsável vê os avisos dele já renderizados para o portal
     @PreAuthorize("hasRole('RESPONSAVEL')")
     @GetMapping("/me")
     public List<AvisoDTO> meusAvisos(org.springframework.security.core.Authentication authentication) {
         return notificacaoService.avisosDoResponsavel(authentication.getName());
     }
 
+    // ! REFN: POST /notificacao/{id}/reenviar - recoloca uma notificação com FALHA na fila e roda o worker
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/reenviar")
     public ResponseEntity<NotificacaoDTO> reenviar(@PathVariable Long id) {

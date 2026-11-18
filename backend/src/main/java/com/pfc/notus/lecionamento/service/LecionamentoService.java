@@ -23,12 +23,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+// ! REFL: Service que cuida do vínculo professor x turma x disciplina (quem dá aula de quê e onde)
 @Service
 @RequiredArgsConstructor
 public class LecionamentoService {
 
+    // ! REFL: limite de professores que podem dar a mesma disciplina na mesma turma
     static final int MAX_PROFESSORES_POR_DISCIPLINA = 2;
 
+    // ! REFL: repositórios usados para buscar turma, disciplina, professor e salvar o vínculo
     private final LecionamentoRepository lecionamentoRepository;
 
     private final TurmaRepository turmaRepository;
@@ -37,6 +40,7 @@ public class LecionamentoService {
 
     private final UserRepository userRepository;
 
+    // ! REFL: cria o vínculo; valida se turma/disciplina/professor existem, se o professor está ativo, se já não existe esse vínculo e se a disciplina ainda não atingiu o limite de professores
     @Transactional
     public LecionamentoDTO create(LecionamentoRequestDTO dto) {
         Turma turma = turmaRepository.findById(dto.turmaId())
@@ -58,6 +62,7 @@ public class LecionamentoService {
         return LecionamentoDTO.of(entity);
     }
 
+    // ! REFL: apaga o vínculo pelo id; dá 404 se não existir
     @Transactional
     public void delete(Long id) {
         if (!lecionamentoRepository.existsById(id)) {
@@ -66,11 +71,13 @@ public class LecionamentoService {
         lecionamentoRepository.deleteById(id);
     }
 
+    // ! REFL: lista todos os vínculos cadastrados (usado na tela do admin)
     @Transactional
     public List<LecionamentoDTO> getAll() {
         return lecionamentoRepository.findAll().stream().map(LecionamentoDTO::of).toList();
     }
 
+    // ! REFL: pega o professor logado pelo e-mail e devolve as turmas dele, cada uma com as disciplinas que ele leciona nela
     @Transactional
     public List<TurmaComDisciplinasDTO> getMinhasTurmas(String professorEmail) {
         User professor = userRepository.findByEmail(professorEmail)
@@ -84,6 +91,7 @@ public class LecionamentoService {
                 .toList();
     }
 
+    // ! REFL: garante que o usuário tem papel de professor e não está desligado antes de criar vínculo
     private static void exigirProfessorAtivo(User professor) {
         if (!professor.hasRole("ROLE_PROFESSOR")) {
             throw new ConflictException("Usuário informado não é um professor.");
@@ -93,7 +101,7 @@ public class LecionamentoService {
         }
     }
 
-    /** Uma turma com as disciplinas que o professor dá nela, em ordem alfabética. */
+    // ! REFL: monta o DTO de uma turma com as disciplinas do professor nela, em ordem alfabética
     private static TurmaComDisciplinasDTO turmaComDisciplinas(List<Lecionamento> vinculosDaTurma) {
         Turma turma = vinculosDaTurma.getFirst().getTurma();
         List<TurmaComDisciplinasDTO.DisciplinaResumoDTO> disciplinas = vinculosDaTurma.stream()

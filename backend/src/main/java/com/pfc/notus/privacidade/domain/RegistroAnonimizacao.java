@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+// ! REFP: Entidade da tabela tb_registro_anonimizacao: quem foi anonimizado, por qual motivo, por quem e quando
 @Entity
 @Table(name = "tb_registro_anonimizacao")
 @NoArgsConstructor
@@ -22,6 +23,7 @@ public class RegistroAnonimizacao {
     @Column(nullable = false, length = 20)
     private String perfil;
 
+    // ! REFP: matrícula guardada para o histórico (aluno), já que o nome é apagado
     private Long matricula;
 
     @Enumerated(EnumType.STRING)
@@ -37,6 +39,7 @@ public class RegistroAnonimizacao {
     @Column(nullable = false)
     private LocalDateTime executadoEm;
 
+    // ! REFP: construtor com todos os campos
     public RegistroAnonimizacao(Long usuarioId, String perfil, Long matricula, MotivoAnonimizacao motivo, String detalhe,
                                 String executadoPor, LocalDateTime executadoEm) {
         this.usuarioId = usuarioId;

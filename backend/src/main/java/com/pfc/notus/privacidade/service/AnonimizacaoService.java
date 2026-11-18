@@ -28,10 +28,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 
+// ! REFP: Anonimização LGPD: monta o resumo do que será apagado, valida bloqueios e registra a execução
 @Service
 @RequiredArgsConstructor
 public class AnonimizacaoService {
 
+    // ! REFP: repositório de usuário, service que faz a anonimização e repositórios para contar o que fica (notas, faltas, entregas, avisos)
     private final UserRepository userRepository;
 
     private final UserService userService;
@@ -45,6 +47,7 @@ public class AnonimizacaoService {
 
     private final NotificacaoRepository notificacaoRepository;
 
+    // ! REFP: resumo antes de anonimizar: dados do titular, último registro e o motivo de bloqueio se houver
     @Transactional(readOnly = true)
     public ResumoAnonimizacaoDTO resumo(Long userId) {
         User user = buscarTitular(userId);
@@ -60,6 +63,7 @@ public class AnonimizacaoService {
     }
 
     /** O que será apagado do aluno e quantos registros escolares ficam (notas, faltas, entregas). */
+    // ! REFP: aluno: bloqueia se a matrícula ainda está ativa; conta notas finais, faltas, entregas e avisos
     private ResumoAnonimizacaoDTO resumoDoAluno(Student aluno, RegistroAnonimizacaoDTO registro) {
         String bloqueio = aluno.getAnonimizadoEm() == null && aluno.getStatusMatricula() == StatusMatricula.ATIVA
                 ? "Cancele a matrícula do aluno antes de anonimizar."
@@ -76,6 +80,7 @@ public class AnonimizacaoService {
     }
 
     /** O responsável só pode ser anonimizado quando nenhum filho tem matrícula ativa. */
+    // ! REFP: responsável: bloqueia se algum filho tem matrícula ativa; lista os filhos
     private ResumoAnonimizacaoDTO resumoDoResponsavel(Responsible responsavel, RegistroAnonimizacaoDTO registro) {
         List<FilhoResumoDTO> filhos = responsavel.getStudents().stream()
                 .sorted(Comparator.comparing(Student::getMatricula))
@@ -95,6 +100,7 @@ public class AnonimizacaoService {
                 responsavel.getAnonimizadoEm(), registro, bloqueio);
     }
 
+    // ! REFP: valida o detalhe do motivo, chama a anonimização no UserService e grava o registro de auditoria
     @Transactional
     public RegistroAnonimizacaoDTO anonimizar(Long userId, AnonimizarRequest request, String adminEmail) {
         String detalhe = request.detalhe() == null || request.detalhe().isBlank() ? null : request.detalhe().trim();
@@ -110,6 +116,7 @@ public class AnonimizacaoService {
         return RegistroAnonimizacaoDTO.from(registro);
     }
 
+    // ! REFP: todas as anonimizações, mais recentes primeiro
     @Transactional(readOnly = true)
     public List<RegistroAnonimizacaoDTO> historico() {
         return registroRepository.findAllByOrderByExecutadoEmDesc().stream()
@@ -121,6 +128,7 @@ public class AnonimizacaoService {
      * "Outro" e "Pedido do titular" precisam de descrição. O pedido do titular chega pela secretaria
      * (fluxo manual): o admin registra como e quando foi feito.
      */
+    // ! REFP: motivos 'Outro' e 'Pedido do titular' precisam de descrição
     private static void exigirDetalheQuandoPrecisa(MotivoAnonimizacao motivo, String detalhe) {
         if (motivo == MotivoAnonimizacao.OUTRO && detalhe == null) {
             throw new RegraNegocioException("Descreva o motivo da anonimização.");
@@ -130,6 +138,7 @@ public class AnonimizacaoService {
         }
     }
 
+    // ! REFP: busca o usuário e garante que é aluno ou responsável (só esses podem ser anonimizados)
     private User buscarTitular(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + userId));

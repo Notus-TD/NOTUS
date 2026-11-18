@@ -15,6 +15,7 @@ import java.util.List;
 @Entity
 @Table(name = "tb_turma",
         uniqueConstraints = @UniqueConstraint(columnNames = {"name", "school_year"}))
+// ! REFT: Entidade da tabela tb_turma: nome (ex: 3º A) e ano letivo, única por nome + ano
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Turma {
@@ -31,6 +32,7 @@ public class Turma {
     @Column(name = "school_year", nullable = false)
     private String schoolYear;
 
+    // ! REFT: professores que dão aula nela e alunos matriculados (não vão pro JSON)
     @OneToMany(mappedBy = "turma")
     @JsonIgnore
     private List<Lecionamento> lecionamentos = new ArrayList<>();
@@ -39,6 +41,7 @@ public class Turma {
     @JsonIgnore
     private List<Student> alunos = new ArrayList<>();
 
+    // ! REFT: construtor usado no create
     public Turma(String name, String schoolYear) {
         this.name = name;
         this.schoolYear = schoolYear;

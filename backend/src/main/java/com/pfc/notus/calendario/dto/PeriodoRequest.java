@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
+// ! REFCAL: Um bimestre no corpo do PUT: qual bimestre e suas datas de início e fim
 public record PeriodoRequest(
         @NotNull Bimestre bimestre,
         @NotNull LocalDate inicio,

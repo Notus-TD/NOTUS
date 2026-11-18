@@ -34,10 +34,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// ! REFA: Regras de negócio das atividades: quem pode publicar/editar, validação de prazo, pontos e bimestre
 @Service
 @RequiredArgsConstructor
 public class AtividadeService {
 
+    // ! REFA: repositórios e services que o fluxo de atividade precisa (turma, disciplina, vínculo, entregas, notificações, calendário)
     private final AtividadeRepository atividadeRepository;
 
     private final TurmaRepository turmaRepository;
@@ -58,11 +60,13 @@ public class AtividadeService {
 
     private final CalendarioService calendarioService;
 
+    // ! REFA: lista todas as atividades sem filtro (visão do admin)
     @Transactional
     public List<AtividadeDTO> getAllAtividade() {
         return atividadeRepository.findAll().stream().map(a -> toDTO(a, null)).toList();
     }
 
+    // ! REFA: lista as atividades de uma turma no ano letivo dela, ordenadas por prazo; checa se quem pediu pode ver a turma
     @Transactional
     public List<AtividadeDTO> getByTurma(Long turmaId, String requesterEmail) {
         studentAccessGuardService.assertCanViewTurma(turmaId, requesterEmail);
@@ -73,6 +77,7 @@ public class AtividadeService {
                 .toList();
     }
 
+    // ! REFA: atividades do aluno logado; se o usuário não for aluno devolve lista vazia
     @Transactional
     public List<AtividadeDTO> getMinhas(String requesterEmail) {
         User requester = buscarUsuario(requesterEmail);
@@ -82,6 +87,7 @@ public class AtividadeService {
         return atividadesComEntrega(aluno);
     }
 
+    // ! REFA: atividades de um aluno específico; valida se o responsável/admin pode ver esse aluno
     @Transactional
     public List<AtividadeDTO> getDoAluno(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
@@ -93,6 +99,7 @@ public class AtividadeService {
         return atividadesComEntrega(aluno);
     }
 
+    // ! REFA: monta a lista de atividades da turma do aluno marcando quais ele já entregou e ignorando as de antes dele entrar na turma
     private List<AtividadeDTO> atividadesComEntrega(Student aluno) {
         if (aluno.getTurma() == null) {
             return List.of();
@@ -109,6 +116,7 @@ public class AtividadeService {
                 .toList();
     }
 
+    // ! REFA: cria a atividade: valida prazo futuro, bimestre aberto, pontos, resolve a disciplina e dispara evento para notificar a turma
     @Transactional
     public AtividadeDTO publicar(AtividadeDTO dto, String requesterEmail) {
         if (dto.prazo().isBefore(LocalDate.now())) {
@@ -132,6 +140,7 @@ public class AtividadeService {
         return toDTO(entity, null);
     }
 
+    // ! REFA: edita a atividade: só quem leciona pode, bimestre precisa estar aberto e não pode baixar pontos abaixo do que já foi dado em entregas
     @Transactional
     public AtividadeDTO atualizar(Long id, AtividadeDTO dto, String requesterEmail) {
         Atividade atividade = atividadeRepository.findById(id)
@@ -151,6 +160,7 @@ public class AtividadeService {
         return toDTO(atividadeRepository.save(atividade), null);
     }
 
+    // ! REFA: exclui a atividade se o professor leciona, o bimestre está aberto e não há entregas; cancela notificações pendentes
     @Transactional
     public void delete(Long id, String requesterEmail) {
         Atividade atividade = atividadeRepository.findById(id)
@@ -164,6 +174,7 @@ public class AtividadeService {
         notificacaoService.cancelarPorReferencia(NotificacaoService.REF_ATIVIDADE, id, "Atividade excluída antes do envio");
     }
 
+    // ! REFA: copia os campos editáveis do DTO para a entidade
     private void preencher(Atividade atividade, AtividadeDTO dto) {
         atividade.setTitle(dto.title().trim());
         atividade.setContent(dto.content().trim());
@@ -172,6 +183,7 @@ public class AtividadeService {
         atividade.setPontos(dto.pontos());
     }
 
+    // ! REFA: bimestre é obrigatório
     private static void exigirBimestre(AtividadeDTO dto) {
         if (dto.bimestre() == null) {
             throw new RegraNegocioException("Informe o bimestre da atividade.");
@@ -179,6 +191,7 @@ public class AtividadeService {
     }
 
     /** Pontos são opcionais; se vierem, ficam entre 0 (exclusive) e 10. */
+    // ! REFA: pontos são opcionais, mas se vierem precisam estar entre 0 e 10
     private static void validarPontos(Float pontos) {
         if (pontos != null && (pontos.isNaN() || pontos <= 0 || pontos > 10)) {
             throw new RegraNegocioException("Os pontos da atividade devem ser maiores que 0 e no máximo 10.");
@@ -186,6 +199,7 @@ public class AtividadeService {
     }
 
     /** Admin sempre pode; professor só se leciona a disciplina da atividade naquela turma. */
+    // ! REFA: admin sempre pode; professor só se dá aquela disciplina naquela turma
     private void exigirQueLeciona(Atividade atividade, String requesterEmail, String mensagem) {
         User requester = buscarUsuario(requesterEmail);
         boolean pode = requester.hasRole("ROLE_ADMIN")
@@ -197,6 +211,7 @@ public class AtividadeService {
     }
 
     /** Baixar o valor da atividade não pode deixar entrega com mais pontos do que ela vale. */
+    // ! REFA: impede reduzir o valor da atividade se alguma entrega já tem nota maior que o novo máximo
     private void exigirEntregasDentroDoNovoValor(Long atividadeId, Float pontos) {
         float novoMaximo = pontos == null ? 0f : pontos;
         boolean entregaAcima = entregaRepository.findByAtividadeId(atividadeId).stream()
@@ -208,6 +223,7 @@ public class AtividadeService {
     }
 
     /** Admin escolhe qualquer disciplina; professor só as que leciona na turma. */
+    // ! REFA: decide qual disciplina usar: admin escolhe qualquer uma, professor só as que leciona na turma
     private Disciplina resolverDisciplina(User requester, Long turmaId, Long disciplinaId) {
         if (requester.hasRole("ROLE_ADMIN")) {
             return disciplinaDoAdmin(disciplinaId);
@@ -218,6 +234,7 @@ public class AtividadeService {
         throw new AccessDeniedException("Sem permissão para publicar atividades.");
     }
 
+    // ! REFA: admin precisa informar a disciplina e ela tem que existir
     private Disciplina disciplinaDoAdmin(Long disciplinaId) {
         if (disciplinaId == null) {
             throw new RegraNegocioException("Informe a disciplina da atividade.");
@@ -227,6 +244,7 @@ public class AtividadeService {
     }
 
     /** Se o professor tem uma disciplina só na turma, ela é usada quando o formulário não informa. */
+    // ! REFA: se o professor dá só uma disciplina na turma usa ela automaticamente; senão exige que informe uma das dele
     private Disciplina disciplinaDoProfessor(Long professorId, Long turmaId, Long disciplinaId) {
         List<Disciplina> disciplinasNaTurma = lecionamentoRepository.findByProfessorId(professorId).stream()
                 .filter(l -> l.getTurma().getId().equals(turmaId))
@@ -247,11 +265,13 @@ public class AtividadeService {
                 .orElseThrow(() -> new AccessDeniedException("Você só pode publicar atividades das disciplinas que leciona nesta turma."));
     }
 
+    // ! REFA: busca o usuário logado pelo e-mail
     private User buscarUsuario(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + email));
     }
 
+    // ! REFA: converte a entidade para DTO, incluindo nome da turma/disciplina e se foi entregue
     private AtividadeDTO toDTO(Atividade entity, Boolean entregue) {
         return new AtividadeDTO(
                 entity.getId(),

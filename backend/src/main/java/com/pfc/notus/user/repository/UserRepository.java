@@ -9,11 +9,14 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+// ! REFU: Acesso ao banco da tabela tb_user (base de aluno, responsável, professor e admin)
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
+    // ! REFU: busca por e-mail (já normalizado)
     Optional<User> findByEmail(String email);
 
+	// ! REFU: maior id cadastrado, para gerar o próximo
 	@Query("SELECT MAX(u.id) FROM User u")
 	Long buscarUltimoId();
 
@@ -29,6 +32,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 			INNER JOIN tb_role ON tb_role.id = tb_user_role.role_id
 			WHERE lower(tb_user.email) = lower(:email)
 		""")
+    // ! REFU: consulta do login: usuário + papéis, e se for aluno considera o acesso liberado; uma linha por papel
     List<UserDetailsProjection> searchUserAndRolesByEmail(String email);
 }
 

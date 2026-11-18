@@ -12,6 +12,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// ! REFF: Entidade da tabela tb_falta: quantas faltas um aluno teve em uma disciplina em um dia
 @Entity
 @Table(name = "tb_falta")
 @NoArgsConstructor
@@ -28,6 +29,7 @@ public class FaltaDomain {
     @Getter @Setter
     private LocalDateTime registradoEm;
 
+    // ! REFF: ano letivo da turma do aluno quando a falta foi lançada
     @Column(name = "ano_letivo", length = 4)
     @Getter @Setter
     private String anoLetivo;
@@ -42,11 +44,13 @@ public class FaltaDomain {
     @Getter @Setter
     private Disciplina disciplina;
 
+    // ! REFF: professor (ou admin) que lançou
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registrado_por_id", nullable = false)
     @Getter @Setter
     private User registradoPor;
 
+    // ! REFF: cria a falta já com o ano letivo do aluno e a hora de agora
     public FaltaDomain(Integer quantidade, LocalDate data, LocalDateTime registradoEm, Student aluno, User registradoPor, Disciplina disciplina) {
         this.quantidade = quantidade;
         this.data = data;

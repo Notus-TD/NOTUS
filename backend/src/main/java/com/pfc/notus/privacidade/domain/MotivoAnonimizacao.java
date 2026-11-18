@@ -1,5 +1,6 @@
 package com.pfc.notus.privacidade.domain;
 
+// ! REFP: Motivos aceitos para anonimizar, com descrição para a tela
 public enum MotivoAnonimizacao {
     PEDIDO_DO_TITULAR("Pedido do titular"),
     FIM_DO_PRAZO_DE_GUARDA("Fim do prazo de guarda"),

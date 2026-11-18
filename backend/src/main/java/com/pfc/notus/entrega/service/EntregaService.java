@@ -23,10 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 
+// ! REFE: Regras de entrega: professor marca se o aluno entregou a atividade e quantos pontos tirou
 @Service
 @RequiredArgsConstructor
 public class EntregaService {
 
+    // ! REFE: repositórios de entrega, atividade, aluno, usuário + guard de permissão e calendário
     private final EntregaRepository entregaRepository;
 
     private final AtividadeRepository atividadeRepository;
@@ -39,6 +41,7 @@ public class EntregaService {
 
     private final CalendarioService calendarioService;
 
+    // ! REFE: entregas de todas as turmas/disciplinas do professor logado
     @Transactional(readOnly = true)
     public List<EntregaDTO> getDoProfessor(String requesterEmail) {
         return entregaRepository.buscarDoProfessor(buscarUsuario(requesterEmail).getId(), null).stream()
@@ -46,6 +49,7 @@ public class EntregaService {
                 .toList();
     }
 
+    // ! REFE: entregas de um aluno, só nas disciplinas que o professor leciona; valida permissão
     @Transactional(readOnly = true)
     public List<EntregaDTO> getByStudent(Long studentId, String requesterEmail) {
         studentAccessGuardService.assertCanView(studentId, requesterEmail);
@@ -54,6 +58,7 @@ public class EntregaService {
                 .toList();
     }
 
+    // ! REFE: entregas de uma atividade; só se o professor leciona aquela disciplina na turma
     @Transactional(readOnly = true)
     public List<EntregaDTO> getByAtividade(Long atividadeId, String requesterEmail) {
         Atividade atividade = buscarAtividade(atividadeId);
@@ -63,6 +68,7 @@ public class EntregaService {
                 .toList();
     }
 
+    // ! REFE: cria ou atualiza a entrega: aluno precisa ser da turma, professor lecionar e bimestre estar aberto; calcula pontos
     @Transactional
     public EntregaDTO marcar(EntregaRequestDTO dto, String requesterEmail) {
         if (dto.status() == null) {
@@ -88,6 +94,7 @@ public class EntregaService {
      * Não entregou: 0 (ou nada, se a atividade não vale pontos).
      * Entregou: os pontos informados, entre 0 e o valor da atividade.
      */
+    // ! REFE: não entregou = 0 (ou nada se a atividade não vale ponto); entregou = pontos informados entre 0 e o valor da atividade
     private Float pontosObtidos(Atividade atividade, EntregaRequestDTO dto) {
         Float valor = atividade.getPontos();
         if (dto.status() == StatusEntrega.NAO_ENTREGUE) {
@@ -106,6 +113,7 @@ public class EntregaService {
         return obtidos;
     }
 
+    // ! REFE: apaga a entrega se o professor leciona e o bimestre está aberto
     @Transactional
     public void delete(Long id, String requesterEmail) {
         Entrega entrega = entregaRepository.findById(id)
@@ -115,11 +123,13 @@ public class EntregaService {
         entregaRepository.delete(entrega);
     }
 
+    // ! REFE: busca atividade ou dá 404
     private Atividade buscarAtividade(Long id) {
         return atividadeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Atividade não encontrada com o id: " + id));
     }
 
+    // ! REFE: busca o usuário logado pelo e-mail
     private User buscarUsuario(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado: " + email));

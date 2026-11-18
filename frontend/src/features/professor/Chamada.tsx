@@ -18,25 +18,29 @@ import { ClipboardCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+// ! REFF: Tela de lista de presença do professor: marca presente/falta por aula e salva a chamada do dia
 export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: DisciplinaRef }) {
   const hoje = hojeLocal();
   const [data, setData] = useState(hoje);
   const [chamada, setChamada] = useState<ChamadaDTO | null>(null);
   const [aulas, setAulas] = useState(1);
-  const [faltas, setFaltas] = useState<Record<number, string>>({});
+  // ! REFF: por aluno, uma marca por aula do dia: true = falta, false = presente (padrão)
+  const [faltas, setFaltas] = useState<Record<number, boolean[]>>({});
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  // ! REFF: preenche a tela com a chamada que veio do back (nº de aulas e faltas de cada aluno)
   function carregou(dto: ChamadaDTO) {
     setChamada(dto);
     setAulas(dto.aulas ?? 1);
     setFaltas(
       Object.fromEntries(
-        dto.alunos.map((a) => [a.studentId, a.faltasNoDia > 0 ? String(a.faltasNoDia) : ""]),
+        dto.alunos.map((a) => [a.studentId, marcas(a.faltasNoDia, dto.aulas ?? 1)]),
       ),
     );
   }
 
+  // ! REFF: carrega a chamada ao abrir e sempre que mudar a turma, a disciplina ou a data
   useEffect(() => {
     let ativo = true;
     setChamada(null);
@@ -51,22 +55,29 @@ export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: 
     };
   }, [turmaId, disciplina.id, data]);
 
-  const valor = (id: number) => Number(faltas[id] || 0);
-  const invalido = (id: number) => {
-    const texto = faltas[id] ?? "";
-    return texto !== "" && (!/^\d$/.test(texto) || Number(texto) > aulas);
-  };
+  // ! REFF: o back guarda só a quantidade de faltas no dia; ao carregar, marcamos as primeiras N aulas como falta
+  function marcas(faltasNoDia: number, total: number): boolean[] {
+    return Array.from({ length: total }, (_, i) => i < faltasNoDia);
+  }
+  // ! REFF: marcas do aluno ajustadas ao número atual de aulas (se mudou, completa com presente)
+  const marcasDe = (id: number) =>
+    Array.from({ length: aulas }, (_, i) => faltas[id]?.[i] ?? false);
+  // ! REFF: quantidade de faltas enviada ao back = quantas aulas estão marcadas como falta
+  const valor = (id: number) => marcasDe(id).filter(Boolean).length;
+  // ! REFF: alterna uma aula do aluno entre presente e falta
+  function marcar(id: number, aula: number, falta: boolean) {
+    const m = marcasDe(id);
+    m[aula] = falta;
+    setFaltas({ ...faltas, [id]: m });
+  }
   const alunos = chamada?.alunos ?? [];
   const bloqueio = chamada?.bloqueio ?? null;
   const comFalta = alunos.filter((a) => valor(a.studentId) > 0).length;
   const presentes = alunos.length - comFalta;
 
+  // ! REFF: envia a chamada (quantidade de faltas por aluno) e recarrega com o que o back gravou
   async function salvar() {
     if (!chamada) return;
-    if (alunos.some((a) => invalido(a.studentId))) {
-      toast.error(`Cada aluno pode ter de 0 a ${aulas} falta(s) nesta chamada.`);
-      return;
-    }
     setSalvando(true);
     try {
       const salva = await salvarChamada({
@@ -105,13 +116,14 @@ export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: 
           <label htmlFor="aulas-no-dia" className="text-sm font-semibold text-foreground">
             Aulas no dia
           </label>
+          {/* ! REFF: nº de aulas do dia (1 a 10) — define quantos botões presente/falta cada aluno tem */}
           <Input
             id="aulas-no-dia"
             type="number"
             min="1"
             max="10"
             value={aulas}
-            onChange={(e) => setAulas(Number(e.target.value) || 1)}
+            onChange={(e) => setAulas(Math.min(10, Math.max(1, Number(e.target.value) || 1)))}
             disabled={bloqueio !== null}
             className="h-9 w-24 text-sm"
           />
@@ -167,17 +179,16 @@ export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: 
               >
                 Faltas no ano
               </TableHead>
-              <TableHead className="w-32 pr-4 text-center">Faltas hoje</TableHead>
+              <TableHead className="pr-4 text-center">Presença hoje</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {alunos.map((a, indice) => {
               const ausente = valor(a.studentId) > 0;
-              const erroCampo = invalido(a.studentId);
               return (
                 <TableRow
                   key={a.studentId}
-                  className={ausente || erroCampo ? "bg-destructive/5 hover:bg-destructive/10" : ""}
+                  className={ausente ? "bg-destructive/5 hover:bg-destructive/10" : ""}
                 >
                   <TableCell className="pl-4 tabular-nums text-muted-foreground">
                     {indice + 1}
@@ -185,9 +196,7 @@ export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: 
                   <TableCell
                     className={`py-2 font-medium ${ausente ? "text-destructive" : "text-foreground"}`}
                   >
-                    <label htmlFor={`faltas-${a.studentId}`} className="cursor-pointer">
-                      {a.studentName}
-                    </label>
+                    {a.studentName}
                   </TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {a.matricula}
@@ -195,21 +204,46 @@ export function Chamada({ turmaId, disciplina }: { turmaId: number; disciplina: 
                   <TableCell className="text-right font-medium tabular-nums">
                     {a.totalFaltas}
                   </TableCell>
-                  <TableCell className="pr-4 text-center">
-                    <Input
-                      id={`faltas-${a.studentId}`}
-                      inputMode="numeric"
-                      maxLength={1}
-                      placeholder="0"
-                      value={faltas[a.studentId] ?? ""}
-                      onChange={(e) =>
-                        setFaltas({ ...faltas, [a.studentId]: e.target.value.trim() })
-                      }
-                      aria-invalid={erroCampo || undefined}
-                      disabled={bloqueio !== null}
-                      aria-label={`Faltas de ${a.studentName} hoje, de 0 a ${aulas}`}
-                      className={`mx-auto h-8 w-14 text-center text-sm tabular-nums ${erroCampo ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                    />
+                  <TableCell className="pr-4">
+                    {/* ! REFF: um par Presente/Falta por aula do dia; Presente já vem selecionado */}
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {marcasDe(a.studentId).map((falta, aula) => (
+                        <div
+                          key={aula}
+                          role="group"
+                          aria-label={`${aulas > 1 ? `${aula + 1}ª aula de ` : ""}${a.studentName}`}
+                          className="flex items-center gap-1"
+                        >
+                          {aulas > 1 && (
+                            <span className="w-6 text-right text-xs tabular-nums text-muted-foreground">
+                              {aula + 1}ª
+                            </span>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={falta ? "outline" : "default"}
+                            aria-pressed={!falta}
+                            disabled={bloqueio !== null}
+                            onClick={() => marcar(a.studentId, aula, false)}
+                            className="h-7 px-2 text-xs"
+                          >
+                            Presente
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={falta ? "destructive" : "outline"}
+                            aria-pressed={falta}
+                            disabled={bloqueio !== null}
+                            onClick={() => marcar(a.studentId, aula, true)}
+                            className="h-7 px-2 text-xs"
+                          >
+                            Falta
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </TableCell>
                 </TableRow>
               );

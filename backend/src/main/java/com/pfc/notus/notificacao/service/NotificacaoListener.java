@@ -11,16 +11,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+// ! REFN: Ouve os eventos (falta, nota final, comunicado, atividade) depois do commit e manda criar os avisos; erro aqui não desfaz o que foi salvo
 @Component
 @RequiredArgsConstructor
 public class NotificacaoListener {
 
+    // ! REFN: log de erro caso a criação do aviso falhe
     private static final Logger log = LoggerFactory.getLogger(NotificacaoListener.class);
 
+    // ! REFN: service que cria os avisos e worker que tenta enviar na hora
     private final NotificacaoService notificacaoService;
 
     private final NotificacaoWorker worker;
 
+    // ! REFN: falta salva -> cria aviso de falta e dispara o envio
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onFaltaRegistrada(FaltaRegistradaEvent evento) {
         try {
@@ -31,6 +35,7 @@ public class NotificacaoListener {
         }
     }
 
+    // ! REFN: nota final salva -> cria aviso (novo ou atualizado) e dispara o envio
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onNotaFinalLancada(NotaFinalLancadaEvent evento) {
         try {
@@ -41,6 +46,7 @@ public class NotificacaoListener {
         }
     }
 
+    // ! REFN: comunicado salvo -> cria um aviso por responsável e dispara o envio
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onComunicadoPublicado(ComunicadoPublicadoEvent evento) {
         try {
@@ -51,6 +57,7 @@ public class NotificacaoListener {
         }
     }
 
+    // ! REFN: atividade salva -> cria avisos para a turma e dispara o envio
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onAtividadePublicada(AtividadePublicadaEvent evento) {
         try {
