@@ -20,7 +20,6 @@ import com.pfc.notus.user.repository.ResponsibleRepository;
 import com.pfc.notus.user.repository.RoleRepository;
 import com.pfc.notus.user.repository.StudentRepository;
 import com.pfc.notus.user.repository.UserRepository;
-import com.pfc.notus.user.validator.PasswordValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
@@ -186,9 +185,6 @@ public class UserService implements UserDetailsService {
         if(!Boolean.TRUE.equals(acceptTerms)){
             throw new ConflictException("Usuário não aceitou os termos de uso");
         }
-
-        // REFN: valida se a senha atende critérios de força
-        PasswordValidator.validarSenhaForte(newPassword);
 
         user = userRepository.findById(user.getId())
                 .orElseThrow();

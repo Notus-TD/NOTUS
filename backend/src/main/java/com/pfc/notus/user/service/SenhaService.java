@@ -10,7 +10,6 @@ import com.pfc.notus.user.dto.TokenSenhaDTO;
 import com.pfc.notus.user.event.LinkSenhaGeradoEvent;
 import com.pfc.notus.user.repository.TokenSenhaRepository;
 import com.pfc.notus.user.repository.UserRepository;
-import com.pfc.notus.user.validator.PasswordValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -106,9 +105,6 @@ public class SenhaService {
             user.setTermsAcceptedAt(agora);
             user.setFirstLogin(false);
         }
-
-        // REFN: valida se a senha atende critérios de força
-        PasswordValidator.validarSenhaForte(novaSenha);
 
         user.setPassword(passwordEncoder.encode(novaSenha));
         tokenSenhaRepository.encerrarAbertos(user.getId(), agora);
